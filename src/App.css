@@ -10,7 +10,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color: #b10f0f;
+  color: #ff0000;
   background-color: transparent;
 
   font-synthesis: none;
@@ -43,7 +43,6 @@ body {
   height: fit-content;
   display: flex;
   overflow: hidden;
-  border-radius: 12px;
 }
 
 .control-bar {
@@ -55,7 +54,7 @@ body {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border: 1px solid white;
-  border-radius: 12px;
+  border-radius: 0px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   min-width: 400px;
   position: relative;
@@ -128,7 +127,7 @@ body {
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   background: #f0f0f0;
   color: #333;
   cursor: pointer;

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
 import "./App.css";
 
@@ -17,14 +18,20 @@ function App() {
         const { width, height } = el.getBoundingClientRect();
         const appWindow = getCurrentWindow();
         await appWindow.setSize(new LogicalSize(Math.ceil(width), Math.ceil(height)));
-      } catch {
-        // not in Tauri or setSize failed; ignore
+      } catch (e) {
+        console.warn("[resizeToContent] setSize failed or not in Tauri:", e);
       }
     };
     resizeToContent();
   }, []);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
+    try {
+      // Fetch selected text; Rust prints it to stdout
+      await invoke<string | null>("get_selected_text");
+    } catch (e) {
+      console.error("get_selected_text failed:", e);
+    }
     setIsPlaying(!isPlaying);
   };
 

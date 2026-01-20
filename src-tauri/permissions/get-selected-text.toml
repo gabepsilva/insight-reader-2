@@ -1,0 +1,5 @@
+# Permission to invoke get_selected_text (read selected text from the system)
+[[permission]]
+identifier = "allow-get-selected-text"
+description = "Allows invoking get_selected_text to read selected text from the system"
+commands.allow = ["get_selected_text"]
