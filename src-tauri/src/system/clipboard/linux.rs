@@ -4,6 +4,25 @@ use super::process_text;
 use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind};
 use tracing::{debug, info, warn};
 
+/// Gets the current clipboard text on Linux using the explicit Clipboard buffer
+/// (matches Ctrl+C), not PRIMARY selection.
+pub(super) fn get_clipboard_text_linux() -> Option<String> {
+    let mut clipboard = match Clipboard::new() {
+        Ok(cb) => cb,
+        Err(e) => {
+            warn!(error = %e, "Failed to initialize clipboard");
+            return None;
+        }
+    };
+
+    clipboard
+        .get()
+        .clipboard(LinuxClipboardKind::Clipboard)
+        .text()
+        .ok()
+        .and_then(|text| process_text(text, "clipboard"))
+}
+
 /// Gets the currently selected text on Linux.
 /// Tries PRIMARY selection first, then falls back to clipboard.
 pub(super) fn get_selected_text_linux() -> Option<String> {

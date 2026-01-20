@@ -76,26 +76,41 @@ fn restore_clipboard(original_text: Option<String>) {
     }
 }
 
-/// Creates a preview string for logging (first 200 chars).
-fn text_preview(text: &str) -> String {
-    let mut chars = text.chars();
-    let preview: String = chars.by_ref().take(200).collect();
-    if chars.next().is_some() {
-        format!("{}...", preview)
-    } else {
-        preview
-    }
-}
-
 /// Helper to process and return trimmed text if non-empty.
+/// Logs only length to avoid leaking clipboard/selection content (e.g. passwords) into logs.
 fn process_text(text: String, source: &str) -> Option<String> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         debug!("{} is empty", source);
         None
     } else {
-        debug!(text = %text_preview(trimmed), "Captured text from {}", source);
+        debug!(len = trimmed.len(), "Captured text from {}", source);
         Some(trimmed.to_string())
+    }
+}
+
+/// Gets the current clipboard text (e.g. from Ctrl+C / Cmd+C).
+/// - On macOS and Windows: Uses `arboard::Clipboard::get_text()`.
+/// - On Linux: Uses the explicit Clipboard buffer (`LinuxClipboardKind::Clipboard`) so it matches Ctrl+C, not PRIMARY.
+/// - Processed with `process_text`; returns `None` if empty or on error.
+pub fn get_clipboard_text() -> Option<String> {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    {
+        Clipboard::new()
+            .ok()
+            .and_then(|mut cb| cb.get_text().ok())
+            .and_then(|t| process_text(t, "clipboard"))
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        linux::get_clipboard_text_linux()
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        tracing::warn!("Platform not supported for clipboard");
+        None
     }
 }
 

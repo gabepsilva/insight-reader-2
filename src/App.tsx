@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
+import { PencilIcon } from "./components/icons";
 import "./App.css";
 
 function App() {
@@ -57,8 +58,16 @@ function App() {
     // TODO: Open screenshot/camera capture
   };
 
-  const handleClipboard = () => {
-    // TODO: Read from clipboard and start TTS
+  const handleEditor = async () => {
+    try {
+      // Same logic as "Insight Editor" tray item: selected text, else clipboard, else ""
+      const sel = await invoke<string | null>("get_selected_text");
+      const text =
+        sel != null ? sel : (await invoke<string | null>("get_clipboard_text")) ?? "";
+      await invoke("open_editor_window", { initialText: text });
+    } catch (e) {
+      console.warn("open_editor_window failed:", e);
+    }
   };
 
   const handleMinimize = async () => {
@@ -170,14 +179,11 @@ function App() {
               </button>
 
               <button
-                className="control-button clipboard"
-                onClick={handleClipboard}
-                aria-label="Read Clipboard"
+                className="control-button editor"
+                onClick={handleEditor}
+                aria-label="Open grammar editor"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                  <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                </svg>
+                <PencilIcon size={20} />
               </button>
             </div>
 

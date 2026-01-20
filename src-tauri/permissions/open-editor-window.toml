@@ -1,0 +1,5 @@
+# Permission to invoke open_editor_window (open or focus the grammar editor window)
+[[permission]]
+identifier = "allow-open-editor-window"
+description = "Allows invoking open_editor_window to open or focus the grammar editor"
+commands.allow = ["open_editor_window"]

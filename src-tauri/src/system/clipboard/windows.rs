@@ -10,7 +10,7 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Delay before simulating Ctrl+C to allow system to settle after hotkey press.
-const SETTLE_DELAY_MS: u64 = 100;
+const SETTLE_DELAY_MS: u64 = 50;
 
 /// Delay after sending keystrokes to allow system to process.
 const KEYSTROKE_DELAY_MS: u64 = 50;

@@ -12,7 +12,7 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Delay before simulating Cmd+C to allow system to settle after hotkey press.
-const SETTLE_DELAY_MS: u64 = 100;
+const SETTLE_DELAY_MS: u64 = 50;
 
 /// Delay in AppleScript to allow focus to settle before sending keystroke.
 const APPLESCRIPT_FOCUS_DELAY: f64 = 0.05;

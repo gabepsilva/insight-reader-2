@@ -2,4 +2,4 @@
 
 mod clipboard;
 
-pub use clipboard::get_selected_text;
+pub use clipboard::{get_clipboard_text, get_selected_text};

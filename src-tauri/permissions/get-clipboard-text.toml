@@ -1,0 +1,5 @@
+# Permission to invoke get_clipboard_text (read clipboard text, e.g. from Ctrl+C)
+[[permission]]
+identifier = "allow-get-clipboard-text"
+description = "Allows invoking get_clipboard_text to read the system clipboard"
+commands.allow = ["get_clipboard_text"]

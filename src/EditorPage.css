@@ -1,0 +1,133 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.editor-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #ddd;
+  background: #f5f5f5;
+  flex-shrink: 0;
+}
+
+.editor-toolbar button {
+  padding: 4px 10px;
+  font-size: 14px;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #000;
+  cursor: pointer;
+}
+
+.editor-toolbar button:hover:not(:disabled) {
+  background: #eee;
+  border-color: #999;
+}
+
+.editor-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-toolbar-theme {
+  padding: 4px 8px;
+}
+
+.editor-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.editor-mirror,
+.editor-textarea {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: var(--editor-font-size, 14px);
+  line-height: 1.5;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+}
+
+.editor-mirror {
+  overflow: auto;
+  pointer-events: none;
+  color: transparent;
+  caret-color: transparent;
+  user-select: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.editor-mirror::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-mirror-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 100%;
+}
+
+.editor-textarea {
+  overflow: auto;
+  background: transparent;
+  resize: none;
+  color: #000;
+}
+
+/* ----- Dark mode ----- */
+.editor-page--dark {
+  background: #1e1e1e;
+}
+
+body:has(.editor-page--dark),
+.editor-page--dark .editor-area {
+  background: #1e1e1e;
+}
+
+.editor-page--dark .editor-toolbar {
+  background: #2d2d2d;
+  border-bottom-color: #2d2d2d;
+}
+
+.editor-page--dark .editor-toolbar button {
+  background: #3d3d3d;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.editor-page--dark .editor-toolbar button:hover:not(:disabled) {
+  background: #4d4d4d;
+  border-color: #666;
+}
+
+.editor-page--dark .editor-textarea {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  caret-color: #e0e0e0;
+}
+
+.editor-page--dark .editor-textarea::placeholder {
+  color: #888;
+}
