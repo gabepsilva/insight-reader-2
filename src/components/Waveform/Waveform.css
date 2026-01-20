@@ -1,0 +1,36 @@
+.waveform__container {
+  flex: 0 0 auto;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.waveform__bar {
+  width: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to top, #667eea, #764ba2);
+  border-radius: 1px;
+  animation: waveform-animation 1s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+@keyframes waveform-animation {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}

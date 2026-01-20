@@ -1,0 +1,44 @@
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-controls__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  min-width: 12px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.window-controls__btn:active {
+  transform: scale(0.92);
+}
+
+.window-controls__btn--minimize {
+  background: #ffbd2e;
+  color: #1f1f1f;
+}
+
+.window-controls__btn--minimize:hover {
+  background: #e6ab29;
+}
+
+.window-controls__btn--close {
+  background: #ff5f57;
+  color: white;
+}
+
+.window-controls__btn--close:hover {
+  background: #f04a42;
+}
