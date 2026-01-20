@@ -1,0 +1,357 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color: #b10f0f;
+  background-color: transparent;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: fit-content;
+  height: fit-content;
+  overflow: hidden;
+  background: transparent;
+}
+
+#root {
+  width: fit-content;
+  height: fit-content;
+  background: transparent;
+}
+
+.main-container {
+  width: fit-content;
+  height: fit-content;
+  display: flex;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.control-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 400px;
+  position: relative;
+  overflow: visible;
+  cursor: grab;
+  user-select: none;
+}
+
+.control-bar:active {
+  cursor: grabbing;
+}
+
+.column {
+  display: flex;
+  align-items: center;
+}
+
+.column-logo {
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.column-controls {
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.column-close {
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.logo-label {
+  font-size: 9px;
+  line-height: 1.2;
+  color: #666;
+  text-align: center;
+  font-weight: 500;
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #f0f0f0;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.control-button:hover {
+  background: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.control-button:active {
+  transform: scale(0.95);
+}
+
+.control-button.play-pause {
+  background: #667eea;
+  color: white;
+}
+
+.control-button.play-pause:hover {
+  background: #5568d3;
+}
+
+.control-button.stop {
+  background: #f56565;
+  color: white;
+}
+
+.control-button.stop:hover {
+  background: #e53e3e;
+}
+
+.progress-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 1px;
+  background: #e0e0e0;
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1px;
+  transition: width 0.1s linear;
+  position: relative;
+  z-index: 2;
+}
+
+.waveform-container {
+  flex: 0 0 auto;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.waveform-bar {
+  width: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to top, #667eea, #764ba2);
+  border-radius: 1px;
+  animation: waveform-animation 1s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+@keyframes waveform-animation {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.control-button.settings,
+.control-button.camera,
+.control-button.clipboard {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.control-button.settings:hover,
+.control-button.camera:hover,
+.control-button.clipboard:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.close-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-button.minimize,
+.control-button.close {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  min-width: 12px;
+  border-radius: 50%;
+  transform: none;
+}
+
+.control-button.minimize {
+  background: #ffbd2e;
+  color: #1f1f1f;
+}
+
+.control-button.minimize:hover {
+  background: #e6ab29;
+  transform: none;
+}
+
+.control-button.minimize:active {
+  transform: scale(0.92);
+}
+
+.control-button.minimize svg {
+  width: 6px;
+  height: 6px;
+}
+
+.control-button.close {
+  background: #ff5f57;
+  color: white;
+}
+
+.control-button.close svg {
+  width: 6px;
+  height: 6px;
+}
+
+.control-button.close:hover {
+  background: #f04a42;
+  transform: none;
+}
+
+.control-button.close:active {
+  transform: scale(0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f6f6f6;
+    background-color: transparent;
+  }
+
+  .control-bar {
+    background: rgba(30, 30, 30, 0.95);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .control-button {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+
+  .control-button:hover {
+    background: #3d3d3d;
+  }
+
+  .control-button.settings,
+  .control-button.camera,
+  .control-button.clipboard {
+    background: #2d2d2d;
+    color: #999;
+  }
+
+  .control-button.settings:hover,
+  .control-button.camera:hover,
+  .control-button.clipboard:hover {
+    background: #3d3d3d;
+    color: #e0e0e0;
+  }
+
+  .progress-bar {
+    background: #2d2d2d;
+  }
+
+  .logo-label {
+    color: #999;
+  }
+
+  .control-button.minimize {
+    background: #ffbd2e;
+    color: #1f1f1f;
+  }
+
+  .control-button.minimize:hover {
+    background: #e6ab29;
+  }
+
+  .control-button.close {
+    background: #ff5f57;
+  }
+
+  .control-button.close:hover {
+    background: #f04a42;
+  }
+}

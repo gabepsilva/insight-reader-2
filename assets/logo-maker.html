@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liquid Glass Icon Preview</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+      background: #1a1a1a;
+      padding: 24px;
+    }
+    
+    .preview {
+      width: 256px;
+      height: 256px;
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+    
+    .preview svg {
+      width: 128px;
+      height: 128px;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+    }
+    
+    .control-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 16px;
+      border-radius: 12px;
+    }
+    
+    .control-group label {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      min-width: 70px;
+    }
+    
+    .control-group input[type="color"] {
+      width: 40px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+    }
+    
+    .control-group input[type="range"] {
+      width: 100px;
+      accent-color: #00d2d2;
+    }
+    
+    .control-group .value {
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+      min-width: 30px;
+      text-align: right;
+    }
+    
+    .presets {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .preset {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    
+    .preset:hover {
+      transform: scale(1.1);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .bar-presets {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .bar-preset {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    
+    .bar-preset:hover {
+      transform: scale(1.1);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .download-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .download-btn:hover {
+      background: rgba(255,255,255,0.25);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    
+    .checkbox-group label {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #00d2d2;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview" id="preview">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+      <defs>
+        <linearGradient id="glassFill" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0.08)"/>
+        </linearGradient>
+        
+        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur id="glowBlur" stdDeviation="4" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <path id="bubbleFill" d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+            fill="url(#glassFill)"/>
+      
+      <path id="bubbleStroke" d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+            fill="none"
+            stroke="rgba(255,255,255,0.4)"
+            stroke-width="0.75"/>
+      
+      <g id="bars" fill="rgba(0,210,210,0.85)" filter="url(#softGlow)">
+        <rect x="18" y="28" width="11" height="40" rx="5.5"/>
+        <rect x="38" y="16" width="11" height="64" rx="5.5"/>
+        <rect x="58" y="22" width="11" height="52" rx="5.5"/>
+        <rect x="78" y="18" width="11" height="60" rx="5.5"/>
+        <rect x="98" y="30" width="11" height="36" rx="5.5"/>
+      </g>
+    </svg>
+  </div>
+  
+  <div class="controls">
+    <div class="control-row">
+      <div class="control-group">
+        <label>Background</label>
+        <input type="color" id="bgPicker" value="#6366f1">
+      </div>
+      
+      <div class="control-group">
+        <label>Bubble</label>
+        <input type="color" id="bubblePicker" value="#6366f1">
+      </div>
+      
+      <div class="presets">
+        <button class="preset" style="background: linear-gradient(135deg, #6366f1, #a855f7)" onclick="setBg('#7c3aed')"></button>
+        <button class="preset" style="background: linear-gradient(135deg, #ec4899, #f43f5e)" onclick="setBg('#e11d48')"></button>
+        <button class="preset" style="background: linear-gradient(135deg, #06b6d4, #3b82f6)" onclick="setBg('#0891b2')"></button>
+        <button class="preset" style="background: linear-gradient(135deg, #10b981, #14b8a6)" onclick="setBg('#059669')"></button>
+        <button class="preset" style="background: linear-gradient(135deg, #f59e0b, #ef4444)" onclick="setBg('#ea580c')"></button>
+        <button class="preset" style="background: #1f1f1f" onclick="setBg('#1f1f1f')"></button>
+        <button class="preset" style="background: #ffffff" onclick="setBg('#ffffff')"></button>
+      </div>
+    </div>
+    
+    <div class="control-row">
+      <div class="control-group">
+        <label>Bars</label>
+        <input type="color" id="barPicker" value="#00d2d2">
+      </div>
+      
+      <div class="bar-presets">
+        <button class="bar-preset" style="background: #00d2d2" onclick="setBarColor('#00d2d2')"></button>
+        <button class="bar-preset" style="background: #ffffff" onclick="setBarColor('#ffffff')"></button>
+        <button class="bar-preset" style="background: #f43f5e" onclick="setBarColor('#f43f5e')"></button>
+        <button class="bar-preset" style="background: #a855f7" onclick="setBarColor('#a855f7')"></button>
+        <button class="bar-preset" style="background: #22c55e" onclick="setBarColor('#22c55e')"></button>
+        <button class="bar-preset" style="background: #f59e0b" onclick="setBarColor('#f59e0b')"></button>
+        <button class="bar-preset" style="background: #3b82f6" onclick="setBarColor('#3b82f6')"></button>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="glassToggle" checked>
+        <label for="glassToggle">Glass bubble</label>
+      </div>
+    </div>
+    
+    <div class="control-row">
+      <div class="control-group">
+        <label>Glow</label>
+        <input type="range" id="glowSlider" min="0" max="12" step="0.5" value="4">
+        <span class="value" id="glowValue">4</span>
+      </div>
+      
+      <div class="control-group">
+        <label>Opacity</label>
+        <input type="range" id="opacitySlider" min="0.3" max="1" step="0.05" value="0.85">
+        <span class="value" id="opacityValue">85%</span>
+      </div>
+      
+      <div class="control-group">
+        <label>Size</label>
+        <input type="range" id="sizeSlider" min="128" max="512" step="8" value="256">
+        <span class="value" id="sizeValue">256</span>
+      </div>
+      
+      <div class="control-group">
+        <label>Bg Alpha</label>
+        <input type="range" id="bgOpacitySlider" min="0" max="1" step="0.05" value="1">
+        <span class="value" id="bgOpacityValue">100%</span>
+      </div>
+    </div>
+    
+    <div class="control-row">
+      <button class="download-btn" onclick="downloadSVG()">Download SVG</button>
+    </div>
+  </div>
+  
+  <script>
+    const preview = document.getElementById('preview');
+    const bgPicker = document.getElementById('bgPicker');
+    const barPicker = document.getElementById('barPicker');
+    const bars = document.getElementById('bars');
+    const glowBlur = document.getElementById('glowBlur');
+    const glowSlider = document.getElementById('glowSlider');
+    const glowValue = document.getElementById('glowValue');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityValue = document.getElementById('opacityValue');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeValue = document.getElementById('sizeValue');
+    const bgOpacitySlider = document.getElementById('bgOpacitySlider');
+    const bgOpacityValue = document.getElementById('bgOpacityValue');
+    const glassToggle = document.getElementById('glassToggle');
+    const bubblePicker = document.getElementById('bubblePicker');
+    const bubbleFill = document.getElementById('bubbleFill');
+    const bubbleStroke = document.getElementById('bubbleStroke');
+    
+    let currentBarColor = '#00d2d2';
+    let currentOpacity = 0.85;
+    let currentBgColor = '#6366f1';
+    let currentBgOpacity = 1;
+    let currentGlow = 4;
+    let currentSize = 256;
+    let isGlass = true;
+    let currentBubbleColor = '#6366f1';
+    
+    function setBg(color) {
+      currentBgColor = color;
+      bgPicker.value = color;
+      updateBgColor();
+    }
+    
+    function updateBgColor() {
+      const r = parseInt(currentBgColor.slice(1,3), 16);
+      const g = parseInt(currentBgColor.slice(3,5), 16);
+      const b = parseInt(currentBgColor.slice(5,7), 16);
+      preview.style.backgroundColor = `rgba(${r},${g},${b},${currentBgOpacity})`;
+    }
+    
+    function setBarColor(color) {
+      currentBarColor = color;
+      barPicker.value = color;
+      updateBarFill();
+    }
+    
+    function updateBarFill() {
+      const r = parseInt(currentBarColor.slice(1,3), 16);
+      const g = parseInt(currentBarColor.slice(3,5), 16);
+      const b = parseInt(currentBarColor.slice(5,7), 16);
+      bars.setAttribute('fill', `rgba(${r},${g},${b},${currentOpacity})`);
+    }
+    
+    function downloadSVG() {
+      const r = parseInt(currentBarColor.slice(1,3), 16);
+      const g = parseInt(currentBarColor.slice(3,5), 16);
+      const b = parseInt(currentBarColor.slice(5,7), 16);
+      
+      const bgR = parseInt(currentBgColor.slice(1,3), 16);
+      const bgG = parseInt(currentBgColor.slice(3,5), 16);
+      const bgB = parseInt(currentBgColor.slice(5,7), 16);
+      
+      const bubbleFillValue = isGlass ? 'url(#glassFill)' : currentBubbleColor;
+      const bubbleStrokeValue = isGlass ? 'rgba(255,255,255,0.4)' : currentBubbleColor;
+      
+      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${currentSize} ${currentSize}" width="${currentSize}" height="${currentSize}">
+  <defs>
+    <linearGradient id="glassFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.08)"/>
+    </linearGradient>
+    
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="${currentGlow}" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="0" y="0" width="${currentSize}" height="${currentSize}" rx="${currentSize * 0.125}" fill="rgba(${bgR},${bgG},${bgB},${currentBgOpacity})"/>
+  
+  <g transform="translate(${(currentSize - 128) / 2}, ${(currentSize - 128) / 2})">
+    <path d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+          fill="${bubbleFillValue}"/>
+    
+    <path d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+          fill="none"
+          stroke="${bubbleStrokeValue}"
+          stroke-width="0.75"/>
+    
+    <g fill="rgba(${r},${g},${b},${currentOpacity})" filter="url(#softGlow)">
+      <rect x="18" y="28" width="11" height="40" rx="5.5"/>
+      <rect x="38" y="16" width="11" height="64" rx="5.5"/>
+      <rect x="58" y="22" width="11" height="52" rx="5.5"/>
+      <rect x="78" y="18" width="11" height="60" rx="5.5"/>
+      <rect x="98" y="30" width="11" height="36" rx="5.5"/>
+    </g>
+  </g>
+</svg>`;
+      
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'liquid-glass-icon.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    bgPicker.addEventListener('input', (e) => {
+      currentBgColor = e.target.value;
+      updateBgColor();
+    });
+    
+    bgOpacitySlider.addEventListener('input', (e) => {
+      currentBgOpacity = parseFloat(e.target.value);
+      bgOpacityValue.textContent = Math.round(currentBgOpacity * 100) + '%';
+      updateBgColor();
+    });
+    
+    glassToggle.addEventListener('change', (e) => {
+      isGlass = e.target.checked;
+      updateBubbleStyle();
+    });
+    
+    bubblePicker.addEventListener('input', (e) => {
+      currentBubbleColor = e.target.value;
+      updateBubbleStyle();
+    });
+    
+    function updateBubbleStyle() {
+      if (isGlass) {
+        bubbleFill.setAttribute('fill', 'url(#glassFill)');
+        bubbleStroke.setAttribute('stroke', 'rgba(255,255,255,0.4)');
+      } else {
+        bubbleFill.setAttribute('fill', currentBubbleColor);
+        bubbleStroke.setAttribute('stroke', currentBubbleColor);
+      }
+    }
+    
+    barPicker.addEventListener('input', (e) => {
+      currentBarColor = e.target.value;
+      updateBarFill();
+    });
+    
+    glowSlider.addEventListener('input', (e) => {
+      currentGlow = parseFloat(e.target.value);
+      glowBlur.setAttribute('stdDeviation', currentGlow);
+      glowValue.textContent = currentGlow;
+    });
+    
+    opacitySlider.addEventListener('input', (e) => {
+      currentOpacity = e.target.value;
+      opacityValue.textContent = Math.round(currentOpacity * 100) + '%';
+      updateBarFill();
+    });
+    
+    sizeSlider.addEventListener('input', (e) => {
+      currentSize = parseInt(e.target.value);
+      sizeValue.textContent = currentSize;
+      preview.style.width = currentSize + 'px';
+      preview.style.height = currentSize + 'px';
+      preview.style.borderRadius = (currentSize * 0.125) + 'px';
+    });
+    
+    // Set initial state
+    setBg('#6366f1');
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="glassFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.08)"/>
+    </linearGradient>
+    
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="128" rx="16" fill="rgba(0,255,0,0)"/>
+  
+  <g transform="translate(0, 0)">
+    <path d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+          fill="#4080ff"/>
+    
+    <path d="M4 20 Q4 4 20 4 L108 4 Q124 4 124 20 L124 76 Q124 92 108 92 L42 92 L20 120 L20 92 Q4 92 4 76 Z"
+          fill="none"
+          stroke="#4080ff"
+          stroke-width="0.75"/>
+    
+    <g fill="rgba(255,255,255,1)" filter="url(#softGlow)">
+      <rect x="18" y="28" width="11" height="40" rx="5.5"/>
+      <rect x="38" y="16" width="11" height="64" rx="5.5"/>
+      <rect x="58" y="22" width="11" height="52" rx="5.5"/>
+      <rect x="78" y="18" width="11" height="60" rx="5.5"/>
+      <rect x="98" y="30" width="11" height="36" rx="5.5"/>
+    </g>
+  </g>
+</svg>

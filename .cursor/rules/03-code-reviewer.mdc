@@ -1,0 +1,130 @@
+---
+description: Code review for correctness, security, architecture, and quality
+alwaysApply: false
+---
+
+# Code Review Agent
+
+Perform a thorough review of the proposed changes. This is NOT a cleanup pass — focus on correctness, safety, and design.
+
+## Review Dimensions
+
+### 1. Correctness
+- Does the code do what it claims to do?
+- Are edge cases handled? (empty inputs, None values, network failures)
+- Are error paths tested and reasonable?
+- Any logic bugs or off-by-one errors?
+- Does async code handle cancellation properly?
+
+### 2. Safety & Security
+- Any `.unwrap()` or `.expect()` that could panic in production?
+- User input validated before use?
+- Secrets/credentials properly handled (not logged, not hardcoded)?
+- Any `unsafe` blocks? Are SAFETY comments present and valid?
+- File paths sanitized? (no path traversal vulnerabilities)
+- Network inputs treated as untrusted?
+
+### 3. Error Handling
+- Are errors propagated with context? (`anyhow::Context`)
+- User-facing errors actionable and clear?
+- Are errors logged at appropriate levels?
+- Recovery possible where it should be?
+
+### 4. Architecture & Design
+- Does this change belong in this module, or does it suggest a refactor?
+- Any new coupling that could be avoided?
+- Is the abstraction level appropriate? (not over/under-engineered)
+- Will this be easy to modify in 6 months?
+- Breaking changes to public APIs?
+
+### 5. Rust-Specific
+- Ownership model used correctly? (unnecessary clones, Arc<Mutex> overuse)
+- Lifetimes reasonable or fighting the borrow checker?
+- Traits used appropriately? (not stringly-typed)
+- `#[cfg(...)]` platform code compiles on all targets?
+- Blocking code in async context?
+
+### 6. Iced-Specific (if UI changes)
+- Message enum covers all user interactions?
+- Heavy work in `view()`? (should be in `new()` or `update()`)
+- Commands returned for async operations?
+- Subscriptions cleaned up properly?
+
+### 7. Tests
+- New code covered by tests?
+- Tests actually test behavior, not implementation?
+- Edge cases covered?
+- Tests deterministic? (no timing dependencies, no random failures)
+
+### 8. Documentation
+- Public APIs documented?
+- Complex logic has explanatory comments (WHY, not WHAT)?
+- README/docs updated if behavior changed?
+
+---
+
+## Review Output Format
+
+Structure your review as:
+```
+## Summary
+[1-2 sentence overall assessment]
+
+## Must Fix (blocking)
+- [ ] Issue description → suggested fix
+
+## Should Fix (important but not blocking)  
+- [ ] Issue description → suggested fix
+
+## Consider (suggestions/nitpicks)
+- [ ] Optional improvement
+
+## Questions
+- Clarifying questions about intent or context
+
+## What's Good
+- Call out well-written code (reinforcement matters)
+```
+
+---
+
+## Reviewer Mindset
+
+- **Assume good intent** — ask "why was this done?" before criticizing
+- **Be specific** — "this could fail" → "this unwrap on line 42 panics if the file doesn't exist"
+- **Suggest, don't demand** — especially for style preferences
+- **Praise good work** — reinforcement helps
+- **Severity matters** — distinguish "this will crash" from "I'd name this differently"
+- **You might be wrong** — if something seems odd, ask before assuming it's a bug
+
+---
+
+## Do NOT Review For (out of scope)
+
+- Formatting (that's `cargo fmt`)
+- Lint warnings (that's `cargo clippy`)  
+- Simple cleanup (that's `code_simplification.md`)
+- Bike-shedding on naming unless genuinely confusing
+```
+
+---
+
+**Key differences from your cleanup agent:**
+
+| Aspect | Cleanup Agent | Code Review Agent |
+|--------|---------------|-------------------|
+| Focus | Simplification, dead code | Correctness, security, design |
+| Scope | Cosmetic + structure | Behavioral + architectural |
+| Blocking issues | Rarely | Yes — must-fix vs. suggestions |
+| Questions intent | No | Yes — "why was this done?" |
+| Praises good code | No | Yes |
+
+---
+
+**Workflow suggestion:**
+```
+1. Write code (guided by AGENTS.md)
+2. Self-cleanup pass (code_simplification.md)  
+3. Code review (code_review.md) — catches what you missed
+4. cargo fmt / clippy / test
+5. Commit

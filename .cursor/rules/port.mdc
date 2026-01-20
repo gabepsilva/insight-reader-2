@@ -1,0 +1,100 @@
+---
+description: Reference information for porting Insight Reader from Iced to Tauri 2. Use when working on the Iced→Tauri migration.
+---
+
+# Iced to Tauri Port – Reference
+
+Informational only: current Iced usage, concept mappings, Iced-coupled modules, dependencies, views, platform notes, and constraints. No Tauri implementation how-to. **Omit**: pencil/pen window and all related code.
+
+---
+
+## Scope
+
+- **In scope**: UI and app-shell; business logic; TTS (Piper/Polly); config; system integration (clipboard, OCR, screenshot, tray, hotkeys, single-instance).
+- **Omit**: pencil/pen window and all related code.
+- **Target**: Tauri 2.x. Frontend stack: unspecified.
+
+---
+
+## Current Iced Architecture
+
+- **Entry** (`src/main.rs`): `iced::daemon` with `app::new`, `app::update`, `app::view`, `app::title`, `app::subscription`. CLI runs first.
+- **Adapter** (`src/app.rs`): `Task`, `Subscription`, `window::open`, `window::open_events` / `window::close_events`, `time::every`, `keyboard::listen`.
+- **State** (`src/model.rs`): `App` and `Message`. Iced types: `iced::window::Id`, `iced::widget::text_editor::Content`, `iced::keyboard::{Key, Modifiers}` in some `Message` variants. **Omit**: `PencilPressed` and any pencil-related state/UI.
+- **Logic** (`src/update.rs`): `Task`, `window::open`, `window::close`, `window::drag`, `window::minimize`, `window::gain_focus`, `window::latest`, `iced::exit`.
+- **UI**: `src/view.rs` (main, settings, voice selection, modals, screenshot, extracted-text), `src/styles.rs`, `src/ui/`, `src/flags/`. Routing: `view(app, window::Id)` vs `app.*_window_id`. **Omit**: pencil view/button.
+- **System** (`src/system/`): clipboard, screenshot, OCR, single_instance (fs2 + IPC), tray (tray-icon), hotkey (global-hotkey), focus_tracker (Windows). **Omit**: `system/webview.rs` and any `--pencil-window`/tao/wry usage for pencil.
+
+---
+
+## What Stays in Rust vs Moves to Frontend
+
+- **Rust**: config, providers (Piper, Polly, audio_player), voices (fetch, aws, download), system (clipboard, screenshot, OCR, text_cleanup, single_instance, focus_tracker). Tray and hotkey today: tray-icon crate, global-hotkey crate.
+- **Frontend (replacing Iced UI)**: All of `view.rs`, `styles.rs`, `ui/`, and `flags/` Iced widgets (SVGs/assets). Waveform/FFT: currently `rustfft` in Rust; can remain or move depending on design.
+- **Iced-only, to be dropped**: `app.rs`, `view.rs`, `styles.rs`, `ui/` Iced code; `window::Id`, `text_editor::Content`, `Message` in their Iced form; `Task`, `Subscription`, `window::*`, `iced::exit`, `keyboard::listen` in the Iced sense.
+
+---
+
+## Iced Concepts and Tauri/Frontend Counterparts
+
+| Iced concept | Counterpart (informational) |
+|--------------|-----------------------------|
+| `window::Id` | Tauri: string window labels (e.g. `"main"`, `"settings"`, `"voice"`, `"polly-info"`, `"screenshot"`, `"ocr-info"`, `"text-cleanup-info"`, `"extracted-text"`). |
+| `window::open(Settings { size, resizable, decorations, transparent, position, level })` | Tauri: window creation with size, decorations, transparency, position, always-on-top. |
+| `window::close`, `window::drag`, `window::minimize`, `window::gain_focus` | Tauri: window `close`, drag, `hide`/`minimize`, `set_focus`. |
+| `window::open_events()` / `close_events()` | Tauri: window lifecycle / events if needed. |
+| `iced::exit()` | App quit. |
+| `Task::perform(async { … }, Message::X)` | Async work in Rust; results sent to frontend (Tauri uses events / invoke). |
+| `Task::batch` | Multiple async tasks. |
+| `time::every`, `Subscription::batch` | Periodic tick; Iced polls tray and hotkey. Tauri: has native tray and global-shortcut support. |
+| `keyboard::listen` (hotkey capture) | `HotkeyCaptured` and "listening for hotkey" UI need an equivalent (Tauri/JS or Rust). |
+| `Message` enum | User actions and async results; in Tauri typically commands + events. |
+| `app::view(app, window_id)` | Frontend routing by window or route. |
+| `app::title(app, window_id)` | Window title per window. |
+| `extracted_text_editor: text_editor::Content` | Editor state; in a WebView this would live in the frontend; Rust can hold `String`. |
+| `ExtractedTextEditorAction` | Edits in frontend; Read/Copy via backend. |
+
+---
+
+## Iced-Coupled Files and Modules
+
+- **Iced adapter**: `src/app.rs`.
+- **UI**: `src/view.rs`, `src/styles.rs`, `src/ui/`, `src/flags/mod.rs` (Iced `svg`/`Length` widget).
+- **State**: `src/model.rs` – `window::Id`, `text_editor::Content`, `Message` with Iced types.
+- **Logic**: `src/update.rs` – `Task`, `window::*`, `iced::exit`.
+- **Entry**: `src/main.rs` – `iced::daemon`, `app::*`.
+- **Omit**: `src/system/webview.rs`, `--pencil-window`, `PencilPressed` and pencil UI, `assets/pencil-window.html`, `assets/icons/pencil.svg` in the context of this port.
+- **Largely Iced-free**: `config`, `logging`, `providers`, `voices`, `cli`, `flags/lang_mapping`, `flags/svg_data`. `system/` except `webview`.
+
+---
+
+## Dependencies
+
+- **Iced**: `iced` (features: svg, tokio, image).
+- **Pencil (omit)**: `tao`, `wry` are used only by `system/webview.rs` for the pencil window; with pencil omitted, they are not needed for the port.
+- **Tray / hotkey**: `tray-icon`, `global-hotkey`; Tauri has its own tray and global-shortcut mechanisms.
+- **Rest**: `clap`, `thiserror`, `rodio`, `rustfft`, `dirs`, `serde`, `serde_json`, `aws-*`, `tokio`, `tracing`, `tracing-subscriber`, `tracing-appender`, `chrono`, `reqwest`, `pulldown-cmark`, `md5`, `arboard`, `open`, `fs2`, `image` (tray icon), `euro-focus`. Platform: `core-foundation`, `macos-accessibility-client`, `gtk`, `windows`, `enigo`.
+
+---
+
+## Views / Screens
+
+- Main bar: play/pause, stop, progress, waveform, settings, camera, clipboard.
+- Settings: provider, log level, text cleanup, OCR, hotkey, voice selectors, links.
+- Windows/modals: Voice selection, Polly info, OCR info, Text-cleanup info, Screenshot viewer, Extracted-text dialog.
+
+---
+
+## Platform and Edge Cases
+
+- **macOS**: AppKit/accessibility; `macos-accessibility-client` for permission checks.
+- **Linux/Wayland+Hyprland**: `hotkeys_disabled_wayland`; hotkey UI/behavior may be disabled.
+- **Windows**: `FocusTracker`, `get_selected_text_with_focus`.
+
+---
+
+## Constraints
+
+- TTS, OCR, and config logic stay in Rust.
+- `config.json` schema and `dirs`-based paths are existing; do not change without an explicit requirement.
+- Follow `.cursor/rules/01-rust-developer.mdc` (no `unwrap`/`expect` in production paths, etc.).

@@ -1,0 +1,437 @@
+---
+description: Development guide for AI coding agents working on Insight Reader, a cross-platform text-to-speech application built with Rust and Iced.
+alwaysApply: true
+---
+
+## Engineering Mindset
+
+Before implementing any request, think like a senior engineer:
+
+### Priority Hierarchy
+When making any change, prioritize in this order:
+1. **Maintainability** — Never sacrifice clarity for cleverness
+2. **Simplicity** — Remove complexity that doesn't earn its keep
+3. **Elimination** — Dead code is a liability, not an asset
+
+### Think Before Coding
+- **Question the approach** — If asked to implement something that violates good rust principles push back with alternatives. Don't silently comply.
+- **Scope creep radar** — If a "small change" implies architectural shifts, flag it. Ask: "This touches X, Y, Z — want me to proceed or discuss first?"
+- **Test the mental model** — Before writing code, confirm understanding: "So the goal is X, and we're solving it by Y — correct?"
+
+### Explain Your Reasoning
+When proposing changes:
+- State WHY this improves the code, not just WHAT changed
+- Flag assumptions and trade-offs explicitly
+- If you're unsure, ask — don't guess
+
+### Push Back When Appropriate
+If asked to implement something that violates these principles:
+- Name the concern specifically (e.g., "This would require `.unwrap()` in a production path")
+- Propose an alternative that achieves the goal
+- Don't silently comply with anti-patterns
+
+
+### Self-Check Before Completion
+- "Does this actually solve the problem, or just pass the check?"
+- "Would this work with different inputs?"
+- "Am I proud of this solution?"
+---
+
+## Quick Reference Commands
+```bash
+# Development
+cargo build                    # Debug build
+cargo build --release          # Release build
+cargo run                      # Run the application
+make run                       # Alternative via Makefile
+
+# Testing
+cargo test                     # Run all tests
+cargo test -- --nocapture      # Show output
+
+# Linting & Formatting
+cargo fmt --all                # Format code (run after changes)
+cargo clippy --all-targets --all-features
+
+# Platform-specific builds
+cargo build --release --target x86_64-pc-windows-msvc      # Windows
+cargo build --release --target aarch64-apple-darwin        # macOS Apple Silicon
+cargo build --release --target x86_64-unknown-linux-gnu    # Linux
+```
+
+---
+
+## Project Overview
+
+**Insight Reader** is a cross-platform text-to-speech application that reads text from clipboard, images, or screenshots. Features 100+ local voices via Piper (offline, privacy-focused) and cloud voices via AWS Polly.
+
+### Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | Rust 2024 Edition |
+| GUI | [Iced](https://iced.rs/) (Elm Architecture) |
+| Async | Tokio |
+| Audio | rodio |
+| Local TTS | Piper |
+| Cloud TTS | AWS Polly |
+| OCR | Windows Media OCR / macOS Vision / EasyOCR (Linux) |
+| Errors | thiserror, anyhow |
+| Logging | tracing |
+| Config | serde, serde_json |
+
+### Code Organization Principles
+
+The codebase is evolving. **Create new files and folders freely** when it improves clarity.
+
+**Guidelines for splitting code:**
+- One module per major concern (TTS, audio, OCR, UI, config)
+- Split files when they exceed ~300-400 lines
+- Group related types: `mod.rs` + submodules (e.g., `tts/piper.rs`, `tts/polly.rs`)
+- Platform-specific code in dedicated modules with `#[cfg(target_os)]`
+
+**When to create new modules:**
+- Adding a new TTS provider → new file in `src/tts/`
+- Adding a new OCR backend → new file in `src/ocr/`
+- UI growing complex → split into `src/ui/components/`, `src/ui/views/`
+- Shared utilities → `src/utils/` or domain-specific (e.g., `src/text/cleanup.rs`)
+
+**Key directories:**
+- `src/` — Rust source code (refactor freely)
+- `assets/` — Icons, images, marketing
+- `install/` — Platform installers (modify carefully)
+- `qa-docs/` — QA documentation
+
+**Don't be afraid to:**
+- Create new folders for logical groupings
+- Extract large structs/enums into their own files
+- Add `mod.rs` files to organize submodules
+- Move code between modules if it improves cohesion
+
+---
+
+## Rust Development Standards
+
+### Modern Rust (2024+ Edition)
+
+- Use modern features: let-else bindings, GATs, async traits, RPITIT
+- Prefer `std::sync::LazyLock` over `lazy_static`/`once_cell`
+- Iterator combinators over manual loops when clearer
+- Derive macros and procedural macros where appropriate
+
+### Type System
+
+- Comprehensive usage: newtypes, marker traits, PhantomData
+- Newtype pattern for type safety and API boundaries
+- Type-state pattern for compile-time state machines
+- Stringly-typed APIs → use enums and newtypes instead
+
+### Clippy Configuration
+```rust
+#![warn(clippy::all, clippy::pedantic)]
+#![deny(clippy::unwrap_used, clippy::expect_used)] // production code
+```
+
+### Error Handling
+
+- `thiserror` for library error types
+- `anyhow` with `.context()` for application-level errors
+- Never use `.unwrap()` / `.expect()` in production paths
+```rust
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum InsightError {
+    #[error("TTS synthesis failed: {0}")]
+    Tts(#[from] TtsError),
+    
+    #[error("Audio playback error: {0}")]
+    Audio(#[from] AudioError),
+    
+    #[error("OCR failed: {0}")]
+    Ocr(#[from] OcrError),
+}
+```
+
+### Idiomatic Patterns
+```rust
+// ✅ Prefer if-let over .is_some() + .unwrap()
+if let Some(value) = optional {
+    use_value(value);
+}
+
+// ❌ Avoid
+if optional.is_some() {
+    use_value(optional.unwrap());
+}
+
+// ✅ Prefer let-else for early returns
+let Some(value) = optional else {
+    return Err(MyError::Missing);
+};
+
+// ✅ Use ? operator with .context() for clear error chains
+let config = fs::read_to_string(&path)
+    .context("Failed to read config file")?;
+```
+
+### Unsafe Code
+
+- Only when necessary, exhaust safe alternatives first
+- Always document with `// SAFETY:` comments explaining invariants
+- Prefer FFI with `#[repr(C)]` for interop
+
+---
+
+## Iced GUI Patterns
+
+### Application vs Sandbox
+
+- Use `Application` trait (not `Sandbox`) — we need `Command` for async and `Subscription` for events
+
+### Message → Update → View (Elm Architecture)
+```rust
+#[derive(Debug, Clone)]
+pub enum Message {
+    PlayPressed,
+    PausePressed,
+    StopPressed,
+    VolumeChanged(f32),
+    TextReceived(String),
+    TtsCompleted(Result<AudioBuffer, TtsError>),
+}
+
+fn update(&mut self, message: Message) -> Command<Message> {
+    match message {
+        Message::PlayPressed => {
+            self.is_playing = true;
+            Command::perform(self.synthesize(), Message::TtsCompleted)
+        }
+        // ...
+    }
+}
+```
+
+### Widget Patterns
+```rust
+// ✅ Extract widget builders into methods
+fn play_button(&self) -> Element<Message> {
+    button(text("▶"))
+        .on_press(Message::PlayPressed)
+        .into()
+}
+
+// ✅ Load SVG handles once in new(), not in view()
+pub fn new() -> Self {
+    Self {
+        play_icon: svg::Handle::from_path("assets/play.svg"),
+        // ...
+    }
+}
+```
+
+### Layout
+
+- Prefer `Length::Fill` for responsive layouts
+- Use `Length::Fixed` sparingly
+- Center with `container().center_x().center_y()`, not manual padding
+
+### Subscriptions
+
+- `Subscription::every()` for periodic updates (waveform animation)
+- Custom subscriptions for hotkey events
+
+---
+
+## Async Patterns (Tokio)
+```rust
+// ✅ Async TTS with cancellation support
+pub async fn synthesize_with_cancel(
+    &self,
+    text: &str,
+    cancel: CancellationToken,
+) -> Result<AudioBuffer, TtsError> {
+    tokio::select! {
+        result = self.synthesize(text) => result,
+        _ = cancel.cancelled() => Err(TtsError::Cancelled),
+    }
+}
+```
+
+- Use `select!` for cancellation safety
+- Avoid blocking I/O in async contexts
+- Structured concurrency: spawn tasks that clean up properly
+
+---
+
+## Platform-Specific Code
+
+### Cross-Platform Targets
+
+- macOS (Apple Silicon, Intel) 
+- Windows 11 
+- Ubuntu/Fedora (GNOME Wayland) 
+- Manjaro (KDE Wayland) 
+- Arch (Hyprland Wayland) 
+
+### Conditional Compilation
+```rust
+#[cfg(target_os = "windows")]
+fn get_ocr_engine() -> impl OcrEngine {
+    WindowsMediaOcr::new()
+}
+
+#[cfg(target_os = "macos")]
+fn get_ocr_engine() -> impl OcrEngine {
+    VisionOcr::new()
+}
+
+#[cfg(target_os = "linux")]
+fn get_ocr_engine() -> impl OcrEngine {
+    EasyOcr::new()
+}
+```
+
+### Linux Notes
+
+- System tray requires `libappindicator-gtk3` on some distros
+- Global hotkeys not supported on Wayland (use compositor config)
+- Clipboard: `wl-clipboard` on Wayland, `xclip` on X11
+
+---
+
+## TTS Providers
+
+### Piper (Local)
+
+- Voice models: `~/.local/share/insight-reader/voices/` (Linux/macOS) or `%LOCALAPPDATA%\insight-reader\voices\` (Windows)
+- Files: `.onnx` model + `.json` config
+- 100+ voices, fully offline
+
+### AWS Polly (Cloud)
+
+- Requires AWS credentials (env vars or `~/.aws/credentials`)
+- Engines: Standard, Neural, Generative, LongForm
+- Handle network errors with retries and user-friendly messages
+```rust
+// ✅ Provide actionable error messages
+Err(TtsError::AwsCredentials) => {
+    self.show_error("AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.");
+}
+```
+
+---
+
+## Performance
+
+- Profile before optimizing (`cargo-flamegraph`, `samply`)
+- Use `Cow<str>` for flexible ownership
+- Prefer `Vec` over `LinkedList`
+- Use `Box`, `Rc`, `Arc` intentionally — avoid `.clone()` spam
+- Overuse of `Arc<Mutex<T>>` → consider channels or ownership redesign
+
+---
+
+## Configuration & Logging
+
+### Paths (via `dirs` crate)
+
+Paths are resolved dynamically using the `dirs` crate — **never hardcode paths**.
+```rust
+// ✅ Use dirs crate for cross-platform paths
+use dirs::data_dir;
+
+fn config_path() -> PathBuf {
+    data_dir()
+        .expect("Failed to get data directory")
+        .join("insight-reader")
+        .join("config.json")
+}
+```
+
+**Typical resolved locations:**
+- Linux: `~/.local/share/insight-reader/`
+- macOS: `~/Library/Application Support/insight-reader/`
+- Windows: `%LOCALAPPDATA%\insight-reader\`
+
+### Structured Logging
+```rust
+tracing::info!(provider = %self.provider, voice = %self.voice_id, "Starting TTS");
+tracing::error!(error = %e, "Synthesis failed");
+```
+
+---
+
+## Git Workflow
+
+### Commit Format
+```
+<type>(<scope>): <description>
+
+Types: feat, fix, docs, style, refactor, test, chore, perf
+Scopes: tts, audio, ocr, ui, config, hotkeys, installer
+```
+
+### Before Committing
+
+1. `cargo fmt --all`
+2. `cargo clippy --all-targets`
+3. `cargo test`
+4. Run cleanup review (see `code_simplification.md`)
+5. Test cross-platform changes when possible
+
+---
+
+## Boundaries
+
+### 🟢 ALWAYS DO
+
+- Run `cargo fmt` after code changes
+- Run `cargo test` after changes — make minimal, conservative edits
+- Use `tracing` for logging, not `println!`
+- Handle all `Result` and `Option` explicitly
+- Provide user-friendly error messages
+- Update `plan.md` when completing roadmap items
+
+### 🟡 ASK FIRST
+
+- Adding new dependencies to `Cargo.toml`
+- Changing Iced Application structure significantly
+- Changing config file format (may break existing configs)
+
+### 🔴 NEVER DO
+
+- `.unwrap()` / `.expect()` in production code paths
+- `panic!()` for recoverable errors
+- Commit AWS credentials or API keys
+- Premature `unsafe` — exhaust safe alternatives first
+- Break backward compatibility without migration path
+- Ignore platform-specific compilation errors
+- Blocking I/O in async contexts
+
+---
+
+## Anti-Patterns to Avoid
+
+- `.unwrap()` / `.expect()` in library code
+- Stringly-typed APIs (use enums and newtypes)
+- `Arc<Mutex<T>>` overuse when channels would be cleaner
+- Premature `unsafe`
+- `.clone()` spam instead of proper ownership
+- Manual loops when iterator combinators are clearer
+- Loading resources in `view()` instead of `new()`
+- `.is_some()` followed by `.unwrap()` — use `if let` or `let-else`
+
+---
+
+## Environment Variables
+```bash
+# AWS Polly (optional)
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+AWS_REGION=us-east-1
+
+# Logging
+RUST_LOG=info,insight_reader=debug
+RUST_BACKTRACE=1
+```
