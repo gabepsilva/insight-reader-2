@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
@@ -8,6 +8,14 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const controlBarRef = useRef<HTMLDivElement>(null);
+  const waveformBars = useMemo(
+    () =>
+      Array.from({ length: 10 }, (_, i) => ({
+        height: Math.random() * 100,
+        delay: i * 0.1,
+      })),
+    []
+  );
 
   useEffect(() => {
     const resizeToContent = async () => {
@@ -27,12 +35,13 @@ function App() {
 
   const handlePlayPause = async () => {
     try {
-      // Fetch selected text; Rust prints it to stdout
-      await invoke<string | null>("get_selected_text");
+      const text = await invoke<string | null>("get_selected_text");
+      if (text != null && text.length > 0) {
+        setIsPlaying(true);
+      }
     } catch (e) {
       console.error("get_selected_text failed:", e);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleStop = () => {
@@ -118,19 +127,16 @@ function App() {
 
               <div className="waveform-container">
                 <div className="waveform">
-                  {Array.from({ length: 10 }).map((_, i) => {
-                    const height = Math.random() * 100;
-                    return (
-                      <div
-                        key={i}
-                        className="waveform-bar"
-                        style={{
-                          height: `${height}%`,
-                          animationDelay: `${i * 0.1}s`,
-                        }}
-                      />
-                    );
-                  })}
+                  {waveformBars.map(({ height, delay }, i) => (
+                    <div
+                      key={i}
+                      className="waveform-bar"
+                      style={{
+                        height: `${height}%`,
+                        animationDelay: `${delay}s`,
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
 

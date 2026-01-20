@@ -2,14 +2,20 @@
 
 use super::process_text;
 use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Gets the currently selected text on Linux.
 /// Tries PRIMARY selection first, then falls back to clipboard.
 pub(super) fn get_selected_text_linux() -> Option<String> {
     info!("Attempting to read selected text (PRIMARY selection, fallback to clipboard)");
 
-    let mut clipboard = Clipboard::new().ok()?;
+    let mut clipboard = match Clipboard::new() {
+        Ok(cb) => cb,
+        Err(e) => {
+            warn!(error = %e, "Failed to initialize clipboard");
+            return None;
+        }
+    };
 
     // First attempt: Try PRIMARY selection (selected text)
     if let Ok(text) = clipboard

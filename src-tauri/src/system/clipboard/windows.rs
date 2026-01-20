@@ -23,9 +23,15 @@ fn simulate_ctrl_c() -> Result<(), String> {
 
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
 
-    enigo.key(Key::Control, Direction::Press).map_err(|e| e.to_string())?;
-    enigo.key(Key::Unicode('c'), Direction::Click).map_err(|e| e.to_string())?;
-    enigo.key(Key::Control, Direction::Release).map_err(|e| e.to_string())?;
+    enigo
+        .key(Key::Control, Direction::Press)
+        .map_err(|e| e.to_string())?;
+    enigo
+        .key(Key::Unicode('c'), Direction::Click)
+        .map_err(|e| e.to_string())?;
+    enigo
+        .key(Key::Control, Direction::Release)
+        .map_err(|e| e.to_string())?;
 
     std::thread::sleep(Duration::from_millis(KEYSTROKE_DELAY_MS));
     debug!("Ctrl+C simulated successfully");

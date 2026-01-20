@@ -15,13 +15,13 @@ use arboard::Clipboard;
 use std::time::Duration;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) const CLIPBOARD_POLL_TIMEOUT_MS: u64 = 300;
+const CLIPBOARD_POLL_TIMEOUT_MS: u64 = 300;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 const CLIPBOARD_POLL_INTERVAL_MS: u64 = 50;
 
 /// Polls clipboard for new content. Used by macOS and Windows Cmd+C/Ctrl+C simulation.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) fn poll_clipboard_for_text(max_wait: Duration) -> Option<String> {
+fn poll_clipboard_for_text(max_wait: Duration) -> Option<String> {
     let poll_interval = Duration::from_millis(CLIPBOARD_POLL_INTERVAL_MS);
     let mut elapsed = Duration::ZERO;
 
@@ -51,7 +51,7 @@ pub(crate) fn poll_clipboard_for_text(max_wait: Duration) -> Option<String> {
 
 /// Restores clipboard after Cmd+C/Ctrl+C simulation. Used by macOS and Windows.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) fn restore_clipboard(original_text: Option<String>) {
+fn restore_clipboard(original_text: Option<String>) {
     let Ok(mut clipboard) = Clipboard::new() else {
         tracing::warn!("Failed to create clipboard instance for restoration");
         return;
@@ -77,7 +77,7 @@ pub(crate) fn restore_clipboard(original_text: Option<String>) {
 }
 
 /// Creates a preview string for logging (first 200 chars).
-pub(crate) fn text_preview(text: &str) -> String {
+fn text_preview(text: &str) -> String {
     let mut chars = text.chars();
     let preview: String = chars.by_ref().take(200).collect();
     if chars.next().is_some() {
@@ -88,7 +88,7 @@ pub(crate) fn text_preview(text: &str) -> String {
 }
 
 /// Helper to process and return trimmed text if non-empty.
-pub(crate) fn process_text(text: String, source: &str) -> Option<String> {
+fn process_text(text: String, source: &str) -> Option<String> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         debug!("{} is empty", source);
