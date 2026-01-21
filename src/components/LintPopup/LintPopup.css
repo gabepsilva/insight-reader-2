@@ -11,7 +11,9 @@
   background: #fff;
   border: 1px solid #d0d0d0;
   border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.08);
 }
 .editor-lint-popup__category {
   margin: 0 0 6px;
@@ -20,12 +22,24 @@
   letter-spacing: 0.02em;
 }
 /* Category color matches the lint highlight / legend swatch for that type */
-.editor-lint-popup__category--spelling { color: #c62828; }
-.editor-lint-popup__category--grammar { color: #00838f; }
-.editor-lint-popup__category--punctuation { color: #00acc1; }
-.editor-lint-popup__category--capitalization { color: #ef6c00; }
-.editor-lint-popup__category--style { color: #1976d2; }
-.editor-lint-popup__category--misc { color: #7b1fa2; }
+.editor-lint-popup__category--spelling {
+  color: #c62828;
+}
+.editor-lint-popup__category--grammar {
+  color: #00838f;
+}
+.editor-lint-popup__category--punctuation {
+  color: #00acc1;
+}
+.editor-lint-popup__category--capitalization {
+  color: #ef6c00;
+}
+.editor-lint-popup__category--style {
+  color: #1976d2;
+}
+.editor-lint-popup__category--misc {
+  color: #7b1fa2;
+}
 .editor-lint-popup__message {
   margin: 0 0 12px;
   font-size: 14px;

@@ -7,7 +7,14 @@ import { extractTextWithMap } from "../utils/positionMap";
 
 const HARPER_LINT_DEBOUNCE_MS = 350;
 
-const KINDS = ["spelling", "grammar", "punctuation", "capitalization", "style", "misc"] as const;
+const KINDS = [
+  "spelling",
+  "grammar",
+  "punctuation",
+  "capitalization",
+  "style",
+  "misc",
+] as const;
 export function toLintClass(kind: string): string {
   const k = kind.toLowerCase().replace(/\s+/g, "");
   return KINDS.includes(k as (typeof KINDS)[number]) ? k : "misc";
@@ -55,7 +62,14 @@ export const HarperLint = Extension.create<HarperLintOptions>({
   },
 
   addProseMirrorPlugins() {
-    const { lint, onLintsChange, onHover, onHoverEnd, getDismissedKeys, scheduleLintRef } = this.options;
+    const {
+      lint,
+      onLintsChange,
+      onHover,
+      onHoverEnd,
+      getDismissedKeys,
+      scheduleLintRef,
+    } = this.options;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let lastLints: Lint[] = [];
 
@@ -65,7 +79,9 @@ export const HarperLint = Extension.create<HarperLintOptions>({
       if (!text.trim()) {
         lastLints = [];
         onLintsChange?.(lastLints);
-        editorView.dispatch(editorView.state.tr.setMeta(harperLintPluginKey, DecorationSet.empty));
+        editorView.dispatch(
+          editorView.state.tr.setMeta(harperLintPluginKey, DecorationSet.empty),
+        );
         return;
       }
       lint(text)
@@ -83,25 +99,38 @@ export const HarperLint = Extension.create<HarperLintOptions>({
             const span = l.span();
             if (span.start >= span.end || span.start < lastEnd) continue;
             lastEnd = span.end;
-            const from = Math.max(1, Math.min(map.textToDoc(span.start), docLen));
-            const to = Math.max(from, Math.min(map.textToDoc(span.end), docLen + 1));
+            const from = Math.max(
+              1,
+              Math.min(map.textToDoc(span.start), docLen),
+            );
+            const to = Math.max(
+              from,
+              Math.min(map.textToDoc(span.end), docLen + 1),
+            );
             if (to <= from) continue;
             const kind = toLintClass(l.lint_kind());
             decos.push(
               Decoration.inline(from, to, {
                 class: `lint lint--${kind}`,
                 "data-lint-index": String(origIndex),
-              })
+              }),
             );
           }
           const set = DecorationSet.create(doc, decos);
-          editorView.dispatch(editorView.state.tr.setMeta(harperLintPluginKey, set));
+          editorView.dispatch(
+            editorView.state.tr.setMeta(harperLintPluginKey, set),
+          );
         })
         .catch((e) => {
           console.warn("[harperLint] lint failed:", e);
           lastLints = [];
           onLintsChange?.(lastLints);
-          editorView.dispatch(editorView.state.tr.setMeta(harperLintPluginKey, DecorationSet.empty));
+          editorView.dispatch(
+            editorView.state.tr.setMeta(
+              harperLintPluginKey,
+              DecorationSet.empty,
+            ),
+          );
         });
     }
 
@@ -113,7 +142,9 @@ export const HarperLint = Extension.create<HarperLintOptions>({
             return DecorationSet.empty;
           },
           apply(tr, set, _oldState, _newState) {
-            const meta = tr.getMeta(harperLintPluginKey) as DecorationSet | undefined;
+            const meta = tr.getMeta(harperLintPluginKey) as
+              | DecorationSet
+              | undefined;
             if (meta != null) return meta;
             return set.map(tr.mapping, tr.doc);
           },
@@ -126,9 +157,16 @@ export const HarperLint = Extension.create<HarperLintOptions>({
             mousemove(view, evt) {
               let el: Element | null = evt.target as Element;
               while (el && el !== view.dom) {
-                if (el instanceof HTMLElement && el.hasAttribute("data-lint-index")) {
-                  const idx = parseInt(el.getAttribute("data-lint-index") ?? "", 10);
-                  if (!Number.isNaN(idx)) onHover?.(idx, { x: evt.clientX, y: evt.clientY });
+                if (
+                  el instanceof HTMLElement &&
+                  el.hasAttribute("data-lint-index")
+                ) {
+                  const idx = parseInt(
+                    el.getAttribute("data-lint-index") ?? "",
+                    10,
+                  );
+                  if (!Number.isNaN(idx))
+                    onHover?.(idx, { x: evt.clientX, y: evt.clientY });
                   return;
                 }
                 el = el.parentElement;

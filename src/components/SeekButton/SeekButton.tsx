@@ -7,7 +7,12 @@ interface SeekButtonProps {
   disabled?: boolean;
 }
 
-export const SeekButton = ({ label, onClick, ariaLabel, disabled }: SeekButtonProps) => {
+export const SeekButton = ({
+  label,
+  onClick,
+  ariaLabel,
+  disabled,
+}: SeekButtonProps) => {
   return (
     <button
       className="seek-button"

@@ -7,7 +7,11 @@ import { extractTextWithMap } from "./positionMap";
  * Apply a Harper suggestion to the TipTap document via a transaction.
  * Uses positionMap to convert lint span (plain text) to doc positions.
  */
-export function applySuggestion(editor: Editor, lint: Lint, suggestion: Suggestion): boolean {
+export function applySuggestion(
+  editor: Editor,
+  lint: Lint,
+  suggestion: Suggestion,
+): boolean {
   const { state } = editor;
   const { doc } = state;
   const { map } = extractTextWithMap(doc);
@@ -18,7 +22,12 @@ export function applySuggestion(editor: Editor, lint: Lint, suggestion: Suggesti
   const kind = suggestion.kind();
   if (kind === SuggestionKind.Replace) {
     const text = suggestion.get_replacement_text();
-    return editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, text).run();
+    return editor
+      .chain()
+      .focus()
+      .deleteRange({ from, to })
+      .insertContentAt(from, text)
+      .run();
   }
   if (kind === SuggestionKind.Remove) {
     return editor.chain().focus().deleteRange({ from, to }).run();

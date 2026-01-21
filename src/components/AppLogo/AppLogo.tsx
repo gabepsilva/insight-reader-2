@@ -8,7 +8,9 @@ export function AppLogo() {
         <img src={logoSvg} alt="Insight Reader" className="app-logo__image" />
       </div>
       <div className="app-logo__label">
-        Insight<br />Reader
+        Insight
+        <br />
+        Reader
       </div>
     </div>
   );

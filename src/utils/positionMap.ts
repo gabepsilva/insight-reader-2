@@ -17,7 +17,7 @@ interface Segment {
 function processBlock(
   block: Node,
   blockStart: number,
-  textOffset: number
+  textOffset: number,
 ): { text: string; segments: Segment[] } {
   let t = "";
   const segments: Segment[] = [];
@@ -72,7 +72,10 @@ function createMap(segments: Segment[], text: string): PositionMap {
  * - Block nodes (e.g. paragraphs) are separated by newlines in the text.
  * - Inline text nodes map 1:1; positions inside marks are correct.
  */
-export function extractTextWithMap(doc: Node): { text: string; map: PositionMap } {
+export function extractTextWithMap(doc: Node): {
+  text: string;
+  map: PositionMap;
+} {
   let text = "";
   const allSegments: Segment[] = [];
   let docPos = 1;
@@ -88,7 +91,11 @@ export function extractTextWithMap(doc: Node): { text: string; map: PositionMap 
       });
       text += "\n";
     }
-    const { text: blockText, segments } = processBlock(block, docPos, text.length);
+    const { text: blockText, segments } = processBlock(
+      block,
+      docPos,
+      text.length,
+    );
     text += blockText;
     allSegments.push(...segments);
     docPos += block.nodeSize;

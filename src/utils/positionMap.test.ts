@@ -19,7 +19,9 @@ describe("extractTextWithMap", () => {
   it("single paragraph: hello world – positions match", () => {
     const doc = docFromJson({
       type: "doc",
-      content: [{ type: "paragraph", content: [{ type: "text", text: "hello world" }] }],
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "hello world" }] },
+      ],
     });
     const { text, map } = extractTextWithMap(doc);
     expect(text).toBe("hello world");
@@ -76,7 +78,9 @@ describe("extractTextWithMap", () => {
   it("formatted text (single text node): positions inside node correct", () => {
     const doc = docFromJson({
       type: "doc",
-      content: [{ type: "paragraph", content: [{ type: "text", text: "hello world" }] }],
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "hello world" }] },
+      ],
     });
     const { text, map } = extractTextWithMap(doc);
     expect(text).toBe("hello world");

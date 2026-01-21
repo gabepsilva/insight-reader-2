@@ -10,7 +10,7 @@ export function Waveform() {
         height: Math.random() * 100,
         delay: i * 0.1,
       })),
-    []
+    [],
   );
 
   return (

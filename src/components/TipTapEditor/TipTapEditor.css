@@ -9,7 +9,8 @@
 .tiptap-editor-content .tiptap {
   flex: 1;
   padding: 12px;
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-family:
+    ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
   font-size: var(--editor-font-size, 14px);
   line-height: 1.5;
   outline: none;
@@ -38,14 +39,29 @@
   height: 0;
 }
 
-.editor-page--dark .tiptap-editor-content .tiptap p.is-editor-empty:first-child::before {
+.editor-page--dark
+  .tiptap-editor-content
+  .tiptap
+  p.is-editor-empty:first-child::before {
   color: #6b7280;
 }
 
 /* Lint decoration underlines (Harper). Match legend hues. */
-.tiptap-editor-content .tiptap .lint--spelling { border-bottom: 2px wavy #c62828; }
-.tiptap-editor-content .tiptap .lint--grammar { border-bottom: 2px wavy #00838f; }
-.tiptap-editor-content .tiptap .lint--punctuation { border-bottom: 2px wavy #00acc1; }
-.tiptap-editor-content .tiptap .lint--capitalization { border-bottom: 2px wavy #ef6c00; }
-.tiptap-editor-content .tiptap .lint--style { border-bottom: 2px wavy #1976d2; }
-.tiptap-editor-content .tiptap .lint--misc { border-bottom: 2px wavy #7b1fa2; }
+.tiptap-editor-content .tiptap .lint--spelling {
+  border-bottom: 2px wavy #c62828;
+}
+.tiptap-editor-content .tiptap .lint--grammar {
+  border-bottom: 2px wavy #00838f;
+}
+.tiptap-editor-content .tiptap .lint--punctuation {
+  border-bottom: 2px wavy #00acc1;
+}
+.tiptap-editor-content .tiptap .lint--capitalization {
+  border-bottom: 2px wavy #ef6c00;
+}
+.tiptap-editor-content .tiptap .lint--style {
+  border-bottom: 2px wavy #1976d2;
+}
+.tiptap-editor-content .tiptap .lint--misc {
+  border-bottom: 2px wavy #7b1fa2;
+}

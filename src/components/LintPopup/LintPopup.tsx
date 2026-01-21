@@ -50,7 +50,9 @@ export function LintPopup({
       onMouseLeave={onMouseLeave}
       role="tooltip"
     >
-      <p className={`editor-lint-popup__category editor-lint-popup__category--${toLintClass(lint.lint_kind())}`}>
+      <p
+        className={`editor-lint-popup__category editor-lint-popup__category--${toLintClass(lint.lint_kind())}`}
+      >
         {getCategoryLabel(lint)}
       </p>
       <p className="editor-lint-popup__message">{lint.message()}</p>
@@ -69,8 +71,24 @@ export function LintPopup({
           ))}
         </ul>
       )}
-      <button type="button" className="editor-lint-popup__ignore" onClick={onDismiss} aria-label="Dismiss">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <button
+        type="button"
+        className="editor-lint-popup__ignore"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
           <path d="M18 6 6 18" />
           <path d="m6 6 12 12" />
         </svg>

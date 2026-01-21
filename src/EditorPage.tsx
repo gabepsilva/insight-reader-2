@@ -57,17 +57,13 @@ function getPopupStyle(mouse: { x: number; y: number }): CSSProperties {
     POPUP_EDGE_MARGIN,
     Math.min(
       my + POPUP_CORNER_OFFSET,
-      window.innerHeight - POPUP_HEIGHT_ESTIMATE - POPUP_EDGE_MARGIN
-    )
+      window.innerHeight - POPUP_HEIGHT_ESTIMATE - POPUP_EDGE_MARGIN,
+    ),
   );
   if (wouldOverflowRight) {
     const idealRight = window.innerWidth - (mx + POPUP_CORNER_OFFSET);
-    const maxRight =
-      window.innerWidth - POPUP_EDGE_MARGIN - POPUP_MAX_WIDTH;
-    const right = Math.max(
-      POPUP_EDGE_MARGIN,
-      Math.min(idealRight, maxRight)
-    );
+    const maxRight = window.innerWidth - POPUP_EDGE_MARGIN - POPUP_MAX_WIDTH;
+    const right = Math.max(POPUP_EDGE_MARGIN, Math.min(idealRight, maxRight));
     return { position: "fixed", right, top };
   }
   const left = Math.max(POPUP_EDGE_MARGIN, mx + POPUP_CORNER_OFFSET);
@@ -111,7 +107,7 @@ export default function EditorPage() {
     () => () => {
       if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
     },
-    []
+    [],
   );
 
   const increaseFontSize = () =>
@@ -131,7 +127,9 @@ export default function EditorPage() {
       await invoke("tts_speak", { text: t });
     } catch (e) {
       console.warn("[EditorPage] tts_speak failed:", e);
-      alert(typeof e === "string" ? e : "Could not read aloud. Is Piper installed?");
+      alert(
+        typeof e === "string" ? e : "Could not read aloud. Is Piper installed?",
+      );
     }
   };
 
@@ -144,7 +142,8 @@ export default function EditorPage() {
         // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
         if (isMounted && initial.length > 0) setText(initial);
       } catch (e) {
-        if (isMounted) console.warn("[EditorPage] take_editor_initial_text failed:", e);
+        if (isMounted)
+          console.warn("[EditorPage] take_editor_initial_text failed:", e);
       }
     })();
     return () => {
@@ -157,7 +156,10 @@ export default function EditorPage() {
       setText(e.payload ?? "");
     });
     return () => {
-      unlisten.then((fn) => fn(), () => {});
+      unlisten.then(
+        (fn) => fn(),
+        () => {},
+      );
     };
   }, []);
 
@@ -172,7 +174,11 @@ export default function EditorPage() {
         if (t) {
           invoke("tts_speak", { text: t }).catch((e) => {
             console.warn("[EditorPage] tts_speak failed:", e);
-            alert(typeof e === "string" ? e : "Could not read aloud. Is Piper installed?");
+            alert(
+              typeof e === "string"
+                ? e
+                : "Could not read aloud. Is Piper installed?",
+            );
           });
         }
         timeoutId = null;
@@ -180,7 +186,10 @@ export default function EditorPage() {
     });
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      unlisten.then((fn) => fn(), () => {});
+      unlisten.then(
+        (fn) => fn(),
+        () => {},
+      );
     };
   }, []);
 
@@ -189,11 +198,11 @@ export default function EditorPage() {
       const linter = await getOrCreateLinter();
       return linter.lint(t);
     },
-    [getOrCreateLinter]
+    [getOrCreateLinter],
   );
 
   const hoveredLint =
-    hoveredLintIndex != null ? lints[hoveredLintIndex] ?? null : null;
+    hoveredLintIndex != null ? (lints[hoveredLintIndex] ?? null) : null;
 
   const popupStyle: CSSProperties | null =
     hoveredLintMouse != null ? getPopupStyle(hoveredLintMouse) : null;
@@ -253,12 +262,32 @@ export default function EditorPage() {
           className="editor-toolbar-theme"
         >
           {darkMode ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
               <circle cx="12" cy="12" r="4" />
               <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
             </svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             </svg>
           )}
