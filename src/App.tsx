@@ -3,6 +3,7 @@ import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
 import { PencilIcon } from "./components/icons";
+import { SeekButton } from "./components/SeekButton";
 import "./App.css";
 
 function App() {
@@ -75,6 +76,22 @@ function App() {
     }
   };
 
+  const handleBackward = async () => {
+    try {
+      await invoke("tts_seek", { offsetMs: -5000 });
+    } catch (e) {
+      console.warn("tts_seek backward failed:", e);
+    }
+  };
+
+  const handleForward = async () => {
+    try {
+      await invoke("tts_seek", { offsetMs: 5000 });
+    } catch (e) {
+      console.warn("tts_seek forward failed:", e);
+    }
+  };
+
   const handleMinimize = async () => {
     const appWindow = getCurrentWindow();
     await appWindow.minimize();
@@ -109,36 +126,54 @@ function App() {
           </div>
         </div>
 
-        {/* Column 2: Controls and Progress Bar */}
+        {/* Column 2: Playback Controls */}
+        <div className="column column-playback">
+          <div className="playback-row">
+            <button
+              className="control-button play-pause"
+              onClick={handlePlayPause}
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                  <rect x="6" y="4" width="3" height="12" />
+                  <rect x="11" y="4" width="3" height="12" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M6 4l12 6-12 6V4z" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              className="control-button stop"
+              onClick={handleStop}
+              aria-label="Stop"
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                <rect x="4" y="4" width="12" height="12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="playback-row">
+            <SeekButton
+              label="-5s"
+              onClick={handleBackward}
+              ariaLabel="Backward 5 seconds"
+            />
+            <SeekButton
+              label="+5s"
+              onClick={handleForward}
+              ariaLabel="Forward 5 seconds"
+            />
+          </div>
+        </div>
+
+        {/* Column 3: Controls and Progress Bar */}
         <div className="column column-controls">
           <div className="controls-row">
-              <button
-                className="control-button play-pause"
-                onClick={handlePlayPause}
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <rect x="6" y="4" width="3" height="12" />
-                    <rect x="11" y="4" width="3" height="12" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M6 4l12 6-12 6V4z" />
-                  </svg>
-                )}
-              </button>
-
-              <button
-                className="control-button stop"
-                onClick={handleStop}
-                aria-label="Stop"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <rect x="4" y="4" width="12" height="12" />
-                </svg>
-              </button>
-
               <div className="waveform-container">
                 <div className="waveform">
                   {waveformBars.map(({ height, delay }, i) => (
@@ -159,7 +194,7 @@ function App() {
                 onClick={handleSettings}
                 aria-label="Settings"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                   <path
                     fillRule="evenodd"
@@ -174,7 +209,7 @@ function App() {
                 onClick={handleCamera}
                 aria-label="Screenshot"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z"
@@ -188,7 +223,7 @@ function App() {
                 onClick={handleEditor}
                 aria-label="Open grammar editor"
               >
-                <PencilIcon size={20} />
+                <PencilIcon size={18} />
               </button>
             </div>
 
@@ -202,7 +237,7 @@ function App() {
             </div>
           </div>
 
-        {/* Column 3: Window controls (minimize, close) */}
+        {/* Column 4: Window controls (minimize, close) */}
         <div className="column column-close">
           <div className="close-row">
             <button
@@ -210,7 +245,7 @@ function App() {
               onClick={handleMinimize}
               aria-label="Minimize"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M4 9h12v2H4z" />
               </svg>
             </button>
@@ -219,7 +254,7 @@ function App() {
               onClick={handleClose}
               aria-label="Close"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
