@@ -45,7 +45,8 @@ fn open_or_focus_editor_with_text<R: tauri::Runtime>(
     initial_text: String,
 ) -> Result<(), String> {
     {
-        let mut guard = (*state.inner())
+        let mut guard = state
+            .inner()
             .lock()
             .map_err(|e| format!("editor state lock: {}", e))?;
         *guard = Some(initial_text.clone());
@@ -103,10 +104,11 @@ fn open_editor_window(
 /// The stored value is overwritten on each open_or_focus_editor_with_text.
 #[tauri::command]
 fn take_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
-    let guard = (*state.inner())
+    let guard = state
+        .inner()
         .lock()
         .map_err(|e| format!("editor state lock: {}", e))?;
-    Ok((*guard).clone())
+    Ok(guard.clone())
 }
 
 /// Speaks the given text with Piper TTS. Fails if TTS is unavailable or text is empty.
@@ -189,6 +191,63 @@ fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
         .map_err(|_| "TTS worker disconnected".to_string())
 }
 
+/// Unified error type for screenshot and OCR operations
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", content = "message")]
+pub enum CaptureOcrError {
+    #[serde(rename = "cancelled")]
+    Cancelled,
+    #[serde(rename = "screenshot")]
+    Screenshot(String),
+    #[serde(rename = "ocr")]
+    Ocr(String),
+}
+
+impl From<system::ScreenshotError> for CaptureOcrError {
+    fn from(err: system::ScreenshotError) -> Self {
+        match err {
+            system::ScreenshotError::Cancelled => CaptureOcrError::Cancelled,
+            e => CaptureOcrError::Screenshot(e.to_string()),
+        }
+    }
+}
+
+impl From<system::OcrError> for CaptureOcrError {
+    fn from(err: system::OcrError) -> Self {
+        CaptureOcrError::Ocr(err.to_string())
+    }
+}
+
+/// Captures a screenshot and performs OCR to extract text with bounding box positions.
+/// Returns the OCR result with text items and their positions, or a structured error.
+/// If the user cancels the screenshot selection, returns a Cancelled error.
+#[tauri::command]
+fn capture_screenshot_and_ocr() -> Result<system::OcrResult, CaptureOcrError> {
+    debug!("Starting screenshot capture and OCR");
+
+    // Capture screenshot
+    let screenshot_bytes = system::capture_screenshot().map_err(CaptureOcrError::from)?;
+
+    debug!(
+        bytes = screenshot_bytes.len(),
+        "Screenshot captured, starting OCR"
+    );
+
+    // Perform OCR with positions
+    let ocr_result =
+        system::extract_text_with_positions(&screenshot_bytes).map_err(CaptureOcrError::from)?;
+
+    // Log OCR results for debugging
+    debug!(
+        items = ocr_result.items.len(),
+        text = %ocr_result.full_text,
+        "OCR completed successfully"
+    );
+    debug!("OCR items: {:?}", ocr_result.items);
+
+    Ok(ocr_result)
+}
+
 fn log_selected_text(result: &Option<String>) {
     match result {
         Some(text) => info!(len = text.len(), "Selected text"),
@@ -248,6 +307,7 @@ pub fn run() {
             tts_get_status,
             tts_seek,
             tts_get_position,
+            capture_screenshot_and_ocr,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -289,7 +349,7 @@ pub fn run() {
                     match id {
                         "read_selected" => {
                             let text = get_text_or_clipboard();
-                            log_selected_text(&(!text.is_empty()).then(|| text.clone()));
+                            log_selected_text(&(!text.is_empty()).then_some(text.clone()));
                             match app.try_state::<EditorInitialText>() {
                                 Some(state) => {
                                     if let Err(e) =

@@ -125,8 +125,47 @@ function App() {
     // TODO: Open settings window
   };
 
-  const handleCamera = () => {
-    // TODO: Open screenshot/camera capture
+  const handleCamera = async () => {
+    try {
+      const result = await invoke<{
+        items: Array<{
+          text: string;
+          bounding_box: { x: number; y: number; width: number; height: number };
+          confidence: number;
+        }>;
+        full_text: string;
+      }>("capture_screenshot_and_ocr");
+      
+      // Text and positions are logged in Rust console, no UI needed yet
+      console.log("OCR full text:", result.full_text);
+      console.log("OCR items with positions:", result.items);
+    } catch (e) {
+      // Handle structured error response from Tauri command
+      // Error format: { type: "cancelled" | "screenshot" | "ocr", message?: string }
+      if (typeof e === "object" && e !== null && "type" in e) {
+        const error = e as { type: string; message?: string };
+        if (error.type === "cancelled") {
+          // User cancelled - silently return
+          return;
+        }
+        const errorType = error.type === "screenshot" ? "Screenshot" : "OCR";
+        console.error(
+          `${errorType} error:`,
+          error.message || "Unknown error"
+        );
+      } else {
+        // Fallback for non-structured errors (legacy or unexpected format)
+        const errorMsg = typeof e === "string" ? e : (e instanceof Error ? e.message : String(e));
+        if (errorMsg.toLowerCase().includes("cancelled")) {
+          // User cancelled - silently return
+          return;
+        }
+        console.error("Screenshot OCR failed:", e);
+        if (e instanceof Error) {
+          console.error("Error details:", e.message, e.stack);
+        }
+      }
+    }
   };
 
   const handleEditor = async () => {

@@ -14,6 +14,7 @@
     "allow-get-clipboard-text",
     "allow-open-editor-window",
     "allow-tts-stop",
-    "allow-tts-pause"
+    "allow-tts-pause",
+    "allow-capture-screenshot-and-ocr"
   ]
 }
