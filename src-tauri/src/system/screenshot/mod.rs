@@ -18,6 +18,6 @@ use thiserror::Error;
 pub struct ScreenshotError;
 
 #[cfg(not(target_os = "macos"))]
-pub fn capture_screenshot() -> Result<Vec<u8>, ScreenshotError> {
+pub fn capture_screenshot() -> Result<(Vec<u8>, std::path::PathBuf), ScreenshotError> {
     Err(ScreenshotError)
 }

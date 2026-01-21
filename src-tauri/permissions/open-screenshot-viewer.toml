@@ -1,0 +1,5 @@
+# Permission to invoke open_screenshot_viewer (open a window to display a screenshot)
+[[permission]]
+identifier = "allow-open-screenshot-viewer"
+description = "Allows invoking open_screenshot_viewer to open a window displaying a screenshot"
+commands.allow = ["open_screenshot_viewer"]

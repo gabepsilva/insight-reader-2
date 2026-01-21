@@ -127,18 +127,14 @@ function App() {
 
   const handleCamera = async () => {
     try {
-      const result = await invoke<{
-        items: Array<{
-          text: string;
-          bounding_box: { x: number; y: number; width: number; height: number };
-          confidence: number;
-        }>;
-        full_text: string;
-      }>("capture_screenshot_and_ocr");
+      const [, screenshotPath] = await invoke<[unknown, string]>("capture_screenshot_and_ocr");
       
-      // Text and positions are logged in Rust console, no UI needed yet
-      console.log("OCR full text:", result.full_text);
-      console.log("OCR items with positions:", result.items);
+      // Open screenshot viewer window
+      try {
+        await invoke("open_screenshot_viewer", { screenshotPath });
+      } catch (viewerError) {
+        console.error("Failed to open screenshot viewer:", viewerError);
+      }
     } catch (e) {
       // Handle structured error response from Tauri command
       // Error format: { type: "cancelled" | "screenshot" | "ocr", message?: string }

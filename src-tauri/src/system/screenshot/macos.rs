@@ -3,7 +3,7 @@
 use std::fs;
 use std::process::Command;
 use thiserror::Error;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 #[derive(Error, Debug)]
 pub enum ScreenshotError {
@@ -19,8 +19,9 @@ pub enum ScreenshotError {
 
 /// Captures a screenshot region on macOS using interactive selection.
 /// Shows a crosshair cursor for the user to select a region.
-/// Returns the screenshot as PNG bytes.
-pub fn capture_screenshot() -> Result<Vec<u8>, ScreenshotError> {
+/// Returns the screenshot as PNG bytes and the path to the temporary file.
+/// The caller is responsible for cleaning up the temporary file.
+pub fn capture_screenshot() -> Result<(Vec<u8>, std::path::PathBuf), ScreenshotError> {
     debug!("Starting interactive screenshot region selection");
 
     // Create temporary file path for the screenshot
@@ -82,17 +83,10 @@ pub fn capture_screenshot() -> Result<Vec<u8>, ScreenshotError> {
     // Read the screenshot file
     let image_bytes = fs::read(&temp_path).map_err(ScreenshotError::ReadFile)?;
 
-    // Clean up temporary file
-    if let Err(e) = fs::remove_file(&temp_path) {
-        warn!(error = %e, path = %temp_path.display(), "Failed to remove temporary screenshot file");
-        // Don't fail the operation if cleanup fails
-    } else {
-        debug!(path = %temp_path.display(), "Cleaned up temporary screenshot file");
-    }
-
     info!(
         bytes = image_bytes.len(),
+        path = %temp_path.display(),
         "Screenshot captured successfully"
     );
-    Ok(image_bytes)
+    Ok((image_bytes, temp_path))
 }

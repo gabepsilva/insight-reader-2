@@ -5,13 +5,17 @@ mod tts;
 use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 /// Managed state for initial text passed to the editor window.
 type EditorInitialText = Arc<Mutex<Option<String>>>;
+
+/// Managed state for screenshot paths passed to screenshot viewer windows.
+/// Maps window label to screenshot file path.
+type ScreenshotPaths = Arc<Mutex<std::collections::HashMap<String, String>>>;
 
 /// Tray icon: app logo at 32x32 (icons/32x32.png).
 const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/32x32.png");
@@ -191,6 +195,94 @@ fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
         .map_err(|_| "TTS worker disconnected".to_string())
 }
 
+/// Opens a window to display a screenshot image.
+/// The screenshot_path should be a valid file path to a PNG image.
+/// The window will be closed and the file deleted when the user closes the window.
+#[tauri::command]
+fn open_screenshot_viewer(
+    app: tauri::AppHandle,
+    state: State<ScreenshotPaths>,
+    screenshot_path: String,
+) -> Result<(), String> {
+    debug!(path = %screenshot_path, "Opening screenshot viewer window");
+
+    // Check if file exists
+    let path = std::path::Path::new(&screenshot_path);
+    if !path.exists() {
+        return Err(format!(
+            "Screenshot file not found: {} (checked at: {})",
+            screenshot_path,
+            path.display()
+        ));
+    }
+
+    // Generate a unique window label with timestamp to prevent collisions
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| format!("Failed to get timestamp: {}", e))?
+        .as_nanos();
+    let filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("screenshot");
+    let filename_without_ext = filename
+        .strip_suffix(".png")
+        .or_else(|| filename.strip_suffix(".PNG"))
+        .unwrap_or(filename);
+    let window_label = format!("screenshot-{}-{}", timestamp, filename_without_ext);
+
+    let url = if tauri::is_dev() {
+        let base = app
+            .config()
+            .build
+            .dev_url
+            .as_ref()
+            .map(|u| u.as_str().trim_end_matches('/').to_string())
+            .unwrap_or_else(|| "http://localhost:1420".to_string());
+        let url = format!("{}/screenshot.html", base);
+        WebviewUrl::External(url.parse().map_err(|e| format!("dev_url parse: {}", e))?)
+    } else {
+        WebviewUrl::App("/screenshot.html".into())
+    };
+
+    // Create window first, only insert into state after successful creation
+    WebviewWindowBuilder::new(&app, &window_label, url)
+        .title("Screenshot")
+        .inner_size(800.0, 600.0)
+        .min_inner_size(400.0, 300.0)
+        .resizable(true)
+        .decorations(true)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // Store the screenshot path in state only after window creation succeeds
+    {
+        let mut guard = state
+            .inner()
+            .lock()
+            .map_err(|e| format!("screenshot state lock: {}", e))?;
+        guard.insert(window_label, screenshot_path);
+    }
+
+    Ok(())
+}
+
+/// Returns the screenshot path for the current window.
+#[tauri::command]
+fn take_screenshot_path(
+    window: Window,
+    state: State<ScreenshotPaths>,
+) -> Result<Option<String>, String> {
+    let window_label = window.label();
+    let guard = state
+        .inner()
+        .lock()
+        .map_err(|e| format!("screenshot state lock: {}", e))?;
+    Ok(guard.get(window_label).cloned())
+}
+
+
 /// Unified error type for screenshot and OCR operations
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", content = "message")]
@@ -219,17 +311,19 @@ impl From<system::OcrError> for CaptureOcrError {
 }
 
 /// Captures a screenshot and performs OCR to extract text with bounding box positions.
-/// Returns the OCR result with text items and their positions, or a structured error.
+/// Returns the OCR result with text items and their positions, and the screenshot file path.
 /// If the user cancels the screenshot selection, returns a Cancelled error.
+/// The screenshot file should be deleted after the viewer window is closed.
 #[tauri::command]
-fn capture_screenshot_and_ocr() -> Result<system::OcrResult, CaptureOcrError> {
+fn capture_screenshot_and_ocr() -> Result<(system::OcrResult, String), CaptureOcrError> {
     debug!("Starting screenshot capture and OCR");
 
-    // Capture screenshot
-    let screenshot_bytes = system::capture_screenshot().map_err(CaptureOcrError::from)?;
+    // Capture screenshot (returns bytes and path)
+    let (screenshot_bytes, screenshot_path) = system::capture_screenshot().map_err(CaptureOcrError::from)?;
 
     debug!(
         bytes = screenshot_bytes.len(),
+        path = %screenshot_path.display(),
         "Screenshot captured, starting OCR"
     );
 
@@ -245,7 +339,8 @@ fn capture_screenshot_and_ocr() -> Result<system::OcrResult, CaptureOcrError> {
     );
     debug!("OCR items: {:?}", ocr_result.items);
 
-    Ok(ocr_result)
+    // Return OCR result and screenshot path (as string for serialization)
+    Ok((ocr_result, screenshot_path.to_string_lossy().to_string()))
 }
 
 fn log_selected_text(result: &Option<String>) {
@@ -290,11 +385,13 @@ pub fn run() {
         .init();
 
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
+    let screenshot_paths: ScreenshotPaths = Arc::new(Mutex::new(std::collections::HashMap::new()));
     let tts_state = tts::create_tts_state();
 
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(editor_initial)
+        .manage(screenshot_paths)
         .manage(tts_state)
         .invoke_handler(tauri::generate_handler![
             get_selected_text,
@@ -308,16 +405,54 @@ pub fn run() {
             tts_seek,
             tts_get_position,
             capture_screenshot_and_ocr,
+            open_screenshot_viewer,
+            take_screenshot_path,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "editor" {
+                let label = window.label();
+                if label == "editor" {
                     let _ = window.hide();
                     api.prevent_close();
-                } else if window.label() == "main" {
+                } else if label == "main" {
                     // Stop TTS worker thread when main window closes
                     if let Some(state) = window.app_handle().try_state::<tts::TtsState>() {
                         let _ = state.inner().send(tts::TtsRequest::Shutdown);
+                    }
+                    // Clean up all screenshot files on app exit
+                    if let Some(state) = window.app_handle().try_state::<ScreenshotPaths>() {
+                        let paths: Vec<String> = {
+                            let guard = state.inner().lock().ok();
+                            guard
+                                .map(|g| g.values().cloned().collect())
+                                .unwrap_or_default()
+                        };
+                        for path in paths {
+                            if let Err(e) = std::fs::remove_file(&path) {
+                                warn!(error = %e, path = %path, "Failed to delete screenshot file on app exit");
+                            } else {
+                                debug!(path = %path, "Deleted screenshot file on app exit");
+                            }
+                        }
+                    }
+                } else if label.starts_with("screenshot-") {
+                    // Delete screenshot file when screenshot viewer window closes
+                    if let Some(state) = window.app_handle().try_state::<ScreenshotPaths>() {
+                        let screenshot_path = {
+                            let guard = state.inner().lock().ok();
+                            guard.and_then(|g| g.get(label).cloned())
+                        };
+                        if let Some(path) = screenshot_path {
+                            if let Err(e) = std::fs::remove_file(&path) {
+                                warn!(error = %e, path = %path, "Failed to delete screenshot file on window close");
+                            } else {
+                                debug!(path = %path, "Deleted screenshot file on window close");
+                            }
+                            // Remove from state
+                            if let Ok(mut guard) = state.inner().lock() {
+                                guard.remove(label);
+                            }
+                        }
                     }
                 }
             }
