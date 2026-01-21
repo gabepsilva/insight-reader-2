@@ -1,7 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { binaryInlined, Dialect, type Lint, WorkerLinter } from "harper.js";
+import { renderMirrorContent, type LintEntry } from "./editorMirror";
 import "./EditorPage.css";
+
+// LintKind → CSS class for overlay. Mapping and colors are in LINT_KIND_TO_CLASS and EditorPage.css.
+const LINT_KIND_TO_CLASS: Record<string, string> = {
+  Spelling: "spelling",
+  SpellCheck: "spelling", /* Harper rule name; lint_kind usually returns "Spelling" */
+  Typo: "spelling",
+  Grammar: "grammar",
+  Agreement: "grammar",
+  BoundaryError: "grammar",
+  Eggcorn: "grammar",
+  Malapropism: "grammar",
+  Usage: "grammar",
+  WordChoice: "grammar",
+  Punctuation: "punctuation",
+  Formatting: "punctuation",
+  Capitalization: "capitalization",
+  Style: "style",
+  Enhancement: "style",
+  Readability: "style",
+  Redundancy: "style",
+  Repetition: "style",
+};
+const LINT_KIND_DEFAULT = "misc";
+
+function lintKindToClass(kind: string): string {
+  return LINT_KIND_TO_CLASS[kind] ?? LINT_KIND_DEFAULT;
+}
 
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
@@ -25,12 +54,37 @@ function saveDarkMode(value: boolean): void {
   }
 }
 
+const LINT_DEBOUNCE_MS = 350;
+
+const LEGEND_ITEMS: { key: string; label: string }[] = [
+  { key: "spelling", label: "Spelling" },
+  { key: "grammar", label: "Grammar" },
+  { key: "punctuation", label: "Punctuation" },
+  { key: "capitalization", label: "Capitalization" },
+  { key: "style", label: "Style" },
+  { key: "misc", label: "Other" },
+];
+
 export default function EditorPage() {
   const [text, setText] = useState("");
+  const [lints, setLints] = useState<LintEntry[]>([]);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
   const [darkMode, setDarkMode] = useState(loadDarkMode);
   const mirrorRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const linterRef = useRef<WorkerLinter | null>(null);
+  const lintIdRef = useRef(0);
+
+  const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
+    if (linterRef.current) return linterRef.current;
+    const l = new WorkerLinter({
+      binary: binaryInlined,
+      dialect: Dialect.American,
+    });
+    await l.setup();
+    linterRef.current = l;
+    return l;
+  }, []);
 
   useEffect(() => {
     saveDarkMode(darkMode);
@@ -64,9 +118,39 @@ export default function EditorPage() {
       setText(e.payload ?? "");
     });
     return () => {
-      unlisten.then((fn) => fn());
+      unlisten.then((fn) => fn(), () => {});
     };
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!text.trim()) {
+        setLints([]);
+        return;
+      }
+      const myId = ++lintIdRef.current;
+      try {
+        const linter = await getOrCreateLinter();
+        const list: Lint[] = await linter.lint(text);
+        if (myId !== lintIdRef.current) return;
+        const entries: LintEntry[] = list.map((lint) => {
+          const s = lint.span();
+          const raw =
+            lint.lint_kind?.() ?? lint.lint_kind_pretty?.() ?? "Miscellaneous";
+          return {
+            start: s.start,
+            end: s.end,
+            kind: lintKindToClass(String(raw)),
+          };
+        });
+        setLints(entries);
+      } catch (e) {
+        if (myId === lintIdRef.current) setLints([]);
+        console.warn("[EditorPage] Harper lint failed:", e);
+      }
+    }, LINT_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [text, getOrCreateLinter]);
 
   const handleScroll = () => {
     const ta = textareaRef.current;
@@ -126,9 +210,10 @@ export default function EditorPage() {
           className="editor-mirror"
           aria-hidden="true"
         >
-          <div className="editor-mirror-content">
-            {text}
-          </div>
+          <div
+            className="editor-mirror-content"
+            dangerouslySetInnerHTML={{ __html: renderMirrorContent(text, lints) }}
+          />
         </div>
         <textarea
           ref={textareaRef}
@@ -139,6 +224,22 @@ export default function EditorPage() {
           placeholder="Paste or type text to check…"
           spellCheck={false}
         />
+      </div>
+      <div className="editor-legend" aria-label="Lint categories">
+        {lints.length > 0 && (
+          <span className="editor-legend-count">
+            {lints.length} issue{lints.length === 1 ? "" : "s"}
+          </span>
+        )}
+        {LEGEND_ITEMS.map(({ key, label }) => (
+          <span key={key} className="editor-legend-item">
+            <span
+              className={`editor-legend-swatch editor-legend-swatch--${key}`}
+              aria-hidden
+            />
+            <span>{label}</span>
+          </span>
+        ))}
       </div>
     </div>
   );

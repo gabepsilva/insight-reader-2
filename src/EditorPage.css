@@ -52,7 +52,7 @@ body {
 
 .editor-area {
   flex: 1;
-  min-height: 0;
+  min-height: 120px;
   position: relative;
 }
 
@@ -86,14 +86,64 @@ body {
 .editor-mirror-content {
   white-space: pre-wrap;
   word-wrap: break-word;
-  min-height: 100%;
+  /* No min-height: 100% — mirror height must match textarea's content exactly so
+   * scrollTop stays in sync. With min-height the mirror was taller when text had
+   * trailing newlines, causing misalignment. */
 }
+
+/* Lint overlay marks: distinct hues per category for high contrast. */
+.lint {
+  padding: 0;
+  display: inline;
+  border-radius: 2px;
+}
+.lint--spelling { background: rgba(198, 40, 40, 0.5); }
+.lint--grammar { background: rgba(0, 131, 143, 0.5); }
+.lint--punctuation { background: rgba(0, 172, 193, 0.5); }
+.lint--capitalization { background: rgba(245, 124, 0, 0.55); }
+.lint--style { background: rgba(25, 118, 210, 0.5); }
+.lint--misc { background: rgba(123, 31, 162, 0.5); }
+
+.editor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #666;
+  border-top: 1px solid #ddd;
+  background: #f9f9f9;
+  flex-shrink: 0;
+}
+.editor-legend-count {
+  margin-right: 4px;
+  font-weight: 600;
+}
+.editor-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.editor-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.editor-legend-swatch--spelling { background: #c62828; }
+.editor-legend-swatch--grammar { background: #00838f; }
+.editor-legend-swatch--punctuation { background: #00acc1; }
+.editor-legend-swatch--capitalization { background: #ef6c00; }
+.editor-legend-swatch--style { background: #1976d2; }
+.editor-legend-swatch--misc { background: #7b1fa2; }
 
 .editor-textarea {
   overflow: auto;
   background: transparent;
   resize: none;
   color: #000;
+  white-space: pre-wrap; /* match mirror so highlight alignment is correct */
 }
 
 /* ----- Dark mode ----- */
@@ -111,6 +161,12 @@ body:has(.editor-page--dark),
   border-bottom-color: #2d2d2d;
 }
 
+.editor-page--dark .editor-legend {
+  background: #2d2d2d;
+  border-top-color: #444;
+  color: #aaa;
+}
+
 .editor-page--dark .editor-toolbar button {
   background: #3d3d3d;
   border-color: #555;
@@ -123,7 +179,7 @@ body:has(.editor-page--dark),
 }
 
 .editor-page--dark .editor-textarea {
-  background: #1e1e1e;
+  background: transparent; /* must stay transparent so mirror's <mark> highlights show through */
   color: #e0e0e0;
   caret-color: #e0e0e0;
 }
@@ -131,3 +187,18 @@ body:has(.editor-page--dark),
 .editor-page--dark .editor-textarea::placeholder {
   color: #888;
 }
+
+/* Dark mode: palette tuned for #1e1e1e — softer, distinct, easy on the eyes. */
+.editor-page--dark .lint--spelling { background: rgba(240, 113, 120, 0.5); }
+.editor-page--dark .lint--grammar { background: rgba(128, 203, 196, 0.5); }
+.editor-page--dark .lint--punctuation { background: rgba(77, 208, 225, 0.5); }
+.editor-page--dark .lint--capitalization { background: rgba(255, 213, 79, 0.5); }
+.editor-page--dark .lint--style { background: rgba(130, 170, 255, 0.45); }
+.editor-page--dark .lint--misc { background: rgba(206, 147, 216, 0.5); }
+
+.editor-page--dark .editor-legend-swatch--spelling { background: #f07178; }
+.editor-page--dark .editor-legend-swatch--grammar { background: #80cbc4; }
+.editor-page--dark .editor-legend-swatch--punctuation { background: #4dd0e1; }
+.editor-page--dark .editor-legend-swatch--capitalization { background: #ffd54f; }
+.editor-page--dark .editor-legend-swatch--style { background: #82aaff; }
+.editor-page--dark .editor-legend-swatch--misc { background: #ce93d8; }

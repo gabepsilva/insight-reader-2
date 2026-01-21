@@ -48,6 +48,7 @@ fn open_or_focus_editor_with_text<R: tauri::Runtime>(
             .map_err(|e: tauri::Error| e.to_string())?;
         let _ = win.show(); // restore if it was hidden (user had "closed" it)
         win.set_focus().map_err(|e| e.to_string())?;
+        // EditorPage receives editor-set-text, sets text, and the debounced linter runs after ~350ms.
         return Ok(());
     }
 
@@ -66,10 +67,12 @@ fn open_or_focus_editor_with_text<R: tauri::Runtime>(
     };
 
     WebviewWindowBuilder::new(app, "editor", url)
-        .title("Grammar")
+        .title("Insight — Grammar")
         .inner_size(500.0, 400.0)
+        .min_inner_size(400.0, 300.0)
         .resizable(true)
         .decorations(true)
+        .center()
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -89,9 +92,11 @@ fn open_editor_window(
 
 /// Takes the stored initial text for the editor (consumes it). Called by the editor page on mount.
 #[tauri::command]
-fn take_editor_initial_text(state: State<EditorInitialText>) -> Option<String> {
-    let mut guard = (*state.inner()).lock().ok()?;
-    guard.take()
+fn take_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
+    let mut guard = (*state.inner())
+        .lock()
+        .map_err(|e| format!("editor state lock: {}", e))?;
+    Ok(guard.take())
 }
 
 fn log_selected_text(result: &Option<String>) {
@@ -158,10 +163,16 @@ pub fn run() {
             // Tray is created from app.trayIcon config; we add menu, icon, and menu handler here.
             if let Some(tray) = app.tray_by_id("main") {
                 // Initial Show/Hide label from current window visibility.
-                let is_visible = app
-                    .get_webview_window("main")
-                    .and_then(|w| w.is_visible().ok())
-                    .unwrap_or(true);
+                let is_visible = match app.get_webview_window("main") {
+                    Some(win) => win.is_visible().unwrap_or_else(|e| {
+                        warn!(error = %e, "is_visible for main window failed, assuming visible");
+                        true
+                    }),
+                    None => {
+                        warn!("main window not found for tray label, assuming visible");
+                        true
+                    }
+                };
                 let toggle_label = if is_visible {
                     "Hide Window"
                 } else {
@@ -195,7 +206,10 @@ pub fn run() {
                         }
                         "toggle_visibility" => {
                             if let Some(win) = app.get_webview_window("main") {
-                                let was_visible = win.is_visible().unwrap_or(false);
+                                let was_visible = win.is_visible().unwrap_or_else(|e| {
+                                    warn!(error = %e, "is_visible failed in toggle, assuming hidden");
+                                    false
+                                });
                                 let new_label = if was_visible {
                                     let _ = win.hide();
                                     "Show Window"
