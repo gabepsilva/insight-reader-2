@@ -24,6 +24,13 @@ fn get_selected_text() -> Option<String> {
     result
 }
 
+/// Gets selected text or falls back to clipboard text. Returns empty string if neither available.
+fn get_text_or_clipboard() -> String {
+    system::get_selected_text()
+        .or_else(system::get_clipboard_text)
+        .unwrap_or_default()
+}
+
 /// Gets the current clipboard text (e.g. from Ctrl+C / Cmd+C).
 #[tauri::command]
 fn get_clipboard_text() -> Option<String> {
@@ -126,6 +133,62 @@ fn tts_stop(state: State<tts::TtsState>) -> Result<(), String> {
     Ok(())
 }
 
+/// Toggles pause state of TTS playback. Returns true if paused, false if playing.
+#[tauri::command]
+fn tts_toggle_pause(state: State<tts::TtsState>) -> Result<bool, String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::TogglePause(resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())?
+        .map_err(|e| e.to_string())
+}
+
+/// Gets the current TTS playback status. Returns (is_playing, is_paused).
+#[tauri::command]
+fn tts_get_status(state: State<tts::TtsState>) -> Result<(bool, bool), String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::GetStatus(resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())
+}
+
+/// Seeks TTS playback by the given offset in milliseconds.
+/// Returns (success, at_start, at_end). Fails if paused or seeking is not supported.
+#[tauri::command]
+fn tts_seek(state: State<tts::TtsState>, offset_ms: i64) -> Result<(bool, bool, bool), String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::Seek(offset_ms, resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())?
+        .map_err(|e| e.to_string())
+}
+
+/// Gets the current playback position and total duration in milliseconds.
+/// Returns (current_ms, total_ms).
+#[tauri::command]
+fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::GetPosition(resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())
+}
+
 fn log_selected_text(result: &Option<String>) {
     match result {
         Some(text) => info!(len = text.len(), "Selected text"),
@@ -181,12 +244,21 @@ pub fn run() {
             take_editor_initial_text,
             tts_speak,
             tts_stop,
+            tts_toggle_pause,
+            tts_get_status,
+            tts_seek,
+            tts_get_position,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "editor" {
                     let _ = window.hide();
                     api.prevent_close();
+                } else if window.label() == "main" {
+                    // Stop TTS worker thread when main window closes
+                    if let Some(state) = window.app_handle().try_state::<tts::TtsState>() {
+                        let _ = state.inner().send(tts::TtsRequest::Shutdown);
+                    }
                 }
             }
         })
@@ -216,12 +288,35 @@ pub fn run() {
                     let id = event.id().0.as_str();
                     match id {
                         "read_selected" => {
-                            log_selected_text(&system::get_selected_text());
+                            let text = get_text_or_clipboard();
+                            log_selected_text(&(!text.is_empty()).then(|| text.clone()));
+                            match app.try_state::<EditorInitialText>() {
+                                Some(state) => {
+                                    if let Err(e) =
+                                        open_or_focus_editor_with_text(app, &state, text.clone())
+                                    {
+                                        warn!(error = %e, "Read Selected: open_editor_window failed");
+                                    } else {
+                                        // Emit trigger event after a short delay to allow editor to mount/set text
+                                        // Reduced delay: editor-set-text event should be sufficient, small delay just for safety
+                                        let app_handle = app.clone();
+                                        std::thread::spawn(move || {
+                                            std::thread::sleep(std::time::Duration::from_millis(200));
+                                            if let Some(win) = app_handle.get_webview_window("editor") {
+                                                if let Err(e) = win.emit("editor-trigger-read", ()) {
+                                                    warn!(error = %e, "Failed to emit editor-trigger-read");
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                                None => {
+                                    warn!("Read Selected: EditorInitialText state not found");
+                                }
+                            }
                         }
                         "insight_editor" => {
-                            let text = system::get_selected_text()
-                                .or_else(system::get_clipboard_text)
-                                .unwrap_or_default();
+                            let text = get_text_or_clipboard();
                             match app.try_state::<EditorInitialText>() {
                                 Some(state) => {
                                     if let Err(e) =
@@ -259,6 +354,10 @@ pub fn run() {
                             }
                         }
                         "quit" => {
+                            // Stop TTS worker thread before exiting
+                            if let Some(state) = app.try_state::<tts::TtsState>() {
+                                let _ = state.inner().send(tts::TtsRequest::Shutdown);
+                            }
                             app.exit(0);
                         }
                         _ => {}

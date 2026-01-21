@@ -8,7 +8,10 @@ import "./App.css";
 
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [atStart, setAtStart] = useState(false);
+  const [atEnd, setAtEnd] = useState(false);
   const controlBarRef = useRef<HTMLDivElement>(null);
   const waveformBars = useMemo(
     () =>
@@ -35,20 +38,80 @@ function App() {
     resizeToContent();
   }, []);
 
+  // Poll TTS status and position to sync UI state and detect when audio finishes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const status = await invoke<[boolean, boolean]>("tts_get_status");
+        const [isPlayingBackend, isPausedBackend] = status;
+        // Update isPlaying: true only if playing and not paused
+        setIsPlaying(isPlayingBackend && !isPausedBackend);
+        setIsPaused(isPausedBackend);
+
+        // Get position if audio is active
+        if (isPlayingBackend) {
+          const position = await invoke<[number, number]>("tts_get_position");
+          const [currentMs, totalMs] = position;
+          
+          // Update progress bar
+          if (totalMs > 0) {
+            setProgress((currentMs / totalMs) * 100);
+          } else {
+            setProgress(0);
+          }
+
+          // Check bounds
+          setAtStart(currentMs === 0);
+          setAtEnd(currentMs >= totalMs);
+        } else {
+          // No audio playing - reset state
+          setProgress(0);
+          setAtStart(false);
+          setAtEnd(false);
+        }
+      } catch (e) {
+        // If status check fails, assume not playing
+        setIsPlaying(false);
+        setIsPaused(false);
+        setProgress(0);
+        setAtStart(false);
+        setAtEnd(false);
+      }
+    }, 500); // Poll every 500ms
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handlePlayPause = async () => {
     try {
-      const text = await invoke<string | null>("get_selected_text");
-      if (text != null && text.length > 0) {
-        setIsPlaying(true);
+      // Check current playback status
+      const status = await invoke<[boolean, boolean]>("tts_get_status");
+      const [isPlayingBackend] = status;
+
+      if (isPlayingBackend) {
+        // Audio is currently playing or paused - toggle pause state
+        const newPausedState = await invoke<boolean>("tts_toggle_pause");
+        // Update UI: isPlaying should be true only if playing and not paused
+        setIsPlaying(!newPausedState);
+      } else {
+        // No audio is playing - start new playback from selected text
+        const text = await invoke<string | null>("get_selected_text");
+        if (text != null && text.length > 0) {
+          await invoke("tts_speak", { text });
+          setIsPlaying(true);
+        }
       }
     } catch (e) {
-      console.error("get_selected_text failed:", e);
+      console.error("handlePlayPause failed:", e);
     }
   };
 
   const handleStop = async () => {
     setIsPlaying(false);
+    setIsPaused(false);
     setProgress(0);
+    setAtStart(false);
+    setAtEnd(false);
     try {
       await invoke("tts_stop");
     } catch (e) {
@@ -76,21 +139,32 @@ function App() {
     }
   };
 
-  const handleBackward = async () => {
+  const handleSeek = async (offsetMs: number, disabled: boolean) => {
+    if (isPaused || disabled) return;
+    
     try {
-      await invoke("tts_seek", { offsetMs: -5000 });
+      const result = await invoke<[boolean, boolean, boolean]>("tts_seek", { offsetMs });
+      const [, atStartResult, atEndResult] = result;
+      
+      // Update position immediately for responsive UI
+      const position = await invoke<[number, number]>("tts_get_position");
+      const [currentMs, totalMs] = position;
+      
+      // Batch state updates to avoid race conditions
+      const progress = totalMs > 0 ? (currentMs / totalMs) * 100 : 0;
+      setAtStart(atStartResult);
+      setAtEnd(atEndResult);
+      setProgress(progress);
     } catch (e) {
-      console.warn("tts_seek backward failed:", e);
+      console.warn(`tts_seek ${offsetMs > 0 ? "forward" : "backward"} failed:`, e);
     }
   };
 
-  const handleForward = async () => {
-    try {
-      await invoke("tts_seek", { offsetMs: 5000 });
-    } catch (e) {
-      console.warn("tts_seek forward failed:", e);
-    }
-  };
+  const backwardDisabled = isPaused || atStart || !isPlaying;
+  const forwardDisabled = isPaused || atEnd || !isPlaying;
+
+  const handleBackward = () => handleSeek(-5000, atStart);
+  const handleForward = () => handleSeek(5000, atEnd);
 
   const handleMinimize = async () => {
     const appWindow = getCurrentWindow();
@@ -162,11 +236,13 @@ function App() {
               label="-5s"
               onClick={handleBackward}
               ariaLabel="Backward 5 seconds"
+              disabled={backwardDisabled}
             />
             <SeekButton
               label="+5s"
               onClick={handleForward}
               ariaLabel="Forward 5 seconds"
+              disabled={forwardDisabled}
             />
           </div>
         </div>

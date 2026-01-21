@@ -13,6 +13,7 @@
     "allow-get-selected-text",
     "allow-get-clipboard-text",
     "allow-open-editor-window",
-    "allow-tts-stop"
+    "allow-tts-stop",
+    "allow-tts-pause"
   ]
 }

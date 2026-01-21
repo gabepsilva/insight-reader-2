@@ -97,6 +97,37 @@ impl PiperTTSProvider {
         self.player.stop()
     }
 
+    /// Pause current playback.
+    pub fn pause(&mut self) -> Result<(), TTSError> {
+        self.player.pause()
+    }
+
+    /// Resume current playback.
+    pub fn resume(&mut self) -> Result<(), TTSError> {
+        self.player.resume()
+    }
+
+    /// Toggle pause state. Returns the new paused status (true if paused, false if playing).
+    pub fn toggle_pause(&mut self) -> Result<bool, TTSError> {
+        self.player.toggle_pause()
+    }
+
+    /// Get playback status. Returns (is_playing, is_paused).
+    pub fn get_status(&self) -> (bool, bool) {
+        self.player.get_status()
+    }
+
+    /// Seek by the given offset in milliseconds. Returns (success, at_start, at_end).
+    pub fn seek(&mut self, offset_ms: i64) -> Result<(bool, bool, bool), TTSError> {
+        self.player.seek(offset_ms)
+    }
+
+    /// Get current playback position and total duration in milliseconds.
+    /// Returns (current_ms, total_ms).
+    pub fn get_position(&self) -> (u64, u64) {
+        self.player.get_position()
+    }
+
     #[cfg(target_os = "windows")]
     fn run_piper_windows(&self, text: &str, model_arg: &str) -> Result<Vec<f32>, TTSError> {
         use std::fs;

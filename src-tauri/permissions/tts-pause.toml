@@ -1,0 +1,5 @@
+# Permission to invoke tts_toggle_pause, tts_get_status, tts_seek, and tts_get_position (pause/resume, query status, and seek TTS playback)
+[[permission]]
+identifier = "allow-tts-pause"
+description = "Allows windows to pause/resume, query TTS playback status, and seek"
+commands.allow = ["tts_toggle_pause", "tts_get_status", "tts_seek", "tts_get_position"]

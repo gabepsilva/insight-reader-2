@@ -90,6 +90,7 @@ export default function EditorPage() {
   const [darkMode, setDarkMode] = useState(loadDarkMode);
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
+  const textRef = useRef(text);
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -117,6 +118,11 @@ export default function EditorPage() {
     setFontSize((f) => Math.min(FONT_SIZE_MAX, f + FONT_SIZE_STEP));
   const decreaseFontSize = () =>
     setFontSize((f) => Math.max(FONT_SIZE_MIN, f - FONT_SIZE_STEP));
+
+  // Keep textRef in sync with text state
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
 
   const handleRead = async () => {
     const t = text.trim();
@@ -151,6 +157,29 @@ export default function EditorPage() {
       setText(e.payload ?? "");
     });
     return () => {
+      unlisten.then((fn) => fn(), () => {});
+    };
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const unlisten = listen("editor-trigger-read", () => {
+      // Clear any pending timeout
+      if (timeoutId) clearTimeout(timeoutId);
+      // Trigger read after text has been set (with a small delay to ensure text is ready)
+      timeoutId = setTimeout(() => {
+        const t = textRef.current.trim();
+        if (t) {
+          invoke("tts_speak", { text: t }).catch((e) => {
+            console.warn("[EditorPage] tts_speak failed:", e);
+            alert(typeof e === "string" ? e : "Could not read aloud. Is Piper installed?");
+          });
+        }
+        timeoutId = null;
+      }, 50); // Reduced from 100ms - text should be ready after editor-set-text event
+    });
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       unlisten.then((fn) => fn(), () => {});
     };
   }, []);

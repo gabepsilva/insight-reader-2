@@ -33,6 +33,11 @@ impl std::error::Error for TTSError {}
 pub enum TtsRequest {
     Speak(String, mpsc::SyncSender<Result<(), TTSError>>),
     Stop,
+    TogglePause(mpsc::SyncSender<Result<bool, TTSError>>),
+    GetStatus(mpsc::SyncSender<(bool, bool)>),
+    Seek(i64, mpsc::SyncSender<Result<(bool, bool, bool), TTSError>>),
+    GetPosition(mpsc::SyncSender<(u64, u64)>),
+    Shutdown,
 }
 
 /// Sender to the TTS worker. The worker owns PiperTTSProvider (and rodio) on its thread.
@@ -55,6 +60,23 @@ pub fn create_tts_state() -> TtsState {
                             )));
                         }
                         Ok(TtsRequest::Stop) => {}
+                        Ok(TtsRequest::TogglePause(resp)) => {
+                            let _ = resp.send(Err(TTSError::ProcessError(
+                                "TTS not available: Piper could not be initialized.".into(),
+                            )));
+                        }
+                        Ok(TtsRequest::GetStatus(resp)) => {
+                            let _ = resp.send((false, false));
+                        }
+                        Ok(TtsRequest::Seek(_, resp)) => {
+                            let _ = resp.send(Err(TTSError::ProcessError(
+                                "TTS not available: Piper could not be initialized.".into(),
+                            )));
+                        }
+                        Ok(TtsRequest::GetPosition(resp)) => {
+                            let _ = resp.send((0, 0));
+                        }
+                        Ok(TtsRequest::Shutdown) => break,
                         Err(_) => break,
                     }
                 }
@@ -68,6 +90,23 @@ pub fn create_tts_state() -> TtsState {
                 }
                 TtsRequest::Stop => {
                     let _ = provider.stop();
+                }
+                TtsRequest::TogglePause(resp) => {
+                    let _ = resp.send(provider.toggle_pause());
+                }
+                TtsRequest::GetStatus(resp) => {
+                    let _ = resp.send(provider.get_status());
+                }
+                TtsRequest::Seek(offset_ms, resp) => {
+                    let _ = resp.send(provider.seek(offset_ms));
+                }
+                TtsRequest::GetPosition(resp) => {
+                    let _ = resp.send(provider.get_position());
+                }
+                TtsRequest::Shutdown => {
+                    // Stop any ongoing playback and exit the loop
+                    let _ = provider.stop();
+                    break;
                 }
             }
         }
