@@ -1,0 +1,5 @@
+# Permission to invoke tts_speak (read editor text aloud via Piper TTS)
+[[permission]]
+identifier = "allow-tts-speak"
+description = "Allows the grammar editor to speak the text area content with Piper TTS"
+commands.allow = ["tts_speak"]

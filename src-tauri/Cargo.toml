@@ -23,6 +23,8 @@ tauri-plugin-opener = "2"
 arboard = { version = "3.2", features = ["wayland-data-control"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rodio = "0.19"
+dirs = "5.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 macos-accessibility-client = "0.0.1"

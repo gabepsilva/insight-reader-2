@@ -45,9 +45,14 @@ function App() {
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsPlaying(false);
     setProgress(0);
+    try {
+      await invoke("tts_stop");
+    } catch (e) {
+      console.warn("tts_stop failed:", e);
+    }
   };
 
   const handleSettings = () => {

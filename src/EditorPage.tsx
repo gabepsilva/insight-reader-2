@@ -8,37 +8,13 @@ import {
   type Lint,
   WorkerLinter,
   type Suggestion,
-  SuggestionKind,
 } from "harper.js";
-import { renderMirrorContent, type LintEntry } from "./editorMirror";
+import type { Editor } from "@tiptap/core";
+import { LintPopup } from "./components/LintPopup";
+import { TipTapEditor } from "./components/TipTapEditor";
+import { makeLintKey } from "./extensions/harperLint";
+import { applySuggestion } from "./utils/applySuggestion";
 import "./EditorPage.css";
-
-// LintKind → CSS class for overlay. Mapping and colors are in LINT_KIND_TO_CLASS and EditorPage.css.
-const LINT_KIND_TO_CLASS: Record<string, string> = {
-  Spelling: "spelling",
-  SpellCheck: "spelling", /* Harper rule name; lint_kind usually returns "Spelling" */
-  Typo: "spelling",
-  Grammar: "grammar",
-  Agreement: "grammar",
-  BoundaryError: "grammar",
-  Eggcorn: "grammar",
-  Malapropism: "grammar",
-  Usage: "grammar",
-  WordChoice: "grammar",
-  Punctuation: "punctuation",
-  Formatting: "punctuation",
-  Capitalization: "capitalization",
-  Style: "style",
-  Enhancement: "style",
-  Readability: "style",
-  Redundancy: "style",
-  Repetition: "style",
-};
-const LINT_KIND_DEFAULT = "misc";
-
-function lintKindToClass(kind: string): string {
-  return LINT_KIND_TO_CLASS[kind] ?? LINT_KIND_DEFAULT;
-}
 
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
@@ -62,22 +38,11 @@ function saveDarkMode(value: boolean): void {
   }
 }
 
-const LINT_DEBOUNCE_MS = 350;
-
 const POPUP_CORNER_OFFSET = 3;
 const POPUP_EDGE_MARGIN = 12;
 const POPUP_MAX_WIDTH = 360;
 const POPUP_HEIGHT_ESTIMATE = 120;
-const POPUP_LEAVE_DELAY_MS = 50;
-
-const LEGEND_ITEMS: { key: string; label: string }[] = [
-  { key: "spelling", label: "Spelling" },
-  { key: "grammar", label: "Grammar" },
-  { key: "punctuation", label: "Punctuation" },
-  { key: "capitalization", label: "Capitalization" },
-  { key: "style", label: "Style" },
-  { key: "misc", label: "Other" },
-];
+const POPUP_HIDE_DELAY_MS = 60;
 
 /**
  * Computes fixed positioning for the lint popup so it stays on-screen.
@@ -109,43 +74,6 @@ function getPopupStyle(mouse: { x: number; y: number }): CSSProperties {
   return { position: "fixed", left, top };
 }
 
-/**
- * Converts a DOM position (from caretPositionFromPoint / caretRangeFromPoint)
- * inside the mirror content to a plain-text character offset.
- */
-function domPositionToCharacterOffset(
-  root: Node,
-  targetNode: Node,
-  targetOffset: number
-): number {
-  let count = 0;
-  const walk = (n: Node): boolean => {
-    if (n === targetNode) {
-      if (n.nodeType === Node.TEXT_NODE) {
-        count += Math.max(
-          0,
-          Math.min(targetOffset, (n.textContent ?? "").length)
-        );
-        return true;
-      }
-      for (let i = 0; i < Math.min(targetOffset, n.childNodes.length); i++) {
-        walk(n.childNodes[i]);
-      }
-      return true;
-    }
-    if (n.nodeType === Node.TEXT_NODE) {
-      count += (n.textContent ?? "").length;
-      return false;
-    }
-    for (let i = 0; i < n.childNodes.length; i++) {
-      if (walk(n.childNodes[i])) return true;
-    }
-    return false;
-  };
-  walk(root);
-  return count;
-}
-
 export default function EditorPage() {
   const [text, setText] = useState("");
   const [lints, setLints] = useState<Lint[]>([]);
@@ -155,12 +83,13 @@ export default function EditorPage() {
     y: number;
   } | null>(null);
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastHoveredIndexRef = useRef<number | null>(null);
+  const dismissedLintKeysRef = useRef<Set<string>>(new Set());
+  const scheduleLintRef = useRef<((immediate?: boolean) => void) | null>(null);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
   const [darkMode, setDarkMode] = useState(loadDarkMode);
-  const mirrorRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
-  const lintIdRef = useRef(0);
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -189,14 +118,24 @@ export default function EditorPage() {
   const decreaseFontSize = () =>
     setFontSize((f) => Math.max(FONT_SIZE_MIN, f - FONT_SIZE_STEP));
 
+  const handleRead = async () => {
+    const t = text.trim();
+    if (!t) return;
+    try {
+      await invoke("tts_speak", { text: t });
+    } catch (e) {
+      console.warn("[EditorPage] tts_speak failed:", e);
+      alert(typeof e === "string" ? e : "Could not read aloud. Is Piper installed?");
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         const initial =
           (await invoke<string | null>("take_editor_initial_text")) ?? "";
-        // Only apply when non-empty: avoid StrictMode's second effect run
-        // overwriting with "" after take consumed the value.
+        // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
         if (isMounted && initial.length > 0) setText(initial);
       } catch (e) {
         if (isMounted) console.warn("[EditorPage] take_editor_initial_text failed:", e);
@@ -216,46 +155,13 @@ export default function EditorPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (!text.trim()) {
-        setLints([]);
-        return;
-      }
-      const myId = ++lintIdRef.current;
-      try {
-        const linter = await getOrCreateLinter();
-        const list: Lint[] = await linter.lint(text);
-        if (myId !== lintIdRef.current) return;
-        setLints(list);
-      } catch (e) {
-        if (myId === lintIdRef.current) setLints([]);
-        console.warn("[EditorPage] Harper lint failed:", e);
-      }
-    }, LINT_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [text, getOrCreateLinter]);
-
-  const handleScroll = () => {
-    const ta = textareaRef.current;
-    const mirror = mirrorRef.current;
-    if (ta && mirror) {
-      mirror.scrollTop = ta.scrollTop;
-      mirror.scrollLeft = ta.scrollLeft;
-    }
-  };
-
-  const entries: LintEntry[] = lints.map((lint, i) => {
-    const s = lint.span();
-    const raw =
-      lint.lint_kind?.() ?? lint.lint_kind_pretty?.() ?? "Miscellaneous";
-    return {
-      start: s.start,
-      end: s.end,
-      kind: lintKindToClass(String(raw)),
-      index: i,
-    };
-  });
+  const lintFn = useCallback(
+    async (t: string) => {
+      const linter = await getOrCreateLinter();
+      return linter.lint(t);
+    },
+    [getOrCreateLinter]
+  );
 
   const hoveredLint =
     hoveredLintIndex != null ? lints[hoveredLintIndex] ?? null : null;
@@ -263,36 +169,15 @@ export default function EditorPage() {
   const popupStyle: CSSProperties | null =
     hoveredLintMouse != null ? getPopupStyle(hoveredLintMouse) : null;
 
-  const handleApplySuggestion = async (
-    lint: Lint,
-    suggestion: Suggestion
-  ): Promise<void> => {
+  const handleApplySuggestion = (lint: Lint, suggestion: Suggestion): void => {
+    const editor = editorInstanceRef.current;
+    if (!editor) return;
     try {
-      const linter = await getOrCreateLinter();
-      const next = await linter.applySuggestion(text, lint, suggestion);
-      setText(next);
+      applySuggestion(editor, lint, suggestion);
       clearHovered();
     } catch (e) {
       console.warn("[EditorPage] applySuggestion failed:", e);
     }
-  };
-
-  const clearHovered = () => {
-    setHoveredLintIndex(null);
-    setHoveredLintMouse(null);
-  };
-
-  const handleIgnoreLint = (lintIndex: number) => {
-    setLints((prev) => prev.filter((_, i) => i !== lintIndex));
-    clearHovered();
-  };
-
-  const schedulePopupClose = () => {
-    if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    leaveTimeoutRef.current = setTimeout(() => {
-      leaveTimeoutRef.current = null;
-      clearHovered();
-    }, POPUP_LEAVE_DELAY_MS);
   };
 
   const cancelPopupClose = () => {
@@ -302,62 +187,31 @@ export default function EditorPage() {
     }
   };
 
-  const handleMirrorMouseMove = (e: React.MouseEvent) => {
-    const mark = (e.target as HTMLElement).closest?.(".lint");
-    if (mark) {
-      cancelPopupClose();
-      const idx = mark.getAttribute("data-lint-index");
-      if (idx != null) {
-        const newIndex = parseInt(idx, 10);
-        if (!Number.isInteger(newIndex) || newIndex < 0) return;
-        const isNewPopup = hoveredLintIndex !== newIndex;
-        setHoveredLintIndex(newIndex);
-        if (isNewPopup) {
-          setHoveredLintMouse({ x: e.clientX, y: e.clientY });
-        }
-      }
-    } else {
-      schedulePopupClose();
-    }
+  const clearHovered = () => {
+    cancelPopupClose();
+    lastHoveredIndexRef.current = null;
+    setHoveredLintIndex(null);
+    setHoveredLintMouse(null);
   };
 
-  const handleEditorAreaMouseLeave = () => {
+  const schedulePopupClose = () => {
     cancelPopupClose();
+    leaveTimeoutRef.current = setTimeout(() => {
+      leaveTimeoutRef.current = null;
+      clearHovered();
+    }, POPUP_HIDE_DELAY_MS);
+  };
+
+  const handleIgnoreLint = (lint: Lint) => {
+    dismissedLintKeysRef.current.add(makeLintKey(lint));
+    scheduleLintRef.current?.(true);
     clearHovered();
   };
 
-  const handlePopupMouseEnter = () => cancelPopupClose();
-  const handlePopupMouseLeave = () => clearHovered();
+  const handleEditorAreaMouseLeave = () => schedulePopupClose();
 
-  const handleMirrorClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest?.(".lint")) return;
-    const ta = textareaRef.current;
-    const content = mirrorRef.current?.querySelector(".editor-mirror-content");
-    if (!ta || !content) {
-      ta?.focus();
-      return;
-    }
-    // Get caret position at click; mirror is on top so we get a position in its DOM.
-    const cp =
-      document.caretPositionFromPoint?.(e.clientX, e.clientY) ??
-      (document as Document & { caretRangeFromPoint?(x: number, y: number): Range | null }).caretRangeFromPoint?.(e.clientX, e.clientY);
-    let offset: number;
-    if (cp) {
-      const node =
-        "offsetNode" in cp ? cp.offsetNode : (cp as Range).startContainer;
-      const off = "offset" in cp ? cp.offset : (cp as Range).startOffset;
-      if (!content.contains(node)) {
-        offset = text.length;
-      } else {
-        offset = domPositionToCharacterOffset(content, node, off);
-      }
-    } else {
-      offset = text.length;
-    }
-    offset = Math.max(0, Math.min(offset, text.length));
-    ta.focus();
-    ta.setSelectionRange(offset, offset);
-  };
+  const handlePopupMouseEnter = () => cancelPopupClose();
+  const handlePopupMouseLeave = () => schedulePopupClose();
 
   return (
     <div className={`editor-page ${darkMode ? "editor-page--dark" : ""}`}>
@@ -398,91 +252,60 @@ export default function EditorPage() {
         >
           A+
         </button>
+        <button
+          type="button"
+          onClick={handleRead}
+          disabled={!text.trim()}
+          aria-label="Read aloud"
+          title="Read aloud (stop from main window)"
+          className="editor-toolbar-read"
+        >
+          Read
+        </button>
       </div>
       <div
         className="editor-area"
         style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}
         onMouseLeave={handleEditorAreaMouseLeave}
       >
-        <div
-          ref={mirrorRef}
-          className="editor-mirror editor-mirror--overlay"
-          aria-hidden="true"
-          onMouseMove={handleMirrorMouseMove}
-          onClick={handleMirrorClick}
-        >
-          <div
-            className="editor-mirror-content"
-            dangerouslySetInnerHTML={{ __html: renderMirrorContent(text, entries) }}
-          />
-        </div>
-        <textarea
-          ref={textareaRef}
-          className="editor-textarea editor-textarea--under-mirror"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onScroll={handleScroll}
+        <TipTapEditor
+          content={text}
+          onUpdate={setText}
+          editorRef={(e) => {
+            editorInstanceRef.current = e;
+          }}
           placeholder="Paste or type text to check…"
-          spellCheck={false}
+          lint={lintFn}
+          onLintsChange={setLints}
+          onHover={(index, pos) => {
+            cancelPopupClose();
+            if (index !== lastHoveredIndexRef.current) {
+              lastHoveredIndexRef.current = index;
+              setHoveredLintMouse(pos);
+            }
+            setHoveredLintIndex(index);
+          }}
+          onHoverEnd={schedulePopupClose}
+          getDismissedKeys={() => dismissedLintKeysRef.current}
+          scheduleLintRef={scheduleLintRef}
         />
         {hoveredLint != null && popupStyle != null && (
-          <div
-            className="editor-lint-popup"
+          <LintPopup
+            lint={hoveredLint}
             style={popupStyle}
+            onApply={(s) => handleApplySuggestion(hoveredLint, s)}
+            onDismiss={() => handleIgnoreLint(hoveredLint!)}
             onMouseEnter={handlePopupMouseEnter}
             onMouseLeave={handlePopupMouseLeave}
-          >
-            <p className="editor-lint-popup__message">
-              {hoveredLint.message()}
-            </p>
-            {hoveredLint.suggestions().length > 0 && (
-              <ul className="editor-lint-popup__suggestions" role="list">
-                {hoveredLint.suggestions().map((s, i) => {
-                  const label =
-                    s.kind() === SuggestionKind.Replace
-                      ? s.get_replacement_text()
-                      : s.kind() === SuggestionKind.Remove
-                        ? "Remove"
-                        : `Insert "${s.get_replacement_text()}" after`;
-                  return (
-                    <li key={i} className="editor-lint-popup__item">
-                      <button
-                        type="button"
-                        className="editor-lint-popup__apply"
-                        onClick={() => handleApplySuggestion(hoveredLint, s)}
-                      >
-                        {label}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <button
-              type="button"
-              className="editor-lint-popup__ignore"
-              onClick={() => { if (hoveredLintIndex != null) handleIgnoreLint(hoveredLintIndex); }}
-            >
-              Dismiss
-            </button>
-          </div>
+          />
         )}
       </div>
-      <div className="editor-legend" aria-label="Lint categories">
+      <div className="editor-legend" aria-label="Lint count">
         {lints.length > 0 && (
           <span className="editor-legend-count">
             {lints.length} issue{lints.length === 1 ? "" : "s"}
           </span>
         )}
-        {LEGEND_ITEMS.map(({ key, label }) => (
-          <span key={key} className="editor-legend-item">
-            <span
-              className={`editor-legend-swatch editor-legend-swatch--${key}`}
-              aria-hidden
-            />
-            <span>{label}</span>
-          </span>
-        ))}
       </div>
     </div>
   );

@@ -1,0 +1,85 @@
+/* Popup: position fixed, near cursor. Dark mode in parent .editor-page--dark */
+.editor-lint-popup {
+  z-index: 2;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 14px 16px;
+  font-family: var(--editor-font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.editor-lint-popup__category {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+/* Category color matches the lint highlight / legend swatch for that type */
+.editor-lint-popup__category--spelling { color: #c62828; }
+.editor-lint-popup__category--grammar { color: #00838f; }
+.editor-lint-popup__category--punctuation { color: #00acc1; }
+.editor-lint-popup__category--capitalization { color: #ef6c00; }
+.editor-lint-popup__category--style { color: #1976d2; }
+.editor-lint-popup__category--misc { color: #7b1fa2; }
+.editor-lint-popup__message {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.5;
+}
+.editor-lint-popup__suggestions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.editor-lint-popup__item {
+  margin: 0;
+}
+.editor-lint-popup__apply {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid #b3d4fe;
+  border-radius: 6px;
+  color: #0066cc;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.editor-lint-popup__apply:hover {
+  border-color: #80b8ff;
+}
+.editor-lint-popup__ignore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: fit-content;
+  margin: 10px auto 0;
+  padding: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 400;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.editor-lint-popup__ignore:hover {
+  color: #8f0101;
+}

@@ -1,0 +1,5 @@
+# Permission to invoke tts_stop (stop ongoing TTS playback)
+[[permission]]
+identifier = "allow-tts-stop"
+description = "Allows the main window to stop any ongoing TTS playback"
+commands.allow = ["tts_stop"]

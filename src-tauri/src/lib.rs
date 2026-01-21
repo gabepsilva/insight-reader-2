@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod system;
+mod tts;
 
 use std::sync::{Arc, Mutex};
 use tauri::{
@@ -90,13 +91,39 @@ fn open_editor_window(
     open_or_focus_editor_with_text(&app, &state, initial_text)
 }
 
-/// Takes the stored initial text for the editor (consumes it). Called by the editor page on mount.
+/// Returns the stored initial text for the editor. Does not consume so that
+/// React StrictMode double-mount or HMR remounts can still receive the value.
+/// The stored value is overwritten on each open_or_focus_editor_with_text.
 #[tauri::command]
 fn take_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
-    let mut guard = (*state.inner())
+    let guard = (*state.inner())
         .lock()
         .map_err(|e| format!("editor state lock: {}", e))?;
-    Ok(guard.take())
+    Ok((*guard).clone())
+}
+
+/// Speaks the given text with Piper TTS. Fails if TTS is unavailable or text is empty.
+#[tauri::command]
+fn tts_speak(state: State<tts::TtsState>, text: String) -> Result<(), String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::Speak(text, resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())?
+        .map_err(|e| e.to_string())
+}
+
+/// Stops any ongoing TTS playback. No-op if TTS is unavailable.
+#[tauri::command]
+fn tts_stop(state: State<tts::TtsState>) -> Result<(), String> {
+    state
+        .inner()
+        .send(tts::TtsRequest::Stop)
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    Ok(())
 }
 
 fn log_selected_text(result: &Option<String>) {
@@ -141,15 +168,19 @@ pub fn run() {
         .init();
 
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
+    let tts_state = tts::create_tts_state();
 
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(editor_initial)
+        .manage(tts_state)
         .invoke_handler(tauri::generate_handler![
             get_selected_text,
             get_clipboard_text,
             open_editor_window,
             take_editor_initial_text,
+            tts_speak,
+            tts_stop,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

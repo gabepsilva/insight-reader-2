@@ -5,6 +5,7 @@
   "windows": ["editor"],
   "permissions": [
     "core:default",
-    "allow-take-editor-initial-text"
+    "allow-take-editor-initial-text",
+    "allow-tts-speak"
   ]
 }
