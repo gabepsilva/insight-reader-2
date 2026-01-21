@@ -1,7 +1,14 @@
+@import "./fonts.css";
+
+:root {
+  --editor-font: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
+  font-family: var(--editor-font);
 }
 
 #root {
@@ -28,7 +35,7 @@ body {
 .editor-toolbar button {
   padding: 4px 10px;
   font-size: 14px;
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-family: var(--editor-font);
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -79,6 +86,16 @@ body {
   -ms-overflow-style: none;
 }
 
+/* Overlay: on top of textarea so marks can receive hover. Click on non-mark focuses textarea. */
+.editor-mirror--overlay {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.editor-textarea--under-mirror {
+  z-index: 0;
+}
+
 .editor-mirror::-webkit-scrollbar {
   display: none;
 }
@@ -110,6 +127,7 @@ body {
   align-items: center;
   gap: 6px 14px;
   padding: 6px 12px;
+  font-family: var(--editor-font);
   font-size: 12px;
   color: #666;
   border-top: 1px solid #ddd;
@@ -144,6 +162,80 @@ body {
   resize: none;
   color: #000;
   white-space: pre-wrap; /* match mirror so highlight alignment is correct */
+}
+
+/* Grammarly-style popup on hover over a lint mark. Fix suggestions come from Harper. */
+.editor-lint-popup {
+  z-index: 2;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 14px 16px;
+  font-family: var(--editor-font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.editor-lint-popup__message {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.5;
+}
+.editor-lint-popup__suggestions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.editor-lint-popup__item {
+  margin: 0;
+}
+.editor-lint-popup__apply {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  background: #f0f7ff;
+  border: 1px solid #b3d4fe;
+  border-radius: 6px;
+  color: #0066cc;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.editor-lint-popup__apply:hover {
+  background: #e0efff;
+  border-color: #80b8ff;
+}
+.editor-lint-popup__ignore {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: center;
+  background: transparent;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.editor-lint-popup__ignore:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+  color: #444;
 }
 
 /* ----- Dark mode ----- */
@@ -202,3 +294,32 @@ body:has(.editor-page--dark),
 .editor-page--dark .editor-legend-swatch--capitalization { background: #ffd54f; }
 .editor-page--dark .editor-legend-swatch--style { background: #82aaff; }
 .editor-page--dark .editor-legend-swatch--misc { background: #ce93d8; }
+
+.editor-page--dark .editor-lint-popup {
+  color: #e0e0e0;
+  background: #2d2d2d;
+  border-color: #444;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.editor-page--dark .editor-lint-popup__message {
+  color: #d0d0d0;
+}
+.editor-page--dark .editor-lint-popup__apply {
+  background: #1e3a5f;
+  border-color: #2a4a6f;
+  color: #82aaff;
+}
+.editor-page--dark .editor-lint-popup__apply:hover {
+  background: #2a4a6f;
+  border-color: #3a5a7f;
+}
+.editor-page--dark .editor-lint-popup__ignore {
+  background: transparent;
+  border-color: #555;
+  color: #888;
+}
+.editor-page--dark .editor-lint-popup__ignore:hover {
+  background: #3d3d3d;
+  border-color: #666;
+  color: #bbb;
+}

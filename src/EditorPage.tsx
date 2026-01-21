@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { binaryInlined, Dialect, type Lint, WorkerLinter } from "harper.js";
+import {
+  binaryInlined,
+  Dialect,
+  type Lint,
+  WorkerLinter,
+  type Suggestion,
+  SuggestionKind,
+} from "harper.js";
 import { renderMirrorContent, type LintEntry } from "./editorMirror";
 import "./EditorPage.css";
 
@@ -56,6 +64,12 @@ function saveDarkMode(value: boolean): void {
 
 const LINT_DEBOUNCE_MS = 350;
 
+const POPUP_CORNER_OFFSET = 3;
+const POPUP_EDGE_MARGIN = 12;
+const POPUP_MAX_WIDTH = 360;
+const POPUP_HEIGHT_ESTIMATE = 120;
+const POPUP_LEAVE_DELAY_MS = 50;
+
 const LEGEND_ITEMS: { key: string; label: string }[] = [
   { key: "spelling", label: "Spelling" },
   { key: "grammar", label: "Grammar" },
@@ -65,9 +79,82 @@ const LEGEND_ITEMS: { key: string; label: string }[] = [
   { key: "misc", label: "Other" },
 ];
 
+/**
+ * Computes fixed positioning for the lint popup so it stays on-screen.
+ * Uses left when there is room to the right, otherwise right.
+ */
+function getPopupStyle(mouse: { x: number; y: number }): CSSProperties {
+  const { x: mx, y: my } = mouse;
+  const wouldOverflowRight =
+    mx + POPUP_CORNER_OFFSET + POPUP_MAX_WIDTH >
+    window.innerWidth - POPUP_EDGE_MARGIN;
+  const top = Math.max(
+    POPUP_EDGE_MARGIN,
+    Math.min(
+      my + POPUP_CORNER_OFFSET,
+      window.innerHeight - POPUP_HEIGHT_ESTIMATE - POPUP_EDGE_MARGIN
+    )
+  );
+  if (wouldOverflowRight) {
+    const idealRight = window.innerWidth - (mx + POPUP_CORNER_OFFSET);
+    const maxRight =
+      window.innerWidth - POPUP_EDGE_MARGIN - POPUP_MAX_WIDTH;
+    const right = Math.max(
+      POPUP_EDGE_MARGIN,
+      Math.min(idealRight, maxRight)
+    );
+    return { position: "fixed", right, top };
+  }
+  const left = Math.max(POPUP_EDGE_MARGIN, mx + POPUP_CORNER_OFFSET);
+  return { position: "fixed", left, top };
+}
+
+/**
+ * Converts a DOM position (from caretPositionFromPoint / caretRangeFromPoint)
+ * inside the mirror content to a plain-text character offset.
+ */
+function domPositionToCharacterOffset(
+  root: Node,
+  targetNode: Node,
+  targetOffset: number
+): number {
+  let count = 0;
+  const walk = (n: Node): boolean => {
+    if (n === targetNode) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        count += Math.max(
+          0,
+          Math.min(targetOffset, (n.textContent ?? "").length)
+        );
+        return true;
+      }
+      for (let i = 0; i < Math.min(targetOffset, n.childNodes.length); i++) {
+        walk(n.childNodes[i]);
+      }
+      return true;
+    }
+    if (n.nodeType === Node.TEXT_NODE) {
+      count += (n.textContent ?? "").length;
+      return false;
+    }
+    for (let i = 0; i < n.childNodes.length; i++) {
+      if (walk(n.childNodes[i])) return true;
+    }
+    return false;
+  };
+  walk(root);
+  return count;
+}
+
 export default function EditorPage() {
   const [text, setText] = useState("");
-  const [lints, setLints] = useState<LintEntry[]>([]);
+  const [lints, setLints] = useState<Lint[]>([]);
+  const [hoveredLintIndex, setHoveredLintIndex] = useState<number | null>(null);
+  const [hoveredLintMouse, setHoveredLintMouse] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
   const [darkMode, setDarkMode] = useState(loadDarkMode);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -89,6 +176,13 @@ export default function EditorPage() {
   useEffect(() => {
     saveDarkMode(darkMode);
   }, [darkMode]);
+
+  useEffect(
+    () => () => {
+      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+    },
+    []
+  );
 
   const increaseFontSize = () =>
     setFontSize((f) => Math.min(FONT_SIZE_MAX, f + FONT_SIZE_STEP));
@@ -133,17 +227,7 @@ export default function EditorPage() {
         const linter = await getOrCreateLinter();
         const list: Lint[] = await linter.lint(text);
         if (myId !== lintIdRef.current) return;
-        const entries: LintEntry[] = list.map((lint) => {
-          const s = lint.span();
-          const raw =
-            lint.lint_kind?.() ?? lint.lint_kind_pretty?.() ?? "Miscellaneous";
-          return {
-            start: s.start,
-            end: s.end,
-            kind: lintKindToClass(String(raw)),
-          };
-        });
-        setLints(entries);
+        setLints(list);
       } catch (e) {
         if (myId === lintIdRef.current) setLints([]);
         console.warn("[EditorPage] Harper lint failed:", e);
@@ -159,6 +243,120 @@ export default function EditorPage() {
       mirror.scrollTop = ta.scrollTop;
       mirror.scrollLeft = ta.scrollLeft;
     }
+  };
+
+  const entries: LintEntry[] = lints.map((lint, i) => {
+    const s = lint.span();
+    const raw =
+      lint.lint_kind?.() ?? lint.lint_kind_pretty?.() ?? "Miscellaneous";
+    return {
+      start: s.start,
+      end: s.end,
+      kind: lintKindToClass(String(raw)),
+      index: i,
+    };
+  });
+
+  const hoveredLint =
+    hoveredLintIndex != null ? lints[hoveredLintIndex] ?? null : null;
+
+  const popupStyle: CSSProperties | null =
+    hoveredLintMouse != null ? getPopupStyle(hoveredLintMouse) : null;
+
+  const handleApplySuggestion = async (
+    lint: Lint,
+    suggestion: Suggestion
+  ): Promise<void> => {
+    try {
+      const linter = await getOrCreateLinter();
+      const next = await linter.applySuggestion(text, lint, suggestion);
+      setText(next);
+      clearHovered();
+    } catch (e) {
+      console.warn("[EditorPage] applySuggestion failed:", e);
+    }
+  };
+
+  const clearHovered = () => {
+    setHoveredLintIndex(null);
+    setHoveredLintMouse(null);
+  };
+
+  const handleIgnoreLint = (lintIndex: number) => {
+    setLints((prev) => prev.filter((_, i) => i !== lintIndex));
+    clearHovered();
+  };
+
+  const schedulePopupClose = () => {
+    if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+    leaveTimeoutRef.current = setTimeout(() => {
+      leaveTimeoutRef.current = null;
+      clearHovered();
+    }, POPUP_LEAVE_DELAY_MS);
+  };
+
+  const cancelPopupClose = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+  };
+
+  const handleMirrorMouseMove = (e: React.MouseEvent) => {
+    const mark = (e.target as HTMLElement).closest?.(".lint");
+    if (mark) {
+      cancelPopupClose();
+      const idx = mark.getAttribute("data-lint-index");
+      if (idx != null) {
+        const newIndex = parseInt(idx, 10);
+        if (!Number.isInteger(newIndex) || newIndex < 0) return;
+        const isNewPopup = hoveredLintIndex !== newIndex;
+        setHoveredLintIndex(newIndex);
+        if (isNewPopup) {
+          setHoveredLintMouse({ x: e.clientX, y: e.clientY });
+        }
+      }
+    } else {
+      schedulePopupClose();
+    }
+  };
+
+  const handleEditorAreaMouseLeave = () => {
+    cancelPopupClose();
+    clearHovered();
+  };
+
+  const handlePopupMouseEnter = () => cancelPopupClose();
+  const handlePopupMouseLeave = () => clearHovered();
+
+  const handleMirrorClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest?.(".lint")) return;
+    const ta = textareaRef.current;
+    const content = mirrorRef.current?.querySelector(".editor-mirror-content");
+    if (!ta || !content) {
+      ta?.focus();
+      return;
+    }
+    // Get caret position at click; mirror is on top so we get a position in its DOM.
+    const cp =
+      document.caretPositionFromPoint?.(e.clientX, e.clientY) ??
+      (document as Document & { caretRangeFromPoint?(x: number, y: number): Range | null }).caretRangeFromPoint?.(e.clientX, e.clientY);
+    let offset: number;
+    if (cp) {
+      const node =
+        "offsetNode" in cp ? cp.offsetNode : (cp as Range).startContainer;
+      const off = "offset" in cp ? cp.offset : (cp as Range).startOffset;
+      if (!content.contains(node)) {
+        offset = text.length;
+      } else {
+        offset = domPositionToCharacterOffset(content, node, off);
+      }
+    } else {
+      offset = text.length;
+    }
+    offset = Math.max(0, Math.min(offset, text.length));
+    ta.focus();
+    ta.setSelectionRange(offset, offset);
   };
 
   return (
@@ -203,27 +401,72 @@ export default function EditorPage() {
       </div>
       <div
         className="editor-area"
-        style={{ "--editor-font-size": `${fontSize}px` } as React.CSSProperties}
+        style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}
+        onMouseLeave={handleEditorAreaMouseLeave}
       >
         <div
           ref={mirrorRef}
-          className="editor-mirror"
+          className="editor-mirror editor-mirror--overlay"
           aria-hidden="true"
+          onMouseMove={handleMirrorMouseMove}
+          onClick={handleMirrorClick}
         >
           <div
             className="editor-mirror-content"
-            dangerouslySetInnerHTML={{ __html: renderMirrorContent(text, lints) }}
+            dangerouslySetInnerHTML={{ __html: renderMirrorContent(text, entries) }}
           />
         </div>
         <textarea
           ref={textareaRef}
-          className="editor-textarea"
+          className="editor-textarea editor-textarea--under-mirror"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onScroll={handleScroll}
           placeholder="Paste or type text to check…"
           spellCheck={false}
         />
+        {hoveredLint != null && popupStyle != null && (
+          <div
+            className="editor-lint-popup"
+            style={popupStyle}
+            onMouseEnter={handlePopupMouseEnter}
+            onMouseLeave={handlePopupMouseLeave}
+          >
+            <p className="editor-lint-popup__message">
+              {hoveredLint.message()}
+            </p>
+            {hoveredLint.suggestions().length > 0 && (
+              <ul className="editor-lint-popup__suggestions" role="list">
+                {hoveredLint.suggestions().map((s, i) => {
+                  const label =
+                    s.kind() === SuggestionKind.Replace
+                      ? s.get_replacement_text()
+                      : s.kind() === SuggestionKind.Remove
+                        ? "Remove"
+                        : `Insert "${s.get_replacement_text()}" after`;
+                  return (
+                    <li key={i} className="editor-lint-popup__item">
+                      <button
+                        type="button"
+                        className="editor-lint-popup__apply"
+                        onClick={() => handleApplySuggestion(hoveredLint, s)}
+                      >
+                        {label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <button
+              type="button"
+              className="editor-lint-popup__ignore"
+              onClick={() => { if (hoveredLintIndex != null) handleIgnoreLint(hoveredLintIndex); }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
       <div className="editor-legend" aria-label="Lint categories">
         {lints.length > 0 && (

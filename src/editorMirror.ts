@@ -7,6 +7,8 @@ export interface LintEntry {
   start: number;
   end: number;
   kind: string;
+  /** Index into the original Lint[] for lookups (e.g. hover popup). Omitted when not needed. */
+  index?: number;
 }
 
 /**
@@ -54,8 +56,9 @@ export function renderMirrorContent(text: string, lints: LintEntry[]): string {
     const start = Math.max(0, Math.min(l.start, text.length));
     const end = Math.max(start, Math.min(l.end, text.length));
     if (end > start) {
+      const dataIndex = l.index !== undefined ? ` data-lint-index="${l.index}"` : "";
       parts.push(
-        `<mark class="lint lint--${l.kind}" data-start="${l.start}" data-end="${l.end}">${escapeHtml(text.slice(start, end))}</mark>`
+        `<mark class="lint lint--${l.kind}" data-start="${l.start}" data-end="${l.end}"${dataIndex}>${escapeHtml(text.slice(start, end))}</mark>`
       );
       pos = end;
     }
