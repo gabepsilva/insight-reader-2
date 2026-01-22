@@ -1,0 +1,5 @@
+# Permission to invoke take_live_text_image_path (get the image path for the current window)
+[[permission]]
+identifier = "allow-take-live-text-image-path"
+description = "Allows invoking take_live_text_image_path to get the image file path for the current live text viewer window"
+commands.allow = ["take_live_text_image_path"]

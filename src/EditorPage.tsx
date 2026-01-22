@@ -110,10 +110,14 @@ export default function EditorPage() {
     [],
   );
 
-  const increaseFontSize = () =>
-    setFontSize((f) => Math.min(FONT_SIZE_MAX, f + FONT_SIZE_STEP));
-  const decreaseFontSize = () =>
-    setFontSize((f) => Math.max(FONT_SIZE_MIN, f - FONT_SIZE_STEP));
+  const increaseFontSize = useCallback(
+    () => setFontSize((f) => Math.min(FONT_SIZE_MAX, f + FONT_SIZE_STEP)),
+    [],
+  );
+  const decreaseFontSize = useCallback(
+    () => setFontSize((f) => Math.max(FONT_SIZE_MIN, f - FONT_SIZE_STEP)),
+    [],
+  );
 
   // Keep textRef in sync with text state
   useEffect(() => {
@@ -202,10 +206,10 @@ export default function EditorPage() {
   );
 
   const hoveredLint =
-    hoveredLintIndex != null ? (lints[hoveredLintIndex] ?? null) : null;
+    hoveredLintIndex != null ? lints[hoveredLintIndex] ?? null : null;
 
   const popupStyle: CSSProperties | null =
-    hoveredLintMouse != null ? getPopupStyle(hoveredLintMouse) : null;
+    hoveredLintMouse ? getPopupStyle(hoveredLintMouse) : null;
 
   const handleApplySuggestion = (lint: Lint, suggestion: Suggestion): void => {
     const editor = editorInstanceRef.current;
@@ -218,27 +222,27 @@ export default function EditorPage() {
     }
   };
 
-  const cancelPopupClose = () => {
+  const cancelPopupClose = useCallback(() => {
     if (leaveTimeoutRef.current) {
       clearTimeout(leaveTimeoutRef.current);
       leaveTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const clearHovered = () => {
+  const clearHovered = useCallback(() => {
     cancelPopupClose();
     lastHoveredIndexRef.current = null;
     setHoveredLintIndex(null);
     setHoveredLintMouse(null);
-  };
+  }, [cancelPopupClose]);
 
-  const schedulePopupClose = () => {
+  const schedulePopupClose = useCallback(() => {
     cancelPopupClose();
     leaveTimeoutRef.current = setTimeout(() => {
       leaveTimeoutRef.current = null;
       clearHovered();
     }, POPUP_HIDE_DELAY_MS);
-  };
+  }, [cancelPopupClose, clearHovered]);
 
   const handleIgnoreLint = (lint: Lint) => {
     dismissedLintKeysRef.current.add(makeLintKey(lint));
@@ -246,10 +250,9 @@ export default function EditorPage() {
     clearHovered();
   };
 
-  const handleEditorAreaMouseLeave = () => schedulePopupClose();
-
-  const handlePopupMouseEnter = () => cancelPopupClose();
-  const handlePopupMouseLeave = () => schedulePopupClose();
+  const handleEditorAreaMouseLeave = schedulePopupClose;
+  const handlePopupMouseEnter = cancelPopupClose;
+  const handlePopupMouseLeave = schedulePopupClose;
 
   return (
     <div className={`editor-page ${darkMode ? "editor-page--dark" : ""}`}>
@@ -352,7 +355,7 @@ export default function EditorPage() {
             lint={hoveredLint}
             style={popupStyle}
             onApply={(s) => handleApplySuggestion(hoveredLint, s)}
-            onDismiss={() => handleIgnoreLint(hoveredLint!)}
+            onDismiss={() => hoveredLint && handleIgnoreLint(hoveredLint)}
             onMouseEnter={handlePopupMouseEnter}
             onMouseLeave={handlePopupMouseLeave}
           />

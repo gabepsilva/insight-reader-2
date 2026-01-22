@@ -1,0 +1,5 @@
+# Permission to invoke open_live_text_viewer (open a window to display an image with live text)
+[[permission]]
+identifier = "allow-open-live-text-viewer"
+description = "Allows invoking open_live_text_viewer to open a window displaying an image with live text overlay"
+commands.allow = ["open_live_text_viewer"]

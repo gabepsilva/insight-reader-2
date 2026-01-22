@@ -127,39 +127,40 @@ function App() {
 
   const handleCamera = async () => {
     try {
-      const [, screenshotPath] = await invoke<[unknown, string]>("capture_screenshot_and_ocr");
+      const platform = await invoke<string>("get_platform");
+      const isMacOS = platform === "macos";
       
-      // Open screenshot viewer window
+      // Capture screenshot and OCR (OCR result ignored on macOS)
+      const [ocrResult, imagePath] = await invoke<[
+        { items: Array<{ text: string; bounding_box: { x: number; y: number; width: number; height: number }; confidence: number }>; full_text: string },
+        string
+      ]>("capture_screenshot_and_ocr");
+      
+      // Open live text viewer window (OCR data is null on macOS)
       try {
-        await invoke("open_screenshot_viewer", { screenshotPath });
+        await invoke("open_live_text_viewer", { 
+          imagePath,
+          ocrResult: isMacOS ? null : ocrResult,
+        });
       } catch (viewerError) {
-        console.error("Failed to open screenshot viewer:", viewerError);
+        console.error("Failed to open live text viewer:", viewerError);
       }
     } catch (e) {
-      // Handle structured error response from Tauri command
-      // Error format: { type: "cancelled" | "screenshot" | "ocr", message?: string }
+      // Handle structured error response: { type: "cancelled" | "screenshot" | "ocr", message?: string }
       if (typeof e === "object" && e !== null && "type" in e) {
         const error = e as { type: string; message?: string };
-        if (error.type === "cancelled") {
-          // User cancelled - silently return
-          return;
-        }
+        if (error.type === "cancelled") return; // User cancelled - silently return
         const errorType = error.type === "screenshot" ? "Screenshot" : "OCR";
-        console.error(
-          `${errorType} error:`,
-          error.message || "Unknown error"
-        );
-      } else {
-        // Fallback for non-structured errors (legacy or unexpected format)
-        const errorMsg = typeof e === "string" ? e : (e instanceof Error ? e.message : String(e));
-        if (errorMsg.toLowerCase().includes("cancelled")) {
-          // User cancelled - silently return
-          return;
-        }
-        console.error("Screenshot OCR failed:", e);
-        if (e instanceof Error) {
-          console.error("Error details:", e.message, e.stack);
-        }
+        console.error(`${errorType} error:`, error.message || "Unknown error");
+        return;
+      }
+      
+      // Fallback for non-structured errors
+      const errorMsg = typeof e === "string" ? e : (e instanceof Error ? e.message : String(e));
+      if (errorMsg.toLowerCase().includes("cancelled")) return; // User cancelled
+      console.error("Live text capture failed:", e);
+      if (e instanceof Error) {
+        console.error("Error details:", e.message, e.stack);
       }
     }
   };
@@ -353,7 +354,7 @@ function App() {
             <button
               className="control-button camera"
               onClick={handleCamera}
-              aria-label="Screenshot"
+              aria-label="Live Text"
             >
               <svg
                 width="18"

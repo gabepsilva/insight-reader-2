@@ -1,0 +1,5 @@
+# Permission to invoke get_platform (get the current platform)
+[[permission]]
+identifier = "allow-get-platform"
+description = "Allows invoking get_platform to get the current operating system platform"
+commands.allow = ["get_platform"]

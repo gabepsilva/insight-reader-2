@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import ScreenshotViewer from "./components/ScreenshotViewer";
+import LiveTextViewer from "./components/LiveTextViewer";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ScreenshotViewer />
+    <LiveTextViewer />
   </React.StrictMode>,
 );

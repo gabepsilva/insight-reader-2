@@ -1,5 +1,0 @@
-# Permission to invoke take_screenshot_path (get the screenshot path for the current window)
-[[permission]]
-identifier = "allow-take-screenshot-path"
-description = "Allows invoking take_screenshot_path to get the screenshot file path for the current window"
-commands.allow = ["take_screenshot_path"]

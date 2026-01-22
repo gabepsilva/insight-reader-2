@@ -16,6 +16,7 @@
     "allow-tts-stop",
     "allow-tts-pause",
     "allow-capture-screenshot-and-ocr",
-    "allow-open-screenshot-viewer"
+    "allow-open-live-text-viewer",
+    "allow-get-platform"
   ]
 }

@@ -1,4 +1,4 @@
-.screenshot-viewer {
+.live-text-viewer {
   width: 100%;
   height: 100vh;
   min-height: 100vh;
@@ -9,17 +9,46 @@
   overflow: hidden;
 }
 
-.screenshot-image {
+.live-text-image {
   width: auto;
   height: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
-.screenshot-loading,
-.screenshot-error {
+.live-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.live-text-item {
+  position: absolute;
+  background-color: rgba(255, 255, 0, 0.2);
+  color: #000000;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: auto;
+  user-select: text;
+  cursor: text;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+}
+
+.live-text-loading,
+.live-text-error {
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, sans-serif;
@@ -27,19 +56,19 @@
   padding: 20px;
 }
 
-.screenshot-error-container {
+.live-text-error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
 }
 
-.screenshot-error {
+.live-text-error {
   color: #ff6b6b;
   text-align: center;
 }
 
-.screenshot-close-button {
+.live-text-close-button {
   padding: 10px 20px;
   background-color: #4a4a4a;
   color: #ffffff;
@@ -52,10 +81,10 @@
   transition: background-color 0.2s;
 }
 
-.screenshot-close-button:hover {
+.live-text-close-button:hover {
   background-color: #5a5a5a;
 }
 
-.screenshot-close-button:active {
+.live-text-close-button:active {
   background-color: #3a3a3a;
 }
