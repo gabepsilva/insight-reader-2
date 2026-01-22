@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
 import { PencilIcon } from "./components/icons";
 import { SeekButton } from "./components/SeekButton";
+import { ProgressBar } from "./components/ProgressBar";
 import "./App.css";
 
 function App() {
@@ -380,12 +381,7 @@ function App() {
           </div>
 
           <div className="progress-container">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <ProgressBar progress={progress} />
           </div>
         </div>
 

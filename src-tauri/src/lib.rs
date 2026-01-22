@@ -64,7 +64,7 @@ fn build_webview_url<R: tauri::Runtime>(
             .map(|u| u.as_str().trim_end_matches('/').to_string())
             .unwrap_or_else(|| "http://localhost:1420".to_string());
         let url = format!("{}/{}", base, html_path);
-        WebviewUrl::External(url.parse().map_err(|e| format!("dev_url parse: {}", e))?)
+        Ok(WebviewUrl::External(url.parse().map_err(|e| format!("dev_url parse: {}", e))?))
     } else {
         Ok(WebviewUrl::App(format!("/{}", html_path).into()))
     }
