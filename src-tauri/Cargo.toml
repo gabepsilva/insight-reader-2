@@ -24,7 +24,6 @@ arboard = { version = "3.2", features = ["wayland-data-control"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rodio = "0.19"
-dirs = "5.0"
 thiserror = "1.0"
 image = "0.25"
 serde = { version = "1.0", features = ["derive"] }

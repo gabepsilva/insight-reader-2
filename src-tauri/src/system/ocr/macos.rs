@@ -1,7 +1,7 @@
 //! macOS-specific OCR implementation using Swift script with Vision framework
 
 use super::{BoundingBox, OcrError, OcrResult, OcrTextItem};
-use dirs;
+use crate::paths;
 use serde_json;
 use std::env;
 use std::fs;
@@ -107,11 +107,9 @@ pub fn extract_text_with_positions(image_bytes: &[u8]) -> Result<OcrResult, OcrE
         "Starting OCR with positions on image"
     );
 
-    // Get cache directory using dirs crate
-    let cache_dir = dirs::cache_dir()
-        .ok_or_else(|| OcrError::ImageConversion("Failed to get cache directory".to_string()))?
-        .join("insight-reader-2")
-        .join("ocr");
+    // Get cache directory: ${HOME}/.insight-reader-2/cache
+    let cache_dir = paths::get_cache_dir()
+        .map_err(|e| OcrError::ImageConversion(format!("Failed to get cache directory: {}", e)))?;
 
     // Create cache directory if it doesn't exist
     fs::create_dir_all(&cache_dir).map_err(|e| {

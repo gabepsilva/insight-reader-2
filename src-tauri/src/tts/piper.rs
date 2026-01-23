@@ -1,5 +1,6 @@
 //! Piper TTS provider: runs the Piper binary and plays audio via rodio.
 
+use crate::paths;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -217,15 +218,6 @@ impl PiperTTSProvider {
         Ok(AudioPlayer::pcm_to_f32(&output.stdout))
     }
 
-    #[cfg(target_os = "macos")]
-    fn linux_style_models_dir() -> Option<PathBuf> {
-        dirs::home_dir().map(|h| {
-            h.join(".local")
-                .join("share")
-                .join("insight-reader")
-                .join("models")
-        })
-    }
 
     fn find_piper_binary() -> PathBuf {
         #[cfg(target_os = "windows")]
@@ -238,6 +230,7 @@ impl PiperTTSProvider {
         #[cfg(not(target_os = "windows"))]
         const PIPER_BIN_NAME: &str = "piper";
 
+        // 1. Check development venv in current directory
         if let Ok(cwd) = env::current_dir() {
             let p = cwd.join("venv").join(VENV_BIN_DIR).join(PIPER_BIN_NAME);
             if p.exists() {
@@ -245,42 +238,15 @@ impl PiperTTSProvider {
             }
         }
 
-        if let Some(d) = dirs::data_local_dir() {
-            let p = d
-                .join("insight-reader")
-                .join("venv")
-                .join(VENV_BIN_DIR)
-                .join(PIPER_BIN_NAME);
+        // 2. Check production venv in ${HOME}/.insight-reader-2/venv
+        if let Ok(venv_dir) = paths::get_venv_dir() {
+            let p = venv_dir.join(VENV_BIN_DIR).join(PIPER_BIN_NAME);
             if p.exists() {
                 return p;
             }
         }
 
-        if let Some(d) = dirs::data_dir() {
-            let p = d
-                .join("insight-reader")
-                .join("venv")
-                .join(VENV_BIN_DIR)
-                .join(PIPER_BIN_NAME);
-            if p.exists() {
-                return p;
-            }
-        }
-
-        #[cfg(target_os = "macos")]
-        if let Some(h) = dirs::home_dir() {
-            let p = h
-                .join(".local")
-                .join("share")
-                .join("insight-reader")
-                .join("venv")
-                .join("bin")
-                .join(PIPER_BIN_NAME);
-            if p.exists() {
-                return p;
-            }
-        }
-
+        // 3. Check system PATH (which/where)
         #[cfg(target_os = "windows")]
         {
             const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -314,9 +280,9 @@ impl PiperTTSProvider {
             }
         }
 
-        let base = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
-        base.join("insight-reader")
-            .join("venv")
+        // 4. Default to production venv path (even if it doesn't exist yet)
+        paths::get_venv_dir()
+            .unwrap_or_else(|_| PathBuf::from("/tmp/.insight-reader-2"))
             .join(VENV_BIN_DIR)
             .join(PIPER_BIN_NAME)
     }
@@ -326,20 +292,18 @@ impl PiperTTSProvider {
         const PREFERRED: &str = "en_US-lessac-medium";
 
         let mut dirs_to_check: Vec<PathBuf> = Vec::new();
+        
+        // 1. Check development models in current directory
         if let Ok(c) = env::current_dir() {
             dirs_to_check.push(c.join("models"));
         }
-        if let Some(d) = dirs::data_local_dir() {
-            dirs_to_check.push(d.join("insight-reader").join("models"));
-        }
-        if let Some(d) = dirs::data_dir() {
-            dirs_to_check.push(d.join("insight-reader").join("models"));
-        }
-        #[cfg(target_os = "macos")]
-        if let Some(p) = Self::linux_style_models_dir() {
-            dirs_to_check.push(p);
+        
+        // 2. Check production models in ${HOME}/.insight-reader-2/models
+        if let Ok(models_dir) = paths::get_models_dir() {
+            dirs_to_check.push(models_dir);
         }
 
+        // First pass: look for preferred model
         for base in &dirs_to_check {
             let preferred = base.join(PREFERRED);
             if preferred.with_extension("onnx").is_file() {
@@ -348,6 +312,7 @@ impl PiperTTSProvider {
             }
         }
 
+        // Second pass: find any .onnx model
         for base in &dirs_to_check {
             if let Ok(entries) = std::fs::read_dir(base) {
                 for e in entries.flatten() {
@@ -362,7 +327,7 @@ impl PiperTTSProvider {
         }
 
         Err(TTSError::ProcessError(
-            "No Piper model (.onnx) found. Install a voice to ~/.local/share/insight-reader/models/".into(),
+            "No Piper model (.onnx) found. Install a voice to ~/.insight-reader-2/models/".into(),
         ))
     }
 }
