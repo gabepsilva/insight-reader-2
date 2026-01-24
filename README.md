@@ -83,7 +83,7 @@ cargo build --release    # release (optimized)
 
 ```bash
 bun run dev     # Vite dev server (no Tauri window)
-bun run build   # Vite production build → dist/
+bun run build   # Vite production build → dist/ 
 bun run preview # Preview production build
 ```
 
