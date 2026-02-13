@@ -7,15 +7,15 @@ body,
 }
 
 body {
-  background: #1a1a2e;
+  background: #18181b;
 }
 
 .settings-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1a1a2e;
-  color: #eee;
+  background: #18181b;
+  color: #fafafa;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -24,7 +24,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   -webkit-app-region: drag;
 }
 
@@ -32,13 +32,14 @@ body {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  color: #fafafa;
 }
 
 .close-button {
   -webkit-app-region: no-drag;
   background: transparent;
   border: none;
-  color: #888;
+  color: #71717a;
   font-size: 24px;
   cursor: pointer;
   padding: 0;
@@ -46,19 +47,19 @@ body {
 }
 
 .close-button:hover {
-  color: #fff;
+  color: #fafafa;
 }
 
 .settings-tabs {
   display: flex;
   padding: 0 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .tab {
   background: transparent;
   border: none;
-  color: #888;
+  color: #71717a;
   padding: 12px 16px;
   cursor: pointer;
   font-size: 14px;
@@ -67,12 +68,12 @@ body {
 }
 
 .tab:hover {
-  color: #eee;
+  color: #a1a1aa;
 }
 
 .tab.active {
-  color: #6c5ce7;
-  border-bottom-color: #6c5ce7;
+  color: #fafafa;
+  border-bottom-color: #fafafa;
 }
 
 .settings-content {
@@ -95,7 +96,7 @@ body {
 
 .setting-group label {
   font-size: 14px;
-  color: #ccc;
+  color: #a1a1aa;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -103,23 +104,30 @@ body {
 
 .setting-group select,
 .setting-group input[type="text"] {
-  background: #16213e;
-  border: 1px solid #333;
-  color: #eee;
+  background: #3f3f46 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff !important;
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 14px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.setting-group select option {
+  background: #27272a !important;
+  color: #ffffff !important;
 }
 
 .setting-group select:focus,
 .setting-group input[type="text"]:focus {
   outline: none;
-  border-color: #6c5ce7;
+  border-color: #fafafa;
 }
 
 .setting-help {
   font-size: 12px;
-  color: #888;
+  color: #71717a;
   margin: 0;
 }
 
@@ -132,8 +140,8 @@ body {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #6c5ce7;
-  color: white;
+  background: #fafafa;
+  color: #18181b;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 14px;
@@ -144,7 +152,7 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
-  color: #888;
+  color: #71717a;
 }
 
 .voice-list {
@@ -160,48 +168,49 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: #16213e;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .voice-item:hover {
-  background: #1f2b4d;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .voice-item.selected {
-  background: #2d3a5a;
-  border: 1px solid #6c5ce7;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid #fafafa;
 }
 
 .voice-name {
   flex: 1;
   font-size: 14px;
+  color: #fafafa;
 }
 
 .voice-lang {
   font-size: 12px;
-  color: #888;
+  color: #71717a;
 }
 
 .voice-badge {
   font-size: 11px;
   padding: 2px 8px;
-  background: #333;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  color: #aaa;
+  color: #a1a1aa;
 }
 
 .voice-badge.downloaded {
-  background: #2d5a3d;
+  background: rgba(74, 222, 128, 0.15);
   color: #4ade80;
 }
 
 .download-btn {
-  background: #6c5ce7;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: white;
+  color: #fafafa;
   padding: 4px 12px;
   border-radius: 4px;
   font-size: 12px;
@@ -209,7 +218,7 @@ body {
 }
 
 .download-btn:hover:not(:disabled) {
-  background: #5a4bd4;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .download-btn:disabled {
@@ -225,13 +234,13 @@ body {
 h3 {
   margin: 0 0 8px 0;
   font-size: 16px;
-  color: #eee;
+  color: #fafafa;
 }
 
 h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
-  color: #ccc;
+  color: #a1a1aa;
 }
 
 .about-section {
@@ -247,13 +256,35 @@ h4 {
 .about-section li {
   padding: 4px 0;
   font-size: 14px;
+  color: #a1a1aa;
 }
 
 .about-section a {
-  color: #6c5ce7;
+  color: #fafafa;
   text-decoration: none;
 }
 
 .about-section a:hover {
   text-decoration: underline;
+}
+
+input[type="radio"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #71717a;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+input[type="radio"]:checked {
+  border-color: #fafafa;
+  background: #fafafa;
+  box-shadow: inset 0 0 0 3px #18181b;
+}
+
+input[type="radio"]:hover {
+  border-color: #a1a1aa;
 }

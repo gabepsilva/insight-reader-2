@@ -10,6 +10,7 @@ interface Config {
   text_cleanup_enabled: boolean | null;
   selected_voice: string | null;
   selected_polly_voice: string | null;
+  selected_microsoft_voice: string | null;
   ocr_backend: string | null;
   hotkey_enabled: boolean | null;
   hotkey_modifiers: string | null;
@@ -198,8 +199,14 @@ function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: 
 function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: Partial<Config>) => void }) {
   const [piperVoices, setPiperVoices] = useState<any[]>([]);
   const [pollyVoices, setPollyVoices] = useState<any[]>([]);
+  const [microsoftVoices, setMicrosoftVoices] = useState<any[]>([]);
+  const [microsoftLanguages, setMicrosoftLanguages] = useState<{code: string; name: string}[]>([]);
+  const [selectedMicrosoftLanguage, setSelectedMicrosoftLanguage] = useState<string>('');
+  const [pollyLanguages, setPollyLanguages] = useState<{code: string; name: string}[]>([]);
+  const [selectedPollyLanguage, setSelectedPollyLanguage] = useState<string>('');
   const [loadingPiper, setLoadingPiper] = useState(false);
   const [loadingPolly, setLoadingPolly] = useState(false);
+  const [loadingMicrosoft, setLoadingMicrosoft] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloadedVoices, setDownloadedVoices] = useState<string[]>([]);
 
@@ -208,9 +215,55 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
     loadDownloadedVoices();
   }, []);
 
+  useEffect(() => {
+    if (pollyVoices.length > 0) {
+      const langMap = new Map<string, string>();
+      pollyVoices.forEach((voice: any) => {
+        if (!langMap.has(voice.language_code)) {
+          const langName = formatPollyLanguage(voice.language_code);
+          langMap.set(voice.language_code, langName);
+        }
+      });
+      const langs = Array.from(langMap.entries())
+        .map(([code, name]) => ({ code, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setPollyLanguages(langs);
+      if (!selectedPollyLanguage && langs.length > 0) {
+        setSelectedPollyLanguage(langs[0].code);
+      }
+    }
+  }, [pollyVoices]);
+
+  useEffect(() => {
+    if (microsoftVoices.length > 0) {
+      const langMap = new Map<string, string>();
+      microsoftVoices.forEach((voice: any) => {
+        if (!langMap.has(voice.language_code)) {
+          langMap.set(voice.language_code, voice.language_code);
+        }
+      });
+      const langs = Array.from(langMap.entries())
+        .map(([code, name]) => ({ code, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setMicrosoftLanguages(langs);
+      if (!selectedMicrosoftLanguage && langs.length > 0) {
+        setSelectedMicrosoftLanguage(langs[0].code);
+      }
+    }
+  }, [microsoftVoices]);
+
+  const formatPollyLanguage = (code: string): string => {
+    const parts = code.split('-');
+    if (parts.length >= 2) {
+      return `${parts[0].toUpperCase()} (${parts[1]})`;
+    }
+    return code.toUpperCase();
+  };
+
   const loadVoices = async () => {
     setLoadingPiper(true);
     setLoadingPolly(true);
+    setLoadingMicrosoft(true);
     try {
       const piper = await invoke<any[]>('list_piper_voices');
       setPiperVoices(piper || []);
@@ -227,6 +280,15 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
       console.error('Failed to load Polly voices:', e);
     } finally {
       setLoadingPolly(false);
+    }
+
+    try {
+      const microsoft = await invoke<any[]>('list_microsoft_voices');
+      setMicrosoftVoices(microsoft || []);
+    } catch (e) {
+      console.error('Failed to load Microsoft voices:', e);
+    } finally {
+      setLoadingMicrosoft(false);
     }
   };
 
@@ -288,19 +350,76 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
       ) : pollyVoices.length === 0 ? (
         <p className="voice-error">No voices available. Check AWS credentials.</p>
       ) : (
-        <div className="voice-list">
-          {pollyVoices.slice(0, 20).map((voice: any) => (
-            <div 
-              key={voice.id}
-              className={`voice-item ${config.selected_polly_voice === voice.id ? 'selected' : ''}`}
-              onClick={() => onChange({ selected_polly_voice: voice.id })}
+        <>
+          <div className="setting-group">
+            <label>Language</label>
+            <select
+              value={selectedPollyLanguage}
+              onChange={(e) => setSelectedPollyLanguage(e.target.value)}
             >
-              <span className="voice-name">{voice.name}</span>
-              <span className="voice-lang">{voice.language_code}</span>
-              <span className="voice-badge">{voice.engine}</span>
-            </div>
-          ))}
-        </div>
+              {pollyLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="voice-list">
+            {pollyVoices
+              .filter((voice: any) => !selectedPollyLanguage || voice.language_code === selectedPollyLanguage)
+              .slice(0, 50)
+              .map((voice: any) => (
+                <div 
+                  key={voice.id}
+                  className={`voice-item ${config.selected_polly_voice === voice.id ? 'selected' : ''}`}
+                  onClick={() => onChange({ selected_polly_voice: voice.id })}
+                >
+                  <span className="voice-name">{voice.name}</span>
+                  <span className="voice-lang">{voice.language_code}</span>
+                  <span className="voice-badge">{voice.engine}</span>
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+
+      <h3>Microsoft Edge Voices</h3>
+      {loadingMicrosoft ? (
+        <p>Loading voices...</p>
+      ) : microsoftVoices.length === 0 ? (
+        <p>No voices available.</p>
+      ) : (
+        <>
+          <div className="setting-group">
+            <label>Language</label>
+            <select
+              value={selectedMicrosoftLanguage}
+              onChange={(e) => setSelectedMicrosoftLanguage(e.target.value)}
+            >
+              {microsoftLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="voice-list">
+            {microsoftVoices
+              .filter((voice: any) => !selectedMicrosoftLanguage || voice.language_code === selectedMicrosoftLanguage)
+              .slice(0, 50)
+              .map((voice: any) => (
+                <div 
+                  key={voice.name}
+                  className={`voice-item ${config.selected_microsoft_voice === voice.name ? 'selected' : ''}`}
+                  onClick={() => onChange({ selected_microsoft_voice: voice.name })}
+                >
+                  <span className="voice-name">{voice.short_name || voice.name}</span>
+                  <span className="voice-lang">{voice.gender}</span>
+                  <span className="voice-badge">{voice.voice_type}</span>
+                </div>
+              ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -13,13 +13,15 @@ pub struct MicrosoftTTSProvider {
 }
 
 impl MicrosoftTTSProvider {
-    pub fn new() -> Result<Self, TTSError> {
+    pub fn new(voice: Option<String>) -> Result<Self, TTSError> {
         info!("Initializing Microsoft Edge TTS provider");
 
         let player = AudioPlayer::new(24000)?;
+        let voice = voice.unwrap_or_else(|| "en-US-AriaNeural".to_string());
+        info!(voice = %voice, "Using Microsoft Edge TTS voice");
         Ok(Self {
             player,
-            voice: "en-US-AriaNeural".to_string(),
+            voice,
             rate: "+0%".to_string(),
             volume: "+0%".to_string(),
         })

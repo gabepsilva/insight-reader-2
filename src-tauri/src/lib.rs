@@ -385,6 +385,11 @@ async fn list_polly_voices() -> Result<Vec<voices::PollyVoiceInfo>, String> {
 }
 
 #[tauri::command]
+async fn list_microsoft_voices() -> Result<Vec<voices::MicrosoftVoiceInfo>, String> {
+    voices::fetch_microsoft_voices().await
+}
+
+#[tauri::command]
 async fn download_voice(voice_key: String) -> Result<String, String> {
     let voices = voices::fetch_piper_voices().await?;
     let voice_info = voices
@@ -449,6 +454,16 @@ fn get_polly_voice() -> Option<String> {
 #[tauri::command]
 fn save_polly_voice(voice_id: String) {
     config::save_selected_polly_voice(voice_id)
+}
+
+#[tauri::command]
+fn get_microsoft_voice() -> Option<String> {
+    config::load_selected_microsoft_voice()
+}
+
+#[tauri::command]
+fn save_microsoft_voice(voice_id: String) {
+    config::save_selected_microsoft_voice(voice_id)
 }
 
 /// Unified error type for screenshot and OCR operations
@@ -584,6 +599,7 @@ pub fn run() {
             save_config,
             list_piper_voices,
             list_polly_voices,
+            list_microsoft_voices,
             download_voice,
             get_download_progress,
             list_downloaded_voices,
@@ -592,6 +608,8 @@ pub fn run() {
             check_polly_credentials,
             get_polly_voice,
             save_polly_voice,
+            get_microsoft_voice,
+            save_microsoft_voice,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

@@ -120,6 +120,8 @@ struct RawConfig {
     #[serde(default)]
     selected_polly_voice: Option<String>,
     #[serde(default)]
+    selected_microsoft_voice: Option<String>,
+    #[serde(default)]
     ocr_backend: Option<String>,
     #[serde(default)]
     hotkey_enabled: Option<bool>,
@@ -311,6 +313,25 @@ pub fn save_selected_polly_voice(voice_id: String) {
     }
 }
 
+pub fn load_selected_microsoft_voice() -> Option<String> {
+    match load_raw_config() {
+        Ok(cfg) => cfg.selected_microsoft_voice.filter(|s| !s.is_empty()),
+        Err(err) => {
+            warn!(error = ?err, "Failed to load config, no Microsoft voice selected");
+            None
+        }
+    }
+}
+
+pub fn save_selected_microsoft_voice(voice_id: String) {
+    debug!(voice_id = %voice_id, "Saving selected Microsoft voice");
+    let mut cfg = load_or_default_config();
+    cfg.selected_microsoft_voice = Some(voice_id);
+    if let Err(err) = save_raw_config(cfg) {
+        error!(error = ?err, "Failed to save config");
+    }
+}
+
 pub fn load_ocr_backend() -> OcrBackend {
     match load_raw_config() {
         Ok(cfg) => cfg
@@ -377,6 +398,7 @@ pub struct FullConfig {
     pub text_cleanup_enabled: Option<bool>,
     pub selected_voice: Option<String>,
     pub selected_polly_voice: Option<String>,
+    pub selected_microsoft_voice: Option<String>,
     pub ocr_backend: Option<String>,
     pub hotkey_enabled: Option<bool>,
     pub hotkey_modifiers: Option<String>,
@@ -391,6 +413,7 @@ impl From<RawConfig> for FullConfig {
             text_cleanup_enabled: raw.text_cleanup_enabled,
             selected_voice: raw.selected_voice,
             selected_polly_voice: raw.selected_polly_voice,
+            selected_microsoft_voice: raw.selected_microsoft_voice,
             ocr_backend: raw.ocr_backend,
             hotkey_enabled: raw.hotkey_enabled,
             hotkey_modifiers: raw.hotkey_modifiers,
@@ -407,6 +430,7 @@ impl From<FullConfig> for RawConfig {
             text_cleanup_enabled: json.text_cleanup_enabled,
             selected_voice: json.selected_voice,
             selected_polly_voice: json.selected_polly_voice,
+            selected_microsoft_voice: json.selected_microsoft_voice,
             ocr_backend: json.ocr_backend,
             hotkey_enabled: json.hotkey_enabled,
             hotkey_modifiers: json.hotkey_modifiers,

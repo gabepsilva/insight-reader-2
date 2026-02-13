@@ -44,6 +44,17 @@ pub struct PollyVoiceInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MicrosoftVoiceInfo {
+    pub name: String,
+    pub short_name: String,
+    pub gender: String,
+    pub language: String,
+    pub language_code: String,
+    pub status: String,
+    pub voice_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct CacheMetadata {
     fetched_at: u64,
 }
@@ -199,6 +210,39 @@ pub async fn fetch_polly_voices() -> Result<Vec<PollyVoiceInfo>, String> {
 
     debug!(count = voices.len(), "Fetched Polly voices");
     Ok(voices)
+}
+
+pub async fn fetch_microsoft_voices() -> Result<Vec<MicrosoftVoiceInfo>, String> {
+    debug!("Fetching Microsoft Edge TTS voices");
+
+    let voices = msedge_tts::voice::get_voices_list()
+        .map_err(|e| format!("Failed to fetch Microsoft voices: {}", e))?;
+
+    let result: Vec<MicrosoftVoiceInfo> = voices
+        .into_iter()
+        .map(|v| MicrosoftVoiceInfo {
+            name: v.name,
+            short_name: v.short_name.unwrap_or_default(),
+            gender: v.gender.unwrap_or_default(),
+            language: v.locale.clone().unwrap_or_default(),
+            language_code: v
+                .locale
+                .unwrap_or_default()
+                .replace("en-US", "English (US)")
+                .replace("en-GB", "English (UK)")
+                .replace("es-ES", "Spanish (Spain)")
+                .replace("es-MX", "Spanish (Mexico)")
+                .replace("pt-BR", "Portuguese (Brazil)")
+                .replace("pt-PT", "Portuguese (Portugal)")
+                .replace("zh-CN", "Chinese (Simplified)")
+                .replace("zh-TW", "Chinese (Traditional)"),
+            status: v.status.unwrap_or_default(),
+            voice_type: format!("{:?}", v.voice_tag),
+        })
+        .collect();
+
+    debug!(count = result.len(), "Fetched Microsoft voices");
+    Ok(result)
 }
 
 fn detect_aws_region() -> String {
