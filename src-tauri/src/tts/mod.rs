@@ -185,6 +185,21 @@ pub fn create_tts_state() -> TtsState {
         while let Ok(req) = rx.recv() {
             match req {
                 TtsRequest::Speak(text, resp) => {
+                    // Check if Microsoft voice changed and reload if needed
+                    if let TtsProviderImpl::Microsoft(ref microsoft) = provider {
+                        if let Some(config_voice) = crate::config::load_selected_microsoft_voice() {
+                            if microsoft.voice() != config_voice {
+                                tracing::info!(old = %microsoft.voice(), new = %config_voice, "Microsoft voice changed, reloading provider");
+                                match TtsProviderImpl::new(TtsProvider::Microsoft) {
+                                    Ok(new_provider) => provider = new_provider,
+                                    Err(e) => {
+                                        let _ = resp.send(Err(e));
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
                     let result = provider.speak(&text);
                     if let Err(ref e) = result {
                         tracing::error!(error = %e, "TTS speak failed");

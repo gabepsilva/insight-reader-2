@@ -27,6 +27,10 @@ impl MicrosoftTTSProvider {
         })
     }
 
+    pub fn voice(&self) -> &str {
+        &self.voice
+    }
+
     pub fn speak(&mut self, text: &str) -> Result<(), TTSError> {
         let text = text.trim();
         if text.is_empty() {

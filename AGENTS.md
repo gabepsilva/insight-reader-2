@@ -12,6 +12,10 @@ bun install
 bun run tauri dev    # full app
 bun run dev         # frontend only
 bun run tauri build # bundles/installers
+bun run build       # frontend build only
+bun run test        # vitest tests
+
+# Rust (from src-tauri)
 cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && cargo test
 ```
 
@@ -20,6 +24,7 @@ cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && 
 - [Code simplification](docs/ai-guidelines/code-simplification.md) — cleanup and simplification before commit
 - [Code review](docs/ai-guidelines/code-review.md) — correctness, security, architecture review
 - [Architecture decisions](docs/ai-guidelines/architecture-decisions.md) — when and how to write ADRs
+- [Release checklist](docs/ai-guidelines/release-checklist.md) — what to verify before releases (CI, linting, security, builds)
 - [Porting Iced → Tauri](docs/ai-guidelines/porting-iced-to-tauri.md) — reference for the migration
 - [Test VMs](docs/ai-guidelines/test-vms.md) — VM access and copying debug binaries
 
