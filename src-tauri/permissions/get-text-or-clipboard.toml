@@ -1,0 +1,5 @@
+# Permission to invoke get_text_or_clipboard (read selected text or clipboard)
+[[permission]]
+identifier = "allow-get-text-or-clipboard"
+description = "Allows invoking get_text_or_clipboard to read selected text or clipboard"
+commands.allow = ["get_text_or_clipboard"]

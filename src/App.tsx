@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
+import { SettingsIcon } from "./components/icons";
 import "./App.css";
 
 function formatTime(ms: number): string {
@@ -22,7 +23,7 @@ function App() {
     const resizeToContent = async () => {
       try {
         const appWindow = getCurrentWindow();
-        await appWindow.setSize(new LogicalSize(340, 240));
+        await appWindow.setSize(new LogicalSize(340, 280));
       } catch (e) {
         console.warn("[resizeToContent] setSize failed or not in Tauri:", e);
       }
@@ -191,6 +192,31 @@ function App() {
             disabled={isPaused || atEnd}
           >
             +5s
+          </button>
+        </div>
+
+        <div className="grammar-row">
+          <button
+            className="grammar-btn"
+            onClick={async () => {
+              const text = await invoke<string>("get_text_or_clipboard");
+              invoke("open_editor_window", { initialText: text });
+            }}
+            aria-label="Open grammar editor"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path
+                fill="currentColor"
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+              />
+            </svg>
+          </button>
+          <button
+            className="grammar-btn"
+            onClick={() => invoke("open_settings_window")}
+            aria-label="Open settings"
+          >
+            <SettingsIcon size={16} />
           </button>
         </div>
       </div>

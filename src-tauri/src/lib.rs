@@ -44,10 +44,16 @@ fn get_selected_text() -> Option<String> {
 }
 
 /// Gets selected text or falls back to clipboard text. Returns empty string if neither available.
-fn get_text_or_clipboard() -> String {
+fn get_text_or_clipboard_impl() -> String {
     system::get_selected_text()
         .or_else(system::get_clipboard_text)
         .unwrap_or_default()
+}
+
+/// Gets selected text or falls back to clipboard text. Returns empty string if neither available.
+#[tauri::command]
+fn get_text_or_clipboard() -> String {
+    get_text_or_clipboard_impl()
 }
 
 /// Gets the current clipboard text (e.g. from Ctrl+C / Cmd+C).
@@ -559,6 +565,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_selected_text,
             get_clipboard_text,
+            get_text_or_clipboard,
             open_editor_window,
             take_editor_initial_text,
             tts_speak,
@@ -661,7 +668,7 @@ pub fn run() {
                     let id = event.id().0.as_str();
                     match id {
                         "read_selected" => {
-                            let text = get_text_or_clipboard();
+                            let text = get_text_or_clipboard_impl();
                             log_selected_text(&(!text.is_empty()).then_some(text.clone()));
                             match app.try_state::<EditorInitialText>() {
                                 Some(state) => {
@@ -689,7 +696,7 @@ pub fn run() {
                             }
                         }
                         "insight_editor" => {
-                            let text = get_text_or_clipboard();
+                            let text = get_text_or_clipboard_impl();
                             match app.try_state::<EditorInitialText>() {
                                 Some(state) => {
                                     if let Err(e) =
