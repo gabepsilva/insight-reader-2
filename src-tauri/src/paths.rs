@@ -4,10 +4,10 @@ use std::env;
 use std::path::PathBuf;
 
 /// Gets the user's home directory.
-/// 
+///
 /// On Unix-like systems (macOS, Linux), uses the `HOME` environment variable.
 /// On Windows, tries `HOME` first (available on Windows 10+), then falls back to `USERPROFILE`.
-/// 
+///
 /// # Returns
 /// `Ok(PathBuf)` with the home directory path, or `Err(String)` if neither variable is set.
 pub fn get_home_dir() -> Result<PathBuf, String> {

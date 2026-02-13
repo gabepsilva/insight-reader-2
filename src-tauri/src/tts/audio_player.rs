@@ -43,6 +43,42 @@ impl AudioPlayer {
         self.start_playback()
     }
 
+    /// Play raw encoded audio (MP3/Opus) - rodio will decode it automatically.
+    pub fn play_audio_raw(
+        &mut self,
+        audio_data: Vec<u8>,
+        _sample_rate: u32,
+    ) -> Result<(), TTSError> {
+        debug!(samples = audio_data.len(), "AudioPlayer::play_audio_raw");
+        if let Some(sink) = self.sink.take() {
+            sink.stop();
+        }
+
+        let stream_handle = self
+            .stream_handle
+            .as_ref()
+            .ok_or_else(|| TTSError::AudioError("No audio output available".into()))?;
+
+        if audio_data.is_empty() {
+            return Err(TTSError::AudioError("No audio data to play".into()));
+        }
+
+        let cursor = Cursor::new(audio_data);
+        let source = Decoder::new(cursor).map_err(|e| {
+            error!("Failed to decode audio: {}", e);
+            TTSError::AudioError(format!("Failed to decode audio: {}", e))
+        })?;
+
+        let sink = Sink::try_new(stream_handle).map_err(|e| {
+            error!("Failed to create audio sink: {}", e);
+            TTSError::AudioError(format!("Failed to create audio sink: {}", e))
+        })?;
+
+        sink.append(source);
+        self.sink = Some(sink);
+        Ok(())
+    }
+
     /// Convert raw PCM bytes (16-bit signed LE mono) to normalized f32 samples.
     pub fn pcm_to_f32(pcm_bytes: &[u8]) -> Vec<f32> {
         pcm_bytes

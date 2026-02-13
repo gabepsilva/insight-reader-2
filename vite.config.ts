@@ -15,7 +15,6 @@ export default defineConfig(async () => ({
       input: {
         main: resolve(process.cwd(), "index.html"),
         editor: resolve(process.cwd(), "editor.html"),
-        screenshot: resolve(process.cwd(), "screenshot.html"),
       },
     },
   },

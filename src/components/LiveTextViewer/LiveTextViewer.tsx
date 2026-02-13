@@ -36,7 +36,7 @@ export default function LiveTextViewer() {
   const [loading, setLoading] = useState(true);
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [displayedTextItems, setDisplayedTextItems] = useState<DisplayedTextItem[]>([]);
-  const [isMacOS, setIsMacOS] = useState(false);
+  const [isMacOS] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasResized = useRef(false);

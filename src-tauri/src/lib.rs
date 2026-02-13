@@ -65,7 +65,9 @@ fn build_webview_url<R: tauri::Runtime>(
             .map(|u| u.as_str().trim_end_matches('/').to_string())
             .unwrap_or_else(|| "http://localhost:1420".to_string());
         let url = format!("{}/{}", base, html_path);
-        Ok(WebviewUrl::External(url.parse().map_err(|e| format!("dev_url parse: {}", e))?))
+        Ok(WebviewUrl::External(
+            url.parse().map_err(|e| format!("dev_url parse: {}", e))?,
+        ))
     } else {
         Ok(WebviewUrl::App(format!("/{}", html_path).into()))
     }
@@ -213,6 +215,30 @@ fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
         .map_err(|_| "TTS worker disconnected".to_string())
 }
 
+/// Switches the TTS provider. provider should be "piper" or "microsoft".
+#[tauri::command]
+fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<(), String> {
+    let provider = match provider.to_lowercase().as_str() {
+        "piper" => tts::TtsProvider::Piper,
+        "microsoft" => tts::TtsProvider::Microsoft,
+        _ => {
+            return Err(format!(
+                "Unknown provider: {}. Use 'piper' or 'microsoft'.",
+                provider
+            ))
+        }
+    };
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::SwitchProvider(provider, resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())?
+        .map_err(|e| e.to_string())
+}
+
 /// Opens a window to display an image with live text overlay.
 /// The image_path should be a valid file path to a PNG image.
 #[tauri::command]
@@ -239,10 +265,7 @@ fn open_live_text_viewer(
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("Failed to get timestamp: {}", e))?
         .as_nanos();
-    let filename = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("image");
+    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
     let filename_without_ext = filename
         .strip_suffix(".png")
         .or_else(|| filename.strip_suffix(".PNG"))
@@ -305,7 +328,9 @@ fn take_live_text_data(
         .inner()
         .lock()
         .map_err(|e| format!("live text state lock: {}", e))?;
-    Ok(guard.get(window_label).and_then(|data| data.ocr_result.clone()))
+    Ok(guard
+        .get(window_label)
+        .and_then(|data| data.ocr_result.clone()))
 }
 
 /// Returns the current platform (e.g., "macos", "windows", "linux").
@@ -320,7 +345,6 @@ fn get_platform() -> &'static str {
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     return "unknown";
 }
-
 
 /// Unified error type for screenshot and OCR operations
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -358,7 +382,8 @@ fn capture_screenshot_and_ocr() -> Result<(system::OcrResult, String), CaptureOc
     debug!("Starting screenshot capture and OCR");
 
     // Capture screenshot (returns bytes and path)
-    let (screenshot_bytes, screenshot_path) = system::capture_screenshot().map_err(CaptureOcrError::from)?;
+    let (screenshot_bytes, screenshot_path) =
+        system::capture_screenshot().map_err(CaptureOcrError::from)?;
 
     debug!(
         bytes = screenshot_bytes.len(),
@@ -443,6 +468,7 @@ pub fn run() {
             tts_get_status,
             tts_seek,
             tts_get_position,
+            tts_switch_provider,
             capture_screenshot_and_ocr,
             open_live_text_viewer,
             take_live_text_image_path,
@@ -616,6 +642,8 @@ pub fn run() {
                         .color(tauri::window::Color(0, 0, 0, 0))
                         .build(),
                 );
+                // Set window size after instantiation
+                let _ = win.set_size(tauri::LogicalSize::new(487.0, 85.0));
             }
             Ok(())
         })

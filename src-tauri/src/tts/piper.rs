@@ -218,7 +218,6 @@ impl PiperTTSProvider {
         Ok(AudioPlayer::pcm_to_f32(&output.stdout))
     }
 
-
     fn find_piper_binary() -> PathBuf {
         #[cfg(target_os = "windows")]
         const VENV_BIN_DIR: &str = "Scripts";
@@ -292,12 +291,12 @@ impl PiperTTSProvider {
         const PREFERRED: &str = "en_US-lessac-medium";
 
         let mut dirs_to_check: Vec<PathBuf> = Vec::new();
-        
+
         // 1. Check development models in current directory
         if let Ok(c) = env::current_dir() {
             dirs_to_check.push(c.join("models"));
         }
-        
+
         // 2. Check production models in ${HOME}/.insight-reader-2/models
         if let Ok(models_dir) = paths::get_models_dir() {
             dirs_to_check.push(models_dir);

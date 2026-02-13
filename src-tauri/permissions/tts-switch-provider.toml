@@ -1,0 +1,6 @@
+# Permission to invoke tts_switch_provider (switch between TTS providers like piper and microsoft)
+
+[[permission]]
+identifier = "allow-tts-switch-provider"
+description = "Permission to invoke tts_switch_provider (switch between TTS providers like piper and microsoft)"
+commands.allow = ["tts_switch_provider"]

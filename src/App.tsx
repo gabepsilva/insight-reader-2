@@ -28,17 +28,24 @@ function App() {
       try {
         const el = controlBarRef.current;
         if (!el) return;
+        // Wait for content to be fully rendered
+        await new Promise((r) => requestAnimationFrame(r));
         await new Promise((r) => requestAnimationFrame(r));
         const { width, height } = el.getBoundingClientRect();
-        const appWindow = getCurrentWindow();
-        await appWindow.setSize(
-          new LogicalSize(Math.ceil(width), Math.ceil(height)),
-        );
+        if (width > 0 && height > 0) {
+          const appWindow = getCurrentWindow();
+          await appWindow.setSize(
+            new LogicalSize(Math.ceil(width), Math.ceil(height)),
+          );
+        }
       } catch (e) {
         console.warn("[resizeToContent] setSize failed or not in Tauri:", e);
       }
     };
+    // Run immediately and also after a short delay to ensure content is rendered
     resizeToContent();
+    const timeoutId = setTimeout(resizeToContent, 100);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Poll TTS status and position to sync UI state and detect when audio finishes

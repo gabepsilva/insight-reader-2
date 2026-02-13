@@ -5,10 +5,12 @@
 //! Sender, which is Send.
 
 mod audio_player;
+mod microsoft;
 mod piper;
 
 use std::sync::mpsc;
 
+use microsoft::MicrosoftTTSProvider;
 use piper::PiperTTSProvider;
 
 /// Errors that can occur during TTS operations.
@@ -37,32 +39,101 @@ pub enum TtsRequest {
     GetStatus(mpsc::SyncSender<(bool, bool)>),
     Seek(i64, mpsc::SyncSender<Result<(bool, bool, bool), TTSError>>),
     GetPosition(mpsc::SyncSender<(u64, u64)>),
+    SwitchProvider(TtsProvider, mpsc::SyncSender<Result<(), TTSError>>),
     Shutdown,
 }
 
 /// Sender to the TTS worker. The worker owns PiperTTSProvider (and rodio) on its thread.
 pub type TtsState = mpsc::Sender<TtsRequest>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum TtsProvider {
+    Piper,
+    #[default]
+    Microsoft,
+}
+
+enum TtsProviderImpl {
+    Piper(PiperTTSProvider),
+    Microsoft(MicrosoftTTSProvider),
+}
+
+impl TtsProviderImpl {
+    fn new(provider: TtsProvider) -> Result<Self, TTSError> {
+        match provider {
+            TtsProvider::Piper => Ok(Self::Piper(PiperTTSProvider::new()?)),
+            TtsProvider::Microsoft => Ok(Self::Microsoft(MicrosoftTTSProvider::new()?)),
+        }
+    }
+
+    fn speak(&mut self, text: &str) -> Result<(), TTSError> {
+        match self {
+            Self::Piper(p) => p.speak(text),
+            Self::Microsoft(p) => p.speak(text),
+        }
+    }
+
+    fn stop(&mut self) -> Result<(), TTSError> {
+        match self {
+            Self::Piper(p) => p.stop(),
+            Self::Microsoft(p) => p.stop(),
+        }
+    }
+
+    fn toggle_pause(&mut self) -> Result<bool, TTSError> {
+        match self {
+            Self::Piper(p) => p.toggle_pause(),
+            Self::Microsoft(p) => p.toggle_pause(),
+        }
+    }
+
+    fn get_status(&self) -> (bool, bool) {
+        match self {
+            Self::Piper(p) => p.get_status(),
+            Self::Microsoft(p) => p.get_status(),
+        }
+    }
+
+    fn seek(&mut self, offset_ms: i64) -> Result<(bool, bool, bool), TTSError> {
+        match self {
+            Self::Piper(p) => p.seek(offset_ms),
+            Self::Microsoft(p) => p.seek(offset_ms),
+        }
+    }
+
+    fn get_position(&self) -> (u64, u64) {
+        match self {
+            Self::Piper(p) => p.get_position(),
+            Self::Microsoft(p) => p.get_position(),
+        }
+    }
+}
+
 /// Spawn the TTS worker and return the channel sender to manage.
 pub fn create_tts_state() -> TtsState {
     let (tx, rx) = mpsc::channel();
+    let default_provider = TtsProvider::default();
 
     std::thread::spawn(move || {
-        let mut provider = match PiperTTSProvider::new() {
-            Ok(p) => p,
+        tracing::info!(provider = ?default_provider, "Initializing TTS worker");
+        let mut provider = match TtsProviderImpl::new(default_provider) {
+            Ok(p) => {
+                tracing::info!("TTS worker initialized successfully");
+                p
+            }
             Err(e) => {
-                tracing::warn!(error = %e, "TTS not available: Piper init failed");
+                tracing::warn!(error = %e, "TTS not available: provider init failed");
                 loop {
                     match rx.recv() {
                         Ok(TtsRequest::Speak(_, resp)) => {
                             let _ = resp.send(Err(TTSError::ProcessError(
-                                "TTS not available: Piper could not be initialized.".into(),
+                                "TTS not available: provider could not be initialized.".into(),
                             )));
                         }
                         Ok(TtsRequest::Stop) => {}
                         Ok(TtsRequest::TogglePause(resp)) => {
                             let _ = resp.send(Err(TTSError::ProcessError(
-                                "TTS not available: Piper could not be initialized.".into(),
+                                "TTS not available: provider could not be initialized.".into(),
                             )));
                         }
                         Ok(TtsRequest::GetStatus(resp)) => {
@@ -70,11 +141,16 @@ pub fn create_tts_state() -> TtsState {
                         }
                         Ok(TtsRequest::Seek(_, resp)) => {
                             let _ = resp.send(Err(TTSError::ProcessError(
-                                "TTS not available: Piper could not be initialized.".into(),
+                                "TTS not available: provider could not be initialized.".into(),
                             )));
                         }
                         Ok(TtsRequest::GetPosition(resp)) => {
                             let _ = resp.send((0, 0));
+                        }
+                        Ok(TtsRequest::SwitchProvider(_, resp)) => {
+                            let _ = resp.send(Err(TTSError::ProcessError(
+                                "TTS not available: provider could not be initialized.".into(),
+                            )));
                         }
                         Ok(TtsRequest::Shutdown) => break,
                         Err(_) => break,
@@ -86,7 +162,11 @@ pub fn create_tts_state() -> TtsState {
         while let Ok(req) = rx.recv() {
             match req {
                 TtsRequest::Speak(text, resp) => {
-                    let _ = resp.send(provider.speak(&text));
+                    let result = provider.speak(&text);
+                    if let Err(ref e) = result {
+                        tracing::error!(error = %e, "TTS speak failed");
+                    }
+                    let _ = resp.send(result);
                 }
                 TtsRequest::Stop => {
                     let _ = provider.stop();
@@ -103,8 +183,19 @@ pub fn create_tts_state() -> TtsState {
                 TtsRequest::GetPosition(resp) => {
                     let _ = resp.send(provider.get_position());
                 }
+                TtsRequest::SwitchProvider(new_provider, resp) => {
+                    let _ = provider.stop();
+                    match TtsProviderImpl::new(new_provider) {
+                        Ok(new_provider) => {
+                            provider = new_provider;
+                            let _ = resp.send(Ok(()));
+                        }
+                        Err(e) => {
+                            let _ = resp.send(Err(e));
+                        }
+                    }
+                }
                 TtsRequest::Shutdown => {
-                    // Stop any ongoing playback and exit the loop
                     let _ = provider.stop();
                     break;
                 }
