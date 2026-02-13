@@ -29,9 +29,10 @@ cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && 
 
 **Priority:** Maintainability > Simplicity > Elimination (no dead code by default).
 
-- **Before coding:** Confirm the goal and approach. If a “small change” touches architecture, say so and ask before proceeding.
+- **Before coding:** Confirm the goal and approach. If a "small change" touches architecture, say so and ask before proceeding.
 - **When proposing changes:** Explain *why* it helps; call out assumptions and trade-offs.
 - **Push back when needed:** If a request would introduce `.unwrap()` in production, stringly-typed APIs, or other anti-patterns, name the concern and suggest an alternative instead of complying.
+- **Work UI-first:** Work backwards from the UI to the backend — implement the frontend/UI first to verify it looks and feels right, then connect to the backend. This ensures the UX is correct before building the underlying functionality.
 
 **Self-check before finishing:** Does this actually solve the problem? Would it work with different inputs?
 

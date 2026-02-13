@@ -71,7 +71,9 @@ impl TtsProviderImpl {
         let microsoft_voice = crate::config::load_selected_microsoft_voice();
         match provider {
             TtsProvider::Piper => Ok(Self::Piper(PiperTTSProvider::new()?)),
-            TtsProvider::Microsoft => Ok(Self::Microsoft(MicrosoftTTSProvider::new(microsoft_voice)?)),
+            TtsProvider::Microsoft => {
+                Ok(Self::Microsoft(MicrosoftTTSProvider::new(microsoft_voice)?))
+            }
             TtsProvider::Polly => {
                 if let Err(e) = PollyTTSProvider::check_credentials() {
                     return Err(TTSError::ProcessError(e));

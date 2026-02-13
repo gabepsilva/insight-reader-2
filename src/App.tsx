@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
@@ -18,6 +18,50 @@ function App() {
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [totalTimeMs, setTotalTimeMs] = useState(0);
   const [atEnd, setAtEnd] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTooltipLeave = () => {
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 250);
+  };
+
+  const handleTooltipEnter = () => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+    }
+    setShowTooltip(true);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof console === 'undefined') return;
+    const originalError = console.error;
+    console.error = (...args) => {
+      originalError.apply(console, args);
+      const msg = args.map(a => {
+        try {
+          return typeof a === 'object' ? JSON.stringify(a) : String(a);
+        } catch {
+          return '[unserializable]';
+        }
+      }).join(' ');
+      setErrors(prev => {
+        const newErrors = [...prev, msg].slice(-5);
+        return newErrors;
+      });
+    };
+    return () => { console.error = originalError; };
+  }, []);
 
   useEffect(() => {
     const resizeToContent = async () => {
@@ -138,6 +182,28 @@ function App() {
           <div className="app-title">
             <span className="app-name">Insight Reader</span>
           </div>
+          {errors.length > 0 && (
+            <div 
+              className="error-indicator"
+              onMouseEnter={handleTooltipEnter}
+              onMouseLeave={handleTooltipLeave}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+              </svg>
+              {showTooltip && (
+                <div className="error-tooltip">
+                  <button 
+                    className="copy-errors-btn"
+                    onClick={() => navigator.clipboard.writeText(errors.join('\n'))}
+                  >
+                    Copy
+                  </button>
+                  {errors.map((err, i) => <div key={i}>{err}</div>)}
+                </div>
+              )}
+            </div>
+          )}
           <button className="more-btn" aria-label="More options">
             <svg viewBox="0 0 24 24">
               <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />

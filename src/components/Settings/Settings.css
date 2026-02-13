@@ -35,6 +35,73 @@ body {
   color: #fafafa;
 }
 
+.settings-error-indicator {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  -webkit-app-region: no-drag;
+  position: relative;
+}
+
+.settings-error-indicator svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.settings-error-indicator:hover {
+  color: #f59e0b;
+}
+
+.error-tooltip {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  background: #27272a;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 9999;
+  font-size: 12px;
+  color: #fafafa;
+}
+
+.copy-errors-btn {
+  float: right;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fafafa;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.copy-errors-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.error-tooltip div {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.error-tooltip div {
+  margin-bottom: 4px;
+}
+
+.error-tooltip div:last-child {
+  margin-bottom: 0;
+}
+
 .close-button {
   -webkit-app-region: no-drag;
   background: transparent;
@@ -287,4 +354,88 @@ input[type="radio"]:checked {
 
 input[type="radio"]:hover {
   border-color: #a1a1aa;
+}
+
+.language-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.language-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.language-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.language-item.selected {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fafafa;
+}
+
+.language-flag {
+  font-size: 24px;
+}
+
+.language-name {
+  font-size: 11px;
+  color: #a1a1aa;
+  text-align: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #18181b;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #fafafa;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }

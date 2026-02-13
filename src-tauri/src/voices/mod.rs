@@ -218,6 +218,8 @@ pub async fn fetch_microsoft_voices() -> Result<Vec<MicrosoftVoiceInfo>, String>
     let voices = msedge_tts::voice::get_voices_list()
         .map_err(|e| format!("Failed to fetch Microsoft voices: {}", e))?;
 
+    debug!(count = voices.len(), "Raw Microsoft voices fetched");
+
     let result: Vec<MicrosoftVoiceInfo> = voices
         .into_iter()
         .map(|v| MicrosoftVoiceInfo {

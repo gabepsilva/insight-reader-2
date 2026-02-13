@@ -58,7 +58,7 @@ impl AudioPlayer {
     pub fn play_audio_raw(
         &mut self,
         audio_data: Vec<u8>,
-        sample_rate: u32,
+        _sample_rate: u32,
     ) -> Result<(), TTSError> {
         debug!(samples = audio_data.len(), "AudioPlayer::play_audio_raw");
         if let Some(sink) = self.sink.take() {

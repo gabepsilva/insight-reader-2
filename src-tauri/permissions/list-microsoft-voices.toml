@@ -1,0 +1,5 @@
+# Permission to invoke list_microsoft_voices (list available Microsoft Edge TTS voices)
+[[permission]]
+identifier = "allow-list-microsoft-voices"
+description = "Allows invoking list_microsoft_voices to list available Microsoft Edge TTS voices"
+commands.allow = ["list_microsoft_voices"]

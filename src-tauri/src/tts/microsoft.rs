@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_edge_tts_synthesizes_audio() {
         // Initialize provider
-        let mut provider = MicrosoftTTSProvider::new().expect("Failed to create provider");
+        let mut provider = MicrosoftTTSProvider::new(None).expect("Failed to create provider");
 
         // Speak short text (~3 seconds)
         let test_text = "Hello world, this is a test.";
