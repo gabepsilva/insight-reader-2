@@ -44,13 +44,6 @@ pub struct OcrResult {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn extract_text_from_image(_image_bytes: &[u8]) -> Result<String, OcrError> {
-    Err(OcrError::Vision(
-        "OCR not implemented for this platform".to_string(),
-    ))
-}
-
-#[cfg(not(target_os = "macos"))]
 pub fn extract_text_with_positions(_image_bytes: &[u8]) -> Result<OcrResult, OcrError> {
     Err(OcrError::Vision(
         "OCR not implemented for this platform".to_string(),

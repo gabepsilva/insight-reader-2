@@ -39,7 +39,7 @@
       }
     },
     "trayIcon": {
-      "iconPath": "icons/32x32.png",
+      "iconPath": "icons/logo.png",
       "iconAsTemplate": true,
       "menuOnLeftClick": true,
       "tooltip": "Insight Reader"

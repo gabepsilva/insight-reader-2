@@ -33,7 +33,7 @@ struct LiveTextData {
 type LiveTextWindows = Arc<Mutex<std::collections::HashMap<String, LiveTextData>>>;
 
 /// Tray icon: app logo at 32x32 (icons/32x32.png).
-const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/32x32.png");
+const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/logo.png");
 
 /// Gets the currently selected text from the system.
 #[tauri::command]
@@ -682,30 +682,17 @@ pub fn run() {
                     match id {
                         "read_selected" => {
                             let text = get_text_or_clipboard_impl();
-                            log_selected_text(&(!text.is_empty()).then_some(text.clone()));
-                            match app.try_state::<EditorInitialText>() {
-                                Some(state) => {
-                                    if let Err(e) =
-                                        open_or_focus_editor_with_text(app, &state, text.clone())
-                                    {
-                                        warn!(error = %e, "Read Selected: open_editor_window failed");
-                                    } else {
-                                        // Emit trigger event after a short delay to allow editor to mount/set text
-                                        // Reduced delay: editor-set-text event should be sufficient, small delay just for safety
-                                        let app_handle = app.clone();
-                                        std::thread::spawn(move || {
-                                            std::thread::sleep(std::time::Duration::from_millis(200));
-                                            if let Some(win) = app_handle.get_webview_window("editor") {
-                                                if let Err(e) = win.emit("editor-trigger-read", ()) {
-                                                    warn!(error = %e, "Failed to emit editor-trigger-read");
-                                                }
-                                            }
-                                        });
-                                    }
+                            if text.is_empty() {
+                                warn!("Read Selected: no text available");
+                                return;
+                            }
+                            log_selected_text(&Some(text.clone()));
+                            if let Some(state) = app.try_state::<tts::TtsState>() {
+                                if let Err(e) = tts_speak(state, text) {
+                                    warn!(error = %e, "Read Selected: tts_speak failed");
                                 }
-                                None => {
-                                    warn!("Read Selected: EditorInitialText state not found");
-                                }
+                            } else {
+                                warn!("Read Selected: TtsState not found");
                             }
                         }
                         "insight_editor" => {

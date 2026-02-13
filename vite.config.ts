@@ -9,6 +9,11 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
+  resolve: {
+    alias: {
+      fs: resolve(process.cwd(), "src/shims/fs.ts"),
+    },
+  },
 
   build: {
     rollupOptions: {

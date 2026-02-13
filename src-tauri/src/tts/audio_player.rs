@@ -131,24 +131,6 @@ impl AudioPlayer {
         Ok(())
     }
 
-    /// Pause playback if currently playing.
-    pub fn pause(&mut self) -> Result<(), TTSError> {
-        trace!("AudioPlayer::pause");
-        if let Some(sink) = &self.sink {
-            sink.pause();
-        }
-        Ok(())
-    }
-
-    /// Resume playback if currently paused.
-    pub fn resume(&mut self) -> Result<(), TTSError> {
-        trace!("AudioPlayer::resume");
-        if let Some(sink) = &self.sink {
-            sink.play();
-        }
-        Ok(())
-    }
-
     /// Toggle pause state. Returns the new paused status (true if paused, false if playing).
     pub fn toggle_pause(&mut self) -> Result<bool, TTSError> {
         trace!("AudioPlayer::toggle_pause");

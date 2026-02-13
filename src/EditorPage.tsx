@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
-  binaryInlined,
+  binary,
   Dialect,
   type Lint,
   WorkerLinter,
@@ -124,7 +124,7 @@ export default function EditorPage() {
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
     const l = new WorkerLinter({
-      binary: binaryInlined,
+      binary,
       dialect: Dialect.American,
     });
     await l.setup();

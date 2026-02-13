@@ -10,13 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error, trace};
 
 const PIPER_VOICES_API_URL: &str =
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/voices.json";
 const CACHE_FILE_NAME: &str = "voices.json";
-const CACHE_TTL_SECS: u64 = 24 * 60 * 60; // 24 hours
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoiceInfo {
@@ -63,11 +61,6 @@ pub struct MicrosoftVoiceInfo {
     pub voice_type: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct CacheMetadata {
-    fetched_at: u64,
-}
-
 fn get_cache_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
     Ok(home.join(".cache").join("insight-reader"))
@@ -84,18 +77,6 @@ fn ensure_cache_dir() -> Result<(), String> {
             .map_err(|e| format!("Failed to create cache directory: {}", e))?;
     }
     Ok(())
-}
-
-fn get_current_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
-
-fn is_cache_valid(metadata: &CacheMetadata) -> bool {
-    let now = get_current_timestamp();
-    now.saturating_sub(metadata.fetched_at) < CACHE_TTL_SECS
 }
 
 pub async fn fetch_piper_voices(force_refresh: bool) -> Result<HashMap<String, VoiceInfo>, String> {
@@ -307,24 +288,4 @@ fn parse_aws_config_region(content: &str) -> Option<String> {
         }
     }
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_cache_ttl() {
-        let old_timestamp = get_current_timestamp() - CACHE_TTL_SECS - 1;
-        let metadata = CacheMetadata {
-            fetched_at: old_timestamp,
-        };
-        assert!(!is_cache_valid(&metadata));
-
-        let recent_timestamp = get_current_timestamp() - 3600;
-        let metadata = CacheMetadata {
-            fetched_at: recent_timestamp,
-        };
-        assert!(is_cache_valid(&metadata));
-    }
 }

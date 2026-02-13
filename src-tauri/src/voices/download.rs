@@ -23,16 +23,6 @@ pub struct DownloadProgress {
     pub current_file: String,
 }
 
-impl DownloadProgress {
-    pub fn percentage(&self) -> f64 {
-        if self.total_bytes == 0 {
-            0.0
-        } else {
-            (self.downloaded_bytes as f64 / self.total_bytes as f64) * 100.0
-        }
-    }
-}
-
 fn get_voices_base_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
     Ok(home
@@ -44,18 +34,6 @@ fn get_voices_base_dir() -> Result<PathBuf, String> {
 
 fn get_voice_directory(language: &str, voice_name: &str) -> Result<PathBuf, String> {
     Ok(get_voices_base_dir()?.join(language).join(voice_name))
-}
-
-pub fn set_download_progress(progress: DownloadProgress) {
-    if let Ok(mut guard) = DOWNLOAD_PROGRESS.lock() {
-        *guard = Some(progress);
-    }
-}
-
-pub fn clear_download_progress() {
-    if let Ok(mut guard) = DOWNLOAD_PROGRESS.lock() {
-        *guard = None;
-    }
 }
 
 pub fn get_current_progress() -> Option<DownloadProgress> {
@@ -163,18 +141,6 @@ async fn download_file(url: &str, path: &Path) -> Result<(), String> {
     );
 
     Ok(())
-}
-
-pub fn is_voice_downloaded(voice_key: &str, language_code: &str) -> bool {
-    let voice_dir = match get_voice_directory(language_code, voice_key) {
-        Ok(dir) => dir,
-        Err(_) => return false,
-    };
-
-    let onnx_path = voice_dir.join(format!("{}.onnx", voice_key));
-    let json_path = voice_dir.join(format!("{}.onnx.json", voice_key));
-
-    onnx_path.exists() && json_path.exists()
 }
 
 pub fn list_downloaded_voices() -> Result<Vec<DownloadedVoice>, String> {

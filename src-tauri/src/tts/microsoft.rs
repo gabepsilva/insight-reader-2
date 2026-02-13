@@ -8,8 +8,6 @@ use super::TTSError;
 pub struct MicrosoftTTSProvider {
     player: AudioPlayer,
     voice: String,
-    rate: String,
-    volume: String,
 }
 
 impl MicrosoftTTSProvider {
@@ -19,16 +17,7 @@ impl MicrosoftTTSProvider {
         let player = AudioPlayer::new(24000)?;
         let voice = voice.unwrap_or_else(|| "en-US-AriaNeural".to_string());
         info!(voice = %voice, "Using Microsoft Edge TTS voice");
-        Ok(Self {
-            player,
-            voice,
-            rate: "+0%".to_string(),
-            volume: "+0%".to_string(),
-        })
-    }
-
-    pub fn voice(&self) -> &str {
-        &self.voice
+        Ok(Self { player, voice })
     }
 
     pub fn speak(&mut self, text: &str) -> Result<(), TTSError> {

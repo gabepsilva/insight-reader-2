@@ -8,7 +8,6 @@ use std::path::PathBuf;
 
 use dirs::config_dir;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 
 const APP_CONFIG_DIR_NAME: &str = "insight-reader";
 const CONFIG_FILE_NAME: &str = "config.json";

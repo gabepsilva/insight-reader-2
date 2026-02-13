@@ -109,16 +109,6 @@ impl PiperTTSProvider {
         self.player.stop()
     }
 
-    /// Pause current playback.
-    pub fn pause(&mut self) -> Result<(), TTSError> {
-        self.player.pause()
-    }
-
-    /// Resume current playback.
-    pub fn resume(&mut self) -> Result<(), TTSError> {
-        self.player.resume()
-    }
-
     /// Toggle pause state. Returns the new paused status (true if paused, false if playing).
     pub fn toggle_pause(&mut self) -> Result<bool, TTSError> {
         self.player.toggle_pause()

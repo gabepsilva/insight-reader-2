@@ -33,6 +33,7 @@ pub fn get_app_data_dir() -> Result<PathBuf, String> {
 }
 
 /// Gets the OCR cache directory: `${HOME}/.insight-reader-2/cache`
+#[cfg(target_os = "macos")]
 pub fn get_cache_dir() -> Result<PathBuf, String> {
     Ok(get_app_data_dir()?.join("cache"))
 }
@@ -40,9 +41,4 @@ pub fn get_cache_dir() -> Result<PathBuf, String> {
 /// Gets the Piper venv directory: `${HOME}/.insight-reader-2/venv`
 pub fn get_venv_dir() -> Result<PathBuf, String> {
     Ok(get_app_data_dir()?.join("venv"))
-}
-
-/// Gets the Piper models directory: `${HOME}/.insight-reader-2/models`
-pub fn get_models_dir() -> Result<PathBuf, String> {
-    Ok(get_app_data_dir()?.join("models"))
 }

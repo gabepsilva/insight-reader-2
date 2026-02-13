@@ -126,19 +126,3 @@ pub async fn cleanup_text(text: &str) -> Result<String, String> {
 
     Ok(plain_text)
 }
-
-pub async fn check_cleanup_available() -> bool {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .ok();
-
-    let Some(client) = client else {
-        return false;
-    };
-
-    match client.get(CLEANUP_API_URL).send().await {
-        Ok(response) => response.status().is_success() || response.status().as_u16() == 405,
-        Err(_) => false,
-    }
-}
