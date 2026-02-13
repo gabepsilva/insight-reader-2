@@ -10,9 +10,6 @@ on:
 jobs:
   test:
     runs-on: self-hosted
-    container:
-      image: ghcr.io/tauri-apps/tauri:ubuntu22.04
-      options: --user root
     steps:
       - uses: actions/checkout@v4
 
@@ -41,9 +38,6 @@ jobs:
   build:
     runs-on: self-hosted
     needs: test
-    container:
-      image: ghcr.io/tauri-apps/tauri:ubuntu22.04
-      options: --user root
     steps:
       - uses: actions/checkout@v4
 
