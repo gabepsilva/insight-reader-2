@@ -16,6 +16,13 @@ import { makeLintKey } from "./extensions/harperLint";
 import { applySuggestion } from "./utils/applySuggestion";
 import "./EditorPage.css";
 
+interface Config {
+  voice_provider: string | null;
+  selected_voice: string | null;
+  selected_polly_voice: string | null;
+  selected_microsoft_voice: string | null;
+}
+
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
 const FONT_SIZE_STEP = 2;
@@ -43,6 +50,31 @@ const POPUP_EDGE_MARGIN = 12;
 const POPUP_MAX_WIDTH = 360;
 const POPUP_HEIGHT_ESTIMATE = 120;
 const POPUP_HIDE_DELAY_MS = 60;
+
+const PROVIDER_LABELS: Record<string, string> = {
+  piper: "Piper",
+  polly: "AWS Polly",
+  microsoft: "Microsoft",
+};
+
+function getProviderLabel(provider: string | null): string {
+  if (!provider) return "Microsoft";
+  return PROVIDER_LABELS[provider] ?? provider;
+}
+
+function getVoiceLabel(config: Config): string {
+  const provider = config.voice_provider ?? "microsoft";
+  switch (provider) {
+    case "piper":
+      return config.selected_voice ?? "Not selected";
+    case "polly":
+      return config.selected_polly_voice ?? "Not selected";
+    case "microsoft":
+      return config.selected_microsoft_voice ?? "Not selected";
+    default:
+      return "Not selected";
+  }
+}
 
 /**
  * Computes fixed positioning for the lint popup so it stays on-screen.
@@ -87,6 +119,7 @@ export default function EditorPage() {
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
   const textRef = useRef(text);
+  const [config, setConfig] = useState<Config | null>(null);
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -102,6 +135,34 @@ export default function EditorPage() {
   useEffect(() => {
     saveDarkMode(darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        setConfig(cfg);
+      } catch (e) {
+        console.warn("[EditorPage] get_config failed:", e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen("config-changed", async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        setConfig(cfg);
+      } catch (e) {
+        console.warn("[EditorPage] config-changed get_config failed:", e);
+      }
+    });
+    return () => {
+      unlisten.then(
+        (fn) => fn(),
+        () => {},
+      );
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -368,6 +429,20 @@ export default function EditorPage() {
           </span>
         )}
       </div>
+      {config && (
+        <div className="editor-status-bar">
+          <span className="editor-status-item">
+            <span className="editor-status-label">Provider:</span>
+            <span className="editor-status-value">
+              {getProviderLabel(config.voice_provider)}
+            </span>
+          </span>
+          <span className="editor-status-item">
+            <span className="editor-status-label">Voice:</span>
+            <span className="editor-status-value">{getVoiceLabel(config)}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

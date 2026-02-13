@@ -1,9 +1,44 @@
 import { useState, useEffect, useRef } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import logoSvg from "./assets/logo.svg";
 import { SettingsIcon } from "./components/icons";
 import "./App.css";
+
+interface Config {
+  voice_provider: string | null;
+  selected_voice: string | null;
+  selected_polly_voice: string | null;
+  selected_microsoft_voice: string | null;
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  piper: "Piper",
+  polly: "AWS Polly",
+  microsoft: "Microsoft",
+};
+
+function getProviderLabel(provider: string | null): string {
+  if (!provider) return "Microsoft";
+  return PROVIDER_LABELS[provider] ?? provider;
+}
+
+function getVoiceLabel(config: Config): string {
+  const provider = config.voice_provider ?? "microsoft";
+  switch (provider) {
+    case "piper":
+      return config.selected_voice ?? "Not selected";
+    case "polly":
+      return config.selected_polly_voice ?? "Not selected";
+    case "microsoft": {
+      const voice = config.selected_microsoft_voice ?? "Not selected";
+      return voice.replace(/^Microsoft Server Speech Text to Speech Voice \(/, "(");
+    }
+    default:
+      return "Not selected";
+  }
+}
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -20,6 +55,7 @@ function App() {
   const [atEnd, setAtEnd] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [config, setConfig] = useState<Config | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTooltipLeave = () => {
@@ -67,12 +103,38 @@ function App() {
     const resizeToContent = async () => {
       try {
         const appWindow = getCurrentWindow();
-        await appWindow.setSize(new LogicalSize(340, 280));
+        await appWindow.setSize(new LogicalSize(340, 320));
       } catch (e) {
         console.warn("[resizeToContent] setSize failed or not in Tauri:", e);
       }
     };
     resizeToContent();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        console.log("[App] config loaded:", cfg);
+        setConfig(cfg);
+      } catch (e) {
+        console.warn("[App] get_config failed:", e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen("config-changed", async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        setConfig(cfg);
+      } catch (e) {
+        console.warn("[App] config-changed get_config failed:", e);
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   useEffect(() => {
@@ -284,6 +346,20 @@ function App() {
           >
             <SettingsIcon size={16} />
           </button>
+        </div>
+        <div className="status-bar">
+          <span className="status-item">
+            <span className="status-label">Provider:</span>
+            <span className="status-value">
+              {config ? getProviderLabel(config.voice_provider) : "Loading..."}
+            </span>
+          </span>
+          <span className="status-item">
+            <span className="status-label">Voice:</span>
+            <span className="status-value">
+              {config ? getVoiceLabel(config) : "Loading..."}
+            </span>
+          </span>
         </div>
       </div>
     </main>

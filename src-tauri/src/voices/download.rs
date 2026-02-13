@@ -1,18 +1,17 @@
 //! Voice download functionality for Piper TTS.
 //!
-//! Downloads voice model files (.onnx and .onnx.json) from GitHub releases.
+//! Downloads voice model files (.onnx and .onnx.json) from HuggingFace.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::voices::VoiceInfo;
 
-const GITHUB_BASE_URL: &str = "https://github.com/rhasspy/piper-voices/releases/download";
-const PIPER_RELEASES_VERSION: &str = "v1.1.0";
+const HUGGINGFACE_BASE_URL: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/main";
 
 static DOWNLOAD_PROGRESS: Mutex<Option<DownloadProgress>> = Mutex::new(None);
 
@@ -69,71 +68,44 @@ pub fn get_current_progress() -> Option<DownloadProgress> {
 pub async fn download_voice(voice_key: &str, voice_info: &VoiceInfo) -> Result<PathBuf, String> {
     info!(voice_key = %voice_key, "Starting voice download");
 
-    let language = voice_info.language.code.split('-').next().unwrap_or("en");
-    let voice_dir = get_voice_directory(language, voice_key)?;
-
+    let voice_dir = get_voice_directory(&voice_info.language.code, voice_key)?;
     fs::create_dir_all(&voice_dir)
         .await
         .map_err(|e| format!("Failed to create voice directory: {}", e))?;
 
-    let files_to_download = vec![
-        format!("{}.onnx", voice_key),
-        format!("{}.onnx.json", voice_key),
-    ];
+    let onnx_file = voice_info
+        .files
+        .iter()
+        .find(|(path, _)| path.ends_with(".onnx") && !path.ends_with(".onnx.json"))
+        .ok_or_else(|| format!("No .onnx file found for voice {voice_key}"))?;
 
-    let total_files = files_to_download.len();
-    let mut total_bytes: u64 = 0;
-    let mut downloaded_bytes: u64 = 0;
+    let json_file = voice_info
+        .files
+        .iter()
+        .find(|(path, _)| path.ends_with(".onnx.json"))
+        .ok_or_else(|| format!("No .onnx.json file found for voice {voice_key}"))?;
 
-    for filename in &files_to_download {
-        let github_path = format!(
-            "{}/{}/{}/{}",
-            language, voice_key, PIPER_RELEASES_VERSION, filename
-        );
-        let url = format!("{}/{}", GITHUB_BASE_URL, github_path);
-        let dest_path = voice_dir.join(filename);
+    download_file(
+        &format!("{}/{}", HUGGINGFACE_BASE_URL, onnx_file.0),
+        &voice_dir.join(format!("{}.onnx", voice_key)),
+    )
+    .await?;
 
-        info!(
-            file = %filename,
-            url = %url,
-            "Downloading voice file"
-        );
-
-        set_download_progress(DownloadProgress {
-            voice_key: voice_key.to_string(),
-            downloaded_bytes,
-            total_bytes: 0,
-            current_file: filename.clone(),
-        });
-
-        match download_file(&url, &dest_path).await {
-            Ok(bytes) => {
-                downloaded_bytes += bytes;
-                total_bytes += bytes;
-                debug!(file = %filename, bytes = bytes, "Downloaded file");
-            }
-            Err(e) => {
-                error!(file = %filename, error = %e, "Failed to download file");
-                clear_download_progress();
-                return Err(format!("Failed to download {}: {}", filename, e));
-            }
-        }
-    }
-
-    clear_download_progress();
+    download_file(
+        &format!("{}/{}", HUGGINGFACE_BASE_URL, json_file.0),
+        &voice_dir.join(format!("{}.onnx.json", voice_key)),
+    )
+    .await?;
 
     info!(
         voice_key = %voice_key,
         path = %voice_dir.display(),
-        files = total_files,
-        total_bytes = total_bytes,
         "Voice download completed"
     );
-
     Ok(voice_dir)
 }
 
-async fn download_file(url: &str, path: &Path) -> Result<u64, String> {
+async fn download_file(url: &str, path: &Path) -> Result<(), String> {
     debug!(url = %url, path = %path.display(), "Starting file download");
 
     let client = reqwest::Client::new();
@@ -190,12 +162,11 @@ async fn download_file(url: &str, path: &Path) -> Result<u64, String> {
         "File downloaded successfully"
     );
 
-    Ok(downloaded)
+    Ok(())
 }
 
 pub fn is_voice_downloaded(voice_key: &str, language_code: &str) -> bool {
-    let language = language_code.split('-').next().unwrap_or("en");
-    let voice_dir = match get_voice_directory(language, voice_key) {
+    let voice_dir = match get_voice_directory(language_code, voice_key) {
         Ok(dir) => dir,
         Err(_) => return false,
     };

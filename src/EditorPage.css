@@ -109,6 +109,34 @@ body {
   font-weight: 400;
 }
 
+.editor-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 12px;
+  font-family: var(--editor-font);
+  font-size: 11px;
+  color: #888;
+  background: #f9f9f9;
+  border-top: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.editor-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.editor-status-label {
+  color: #666;
+}
+
+.editor-status-value {
+  color: #444;
+  font-weight: 500;
+}
+
 /* ----- Dark mode ----- */
 .editor-page--dark {
   background: #1e1e1e;
@@ -127,6 +155,20 @@ body:has(.editor-page--dark),
 .editor-page--dark .editor-legend {
   background: #2d2d2d;
   border-top-color: #444;
+  color: #aaa;
+}
+
+.editor-page--dark .editor-status-bar {
+  background: #2d2d2d;
+  border-top-color: #444;
+  color: #888;
+}
+
+.editor-page--dark .editor-status-label {
+  color: #777;
+}
+
+.editor-page--dark .editor-status-value {
   color: #aaa;
 }
 

@@ -349,3 +349,35 @@ body {
   height: 12px;
   background: rgba(255, 255, 255, 0.06);
 }
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  background: #18181b;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.status-label {
+  color: #71717a;
+  flex-shrink: 0;
+}
+
+.status-value {
+  color: #a1a1aa;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}

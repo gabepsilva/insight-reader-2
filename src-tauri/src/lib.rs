@@ -361,21 +361,28 @@ fn get_platform() -> &'static str {
 }
 
 #[tauri::command]
-fn get_config() -> Result<String, String> {
-    let cfg = config::load_full_config()?;
-    serde_json::to_string(&cfg).map_err(|e| format!("Failed to serialize config: {}", e))
+fn get_config() -> Result<config::FullConfig, String> {
+    config::load_full_config()
 }
 
 #[tauri::command]
-fn save_config(config_json: String) -> Result<(), String> {
+fn save_config(app: tauri::AppHandle, config_json: String) -> Result<(), String> {
     let cfg: config::FullConfig = serde_json::from_str(&config_json)
         .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
-    config::save_full_config(cfg)
+    config::save_full_config(cfg).map_err(|e| e.to_string())?;
+    let _ = app.emit("config-changed", ());
+    Ok(())
 }
 
 #[tauri::command]
 async fn list_piper_voices() -> Result<Vec<voices::VoiceInfo>, String> {
-    let voices = voices::fetch_piper_voices().await?;
+    let voices = voices::fetch_piper_voices(false).await?;
+    Ok(voices.into_values().collect())
+}
+
+#[tauri::command]
+async fn refresh_piper_voices() -> Result<Vec<voices::VoiceInfo>, String> {
+    let voices = voices::fetch_piper_voices(true).await?;
     Ok(voices.into_values().collect())
 }
 
@@ -391,10 +398,21 @@ async fn list_microsoft_voices() -> Result<Vec<voices::MicrosoftVoiceInfo>, Stri
 
 #[tauri::command]
 async fn download_voice(voice_key: String) -> Result<String, String> {
-    let voices = voices::fetch_piper_voices().await?;
+    let voices = voices::fetch_piper_voices(false).await?;
     let voice_info = voices
         .get(&voice_key)
         .ok_or_else(|| format!("Voice not found: {}", voice_key))?;
+
+    // If files are empty, force refresh to get the full data with files
+    if voice_info.files.is_empty() {
+        let voices = voices::fetch_piper_voices(true).await?;
+        let voice_info = voices
+            .get(&voice_key)
+            .ok_or_else(|| format!("Voice not found: {}", voice_key))?;
+        let path = voices::download::download_voice(&voice_key, voice_info).await?;
+        return Ok(path.to_string_lossy().to_string());
+    }
+
     let path = voices::download::download_voice(&voice_key, voice_info).await?;
     Ok(path.to_string_lossy().to_string())
 }
@@ -444,26 +462,6 @@ fn check_polly_credentials() -> Result<bool, String> {
         Ok(()) => Ok(true),
         Err(_) => Ok(false),
     }
-}
-
-#[tauri::command]
-fn get_polly_voice() -> Option<String> {
-    config::load_selected_polly_voice()
-}
-
-#[tauri::command]
-fn save_polly_voice(voice_id: String) {
-    config::save_selected_polly_voice(voice_id)
-}
-
-#[tauri::command]
-fn get_microsoft_voice() -> Option<String> {
-    config::load_selected_microsoft_voice()
-}
-
-#[tauri::command]
-fn save_microsoft_voice(voice_id: String) {
-    config::save_selected_microsoft_voice(voice_id)
 }
 
 /// Unified error type for screenshot and OCR operations
@@ -598,6 +596,7 @@ pub fn run() {
             get_config,
             save_config,
             list_piper_voices,
+            refresh_piper_voices,
             list_polly_voices,
             list_microsoft_voices,
             download_voice,
@@ -606,10 +605,6 @@ pub fn run() {
             open_settings_window,
             cleanup_text,
             check_polly_credentials,
-            get_polly_voice,
-            save_polly_voice,
-            get_microsoft_voice,
-            save_microsoft_voice,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

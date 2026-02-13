@@ -21,6 +21,7 @@
     "allow-capture-screenshot-and-ocr",
     "allow-open-live-text-viewer",
     "allow-get-platform",
-    "allow-open-settings-window"
+    "allow-open-settings-window",
+    "allow-get-config"
   ]
 }

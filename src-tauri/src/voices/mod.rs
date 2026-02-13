@@ -13,7 +13,8 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error, trace};
 
-const PIPER_VOICES_API_URL: &str = "https://piper-voices.com/api/v1";
+const PIPER_VOICES_API_URL: &str =
+    "https://huggingface.co/rhasspy/piper-voices/resolve/main/voices.json";
 const CACHE_FILE_NAME: &str = "voices.json";
 const CACHE_TTL_SECS: u64 = 24 * 60 * 60; // 24 hours
 
@@ -24,6 +25,8 @@ pub struct VoiceInfo {
     pub language: LanguageInfo,
     pub quality: String,
     pub num_speakers: u32,
+    #[serde(default)]
+    pub files: HashMap<String, FileInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +35,12 @@ pub struct LanguageInfo {
     pub family: String,
     pub region: String,
     pub name_english: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileInfo {
+    pub size_bytes: u64,
+    pub md5_digest: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,13 +98,15 @@ fn is_cache_valid(metadata: &CacheMetadata) -> bool {
     now.saturating_sub(metadata.fetched_at) < CACHE_TTL_SECS
 }
 
-pub async fn fetch_piper_voices() -> Result<HashMap<String, VoiceInfo>, String> {
-    debug!("Fetching Piper voices from piper-voices.com API");
+pub async fn fetch_piper_voices(force_refresh: bool) -> Result<HashMap<String, VoiceInfo>, String> {
+    debug!("Fetching Piper voices from HuggingFace");
 
-    // Check cache first
-    if let Ok(Some(v)) = get_cached_voices() {
-        debug!("Using cached Piper voices");
-        return Ok(v);
+    // Check cache first (unless force refresh)
+    if !force_refresh {
+        if let Ok(Some(v)) = get_cached_voices() {
+            debug!("Using cached Piper voices");
+            return Ok(v);
+        }
     }
 
     // Fetch from API

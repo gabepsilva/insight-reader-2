@@ -1,5 +1,0 @@
-# Permission to invoke save_polly_voice (save Polly voice selection)
-[[permission]]
-identifier = "allow-save-polly-voice"
-description = "Allows invoking save_polly_voice to save the Polly voice selection"
-commands.allow = ["save_polly_voice"]

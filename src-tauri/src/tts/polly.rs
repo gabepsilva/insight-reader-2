@@ -18,7 +18,7 @@ pub struct PollyTTSProvider {
 }
 
 impl PollyTTSProvider {
-    pub fn new() -> Result<Self, TTSError> {
+    pub fn new(selected_voice: Option<String>) -> Result<Self, TTSError> {
         info!("Initializing AWS Polly TTS provider");
 
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -41,11 +41,17 @@ impl PollyTTSProvider {
 
         let player = AudioPlayer::new(16000)?;
 
+        let voice_id = selected_voice
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Matthew".to_string());
+
         Ok(Self {
             client,
             player,
             runtime,
-            voice_id: "Matthew".to_string(),
+            voice_id,
             engine: Engine::Neural,
         })
     }

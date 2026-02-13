@@ -77,6 +77,16 @@ function Settings() {
     };
   }, []);
 
+  useEffect(() => {
+    const unlisten = listen('config-changed', () => {
+      loadConfig();
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
+
   const loadConfig = async () => {
     try {
       const cfg = await invoke<Config>('get_config');
@@ -327,6 +337,7 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
   }, [microsoftVoices]);
 
   const getCountryFlag = (langCode: string): string => {
+    const normalizedCode = langCode.replace(/_/g, '-');
     const flagMap: Record<string, string> = {
       // English
       'en-US': '🇺🇸', 'en-GB': '🇬🇧', 'en-AU': '🇦🇺', 'en-CA': '🇨🇦',
@@ -391,16 +402,16 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
       'iu-Latn-CA': '🇨🇦', 'iu-Cans-CA': '🇨🇦',
     };
 
-    if (flagMap[langCode]) {
-      return flagMap[langCode];
+    if (flagMap[normalizedCode]) {
+      return flagMap[normalizedCode];
     }
 
-    const lang = langCode.split('-')[0];
+    const lang = normalizedCode.split('-')[0];
     if (lang === 'zh' || lang === 'yue' || lang === 'cmn' || lang === 'wuu' || lang === 'lzh') {
       return '🇨🇳';
     }
 
-    const region = langCode.split('-')[1];
+    const region = normalizedCode.split('-')[1];
     if (region && region.length === 2) {
       const codePoints = [...region.toUpperCase()]
         .map(char => 127397 + char.charCodeAt(0));
@@ -465,6 +476,7 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
     try {
       await invoke('download_voice', { voiceKey });
       setDownloadedVoices(prev => [...prev, voiceKey]);
+      onChange({ selected_voice: voiceKey });
     } catch (e) {
       console.error('Failed to download voice:', e);
     } finally {
@@ -475,7 +487,7 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
   return (
     <div className="tab-content">
       <div className="setting-group">
-        <label>Voice Provider</label>
+        <label className="voice-provider-label">Select a Voice Provider</label>
         <select 
           value={config.voice_provider || 'microsoft'}
           onChange={(e) => onChange({ voice_provider: e.target.value })}
@@ -517,27 +529,41 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
                   <div className="voice-list">
                     {piperVoices
                       .filter((voice: any) => voice.language.code === piperModalLanguage)
-                      .map((voice: any) => (
+                      .map((voice: any) => {
+                        const isDownloaded = downloadedVoices.includes(voice.key);
+                        const isDownloading = downloading === voice.key;
+                        const isSelected = config.selected_voice === voice.key;
+                        
+                        return (
                         <div 
                           key={voice.key} 
-                          className={`voice-item ${config.selected_voice === voice.key ? 'selected' : ''}`}
-                          onClick={() => { onChange({ selected_voice: voice.key }); setPiperModalLanguage(null); }}
+                          className={`voice-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => isDownloaded && onChange({ selected_voice: voice.key })}
                         >
                           <span className="voice-name">{voice.name || voice.key}</span>
                           <span className="voice-badge">{voice.quality}</span>
-                          {downloadedVoices.includes(voice.key) ? (
-                            <span className="voice-badge downloaded">Downloaded</span>
+                          {isDownloaded ? (
+                            <button 
+                              className={`download-btn ${isSelected ? 'selected' : ''}`}
+                              onClick={(e) => { e.stopPropagation(); onChange({ selected_voice: voice.key }); }}
+                            >
+                              {isSelected ? 'Selected' : 'Select'}
+                            </button>
+                          ) : isDownloading ? (
+                            <span className="download-btn downloading">
+                              <span className="spinner"></span>
+                              Downloading...
+                            </span>
                           ) : (
                             <button 
                               className="download-btn"
                               onClick={(e) => { e.stopPropagation(); handleDownloadVoice(voice.key); }}
-                              disabled={downloading === voice.key}
                             >
-                              {downloading === voice.key ? 'Downloading...' : 'Download'}
+                              Download
                             </button>
                           )}
                         </div>
-                      ))}
+                      )})}
                   </div>
                 </div>
               </div>

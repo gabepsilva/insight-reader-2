@@ -1,0 +1,5 @@
+# Permission to invoke refresh_piper_voices (refresh the cached Piper voices list)
+[[permission]]
+identifier = "allow-refresh-piper-voices"
+description = "Allows invoking refresh_piper_voices to force refresh the cached Piper voices list"
+commands.allow = ["refresh_piper_voices"]

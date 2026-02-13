@@ -56,6 +56,44 @@ pub enum TtsProvider {
     Polly,
 }
 
+#[derive(Clone, Debug, Default)]
+struct TtsConfigSnapshot {
+    provider: TtsProvider,
+    selected_voice: Option<String>,
+    selected_polly_voice: Option<String>,
+    selected_microsoft_voice: Option<String>,
+}
+
+fn normalize_voice(value: Option<String>) -> Option<String> {
+    value
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string())
+}
+
+fn load_tts_config() -> TtsConfigSnapshot {
+    match crate::config::load_full_config() {
+        Ok(cfg) => {
+            let provider = match cfg.voice_provider.as_deref() {
+                Some("piper") => TtsProvider::Piper,
+                Some("polly") => TtsProvider::Polly,
+                Some("microsoft") => TtsProvider::Microsoft,
+                _ => TtsProvider::default(),
+            };
+            TtsConfigSnapshot {
+                provider,
+                selected_voice: normalize_voice(cfg.selected_voice),
+                selected_polly_voice: normalize_voice(cfg.selected_polly_voice),
+                selected_microsoft_voice: normalize_voice(cfg.selected_microsoft_voice),
+            }
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, "Failed to load config, using default TTS settings");
+            TtsConfigSnapshot::default()
+        }
+    }
+}
+
 pub fn check_polly_credentials() -> Result<(), String> {
     PollyTTSProvider::check_credentials()
 }
@@ -67,18 +105,21 @@ enum TtsProviderImpl {
 }
 
 impl TtsProviderImpl {
-    fn new(provider: TtsProvider) -> Result<Self, TTSError> {
-        let microsoft_voice = crate::config::load_selected_microsoft_voice();
+    fn new(provider: TtsProvider, config: &TtsConfigSnapshot) -> Result<Self, TTSError> {
         match provider {
-            TtsProvider::Piper => Ok(Self::Piper(PiperTTSProvider::new()?)),
-            TtsProvider::Microsoft => {
-                Ok(Self::Microsoft(MicrosoftTTSProvider::new(microsoft_voice)?))
-            }
+            TtsProvider::Piper => Ok(Self::Piper(PiperTTSProvider::new(
+                config.selected_voice.clone(),
+            )?)),
+            TtsProvider::Microsoft => Ok(Self::Microsoft(MicrosoftTTSProvider::new(
+                config.selected_microsoft_voice.clone(),
+            )?)),
             TtsProvider::Polly => {
                 if let Err(e) = PollyTTSProvider::check_credentials() {
                     return Err(TTSError::ProcessError(e));
                 }
-                Ok(Self::Polly(PollyTTSProvider::new()?))
+                Ok(Self::Polly(PollyTTSProvider::new(
+                    config.selected_polly_voice.clone(),
+                )?))
             }
         }
     }
@@ -135,11 +176,12 @@ impl TtsProviderImpl {
 /// Spawn the TTS worker and return the channel sender to manage.
 pub fn create_tts_state() -> TtsState {
     let (tx, rx) = mpsc::channel();
-    let default_provider = TtsProvider::default();
+    let mut config_snapshot = load_tts_config();
+    let default_provider = config_snapshot.provider;
 
     std::thread::spawn(move || {
         tracing::info!(provider = ?default_provider, "Initializing TTS worker");
-        let mut provider = match TtsProviderImpl::new(default_provider) {
+        let mut provider = match TtsProviderImpl::new(default_provider, &config_snapshot) {
             Ok(p) => {
                 tracing::info!("TTS worker initialized successfully");
                 p
@@ -185,18 +227,43 @@ pub fn create_tts_state() -> TtsState {
         while let Ok(req) = rx.recv() {
             match req {
                 TtsRequest::Speak(text, resp) => {
-                    // Check if Microsoft voice changed and reload if needed
-                    if let TtsProviderImpl::Microsoft(ref microsoft) = provider {
-                        if let Some(config_voice) = crate::config::load_selected_microsoft_voice() {
-                            if microsoft.voice() != config_voice {
-                                tracing::info!(old = %microsoft.voice(), new = %config_voice, "Microsoft voice changed, reloading provider");
-                                match TtsProviderImpl::new(TtsProvider::Microsoft) {
-                                    Ok(new_provider) => provider = new_provider,
-                                    Err(e) => {
-                                        let _ = resp.send(Err(e));
-                                        continue;
-                                    }
-                                }
+                    let new_config = load_tts_config();
+                    let current_provider = new_config.provider;
+                    let provider_variant = match provider {
+                        TtsProviderImpl::Piper(_) => TtsProvider::Piper,
+                        TtsProviderImpl::Microsoft(_) => TtsProvider::Microsoft,
+                        TtsProviderImpl::Polly(_) => TtsProvider::Polly,
+                    };
+                    let provider_changed = current_provider != provider_variant;
+                    let voice_changed = match current_provider {
+                        TtsProvider::Piper => {
+                            new_config.selected_voice != config_snapshot.selected_voice
+                        }
+                        TtsProvider::Polly => {
+                            new_config.selected_polly_voice != config_snapshot.selected_polly_voice
+                        }
+                        TtsProvider::Microsoft => {
+                            new_config.selected_microsoft_voice
+                                != config_snapshot.selected_microsoft_voice
+                        }
+                    };
+
+                    if provider_changed || voice_changed {
+                        tracing::info!(
+                            old = ?provider_variant,
+                            new = ?current_provider,
+                            provider_changed,
+                            voice_changed,
+                            "TTS config changed, reloading provider"
+                        );
+                        match TtsProviderImpl::new(current_provider, &new_config) {
+                            Ok(new_provider) => {
+                                provider = new_provider;
+                                config_snapshot = new_config;
+                            }
+                            Err(e) => {
+                                let _ = resp.send(Err(e));
+                                continue;
                             }
                         }
                     }
@@ -223,9 +290,11 @@ pub fn create_tts_state() -> TtsState {
                 }
                 TtsRequest::SwitchProvider(new_provider, resp) => {
                     let _ = provider.stop();
-                    match TtsProviderImpl::new(new_provider) {
+                    let new_config = load_tts_config();
+                    match TtsProviderImpl::new(new_provider, &new_config) {
                         Ok(new_provider) => {
                             provider = new_provider;
+                            config_snapshot = new_config;
                             let _ = resp.send(Ok(()));
                         }
                         Err(e) => {

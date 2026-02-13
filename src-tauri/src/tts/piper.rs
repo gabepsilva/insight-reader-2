@@ -13,6 +13,17 @@ use tracing::{debug, error, info, warn};
 use super::audio_player::AudioPlayer;
 use super::TTSError;
 
+fn get_voices_base_dir() -> PathBuf {
+    if let Some(home) = dirs::home_dir() {
+        home.join(".local")
+            .join("share")
+            .join("insight-reader")
+            .join("voices")
+    } else {
+        PathBuf::from("/tmp")
+    }
+}
+
 /// Piper TTS provider using the local Piper binary and ONNX models.
 pub struct PiperTTSProvider {
     piper_bin: PathBuf,
@@ -23,9 +34,9 @@ pub struct PiperTTSProvider {
 
 impl PiperTTSProvider {
     /// Create a new Piper TTS provider. Finds piper binary and any installed model.
-    pub fn new() -> Result<Self, TTSError> {
+    pub fn new(selected_voice: Option<String>) -> Result<Self, TTSError> {
         let piper_bin = Self::find_piper_binary();
-        let model_path = Self::find_any_model()?;
+        let model_path = Self::find_any_model(selected_voice)?;
 
         if !piper_bin.is_file() {
             error!(?piper_bin, "Piper binary not found");
@@ -286,47 +297,65 @@ impl PiperTTSProvider {
             .join(PIPER_BIN_NAME)
     }
 
-    /// Find any installed Piper model. Prefers en_US-lessac-medium, else first .onnx in model dirs.
-    fn find_any_model() -> Result<PathBuf, TTSError> {
-        const PREFERRED: &str = "en_US-lessac-medium";
+    /// Find any installed Piper model. Prefers selected voice from config, else finds any available.
+    fn find_any_model(selected_voice: Option<String>) -> Result<PathBuf, TTSError> {
+        let model_name = selected_voice
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "en_US-lessac-medium".to_string());
 
-        let mut dirs_to_check: Vec<PathBuf> = Vec::new();
+        let voices_dir = get_voices_base_dir();
 
-        // 1. Check development models in current directory
-        if let Ok(c) = env::current_dir() {
-            dirs_to_check.push(c.join("models"));
-        }
+        // Check development voices in current directory
+        let dev_voices = env::current_dir().map(|c| c.join("voices")).ok();
 
-        // 2. Check production models in ${HOME}/.insight-reader-2/models
-        if let Ok(models_dir) = paths::get_models_dir() {
-            dirs_to_check.push(models_dir);
-        }
-
-        // First pass: look for preferred model
-        for base in &dirs_to_check {
-            let preferred = base.join(PREFERRED);
-            if preferred.with_extension("onnx").is_file() {
-                debug!(path = %preferred.display(), "Using preferred Piper model");
-                return Ok(preferred);
+        // First pass: look for selected model in language subdirectory
+        // Model path format: voices/{language}/{voice_name}/{voice_name}.onnx
+        for base in dev_voices.iter().chain(std::iter::once(&voices_dir)) {
+            // Look in language subdirectory (e.g., voices/pt_BR/pt_BR-cadu-medium/)
+            if let Ok(lang_dirs) = std::fs::read_dir(base) {
+                for lang_dir in lang_dirs.flatten() {
+                    let voice_dir = lang_dir.path().join(&model_name);
+                    let model_path = voice_dir.join(format!("{}.onnx", &model_name));
+                    if model_path.is_file() {
+                        debug!(path = %model_path.display(), "Using selected Piper model");
+                        return Ok(model_path.with_extension(""));
+                    }
+                }
             }
         }
 
         // Second pass: find any .onnx model
-        for base in &dirs_to_check {
-            if let Ok(entries) = std::fs::read_dir(base) {
-                for e in entries.flatten() {
-                    let p = e.path();
-                    if p.extension().is_some_and(|e| e == "onnx") {
-                        let stem = p.with_extension("");
-                        debug!(path = %stem.display(), "Using first found Piper model");
-                        return Ok(stem);
+        for base in dev_voices.iter().chain(std::iter::once(&voices_dir)) {
+            if let Ok(lang_dirs) = std::fs::read_dir(base) {
+                for lang_dir in lang_dirs.flatten() {
+                    if !lang_dir.path().is_dir() {
+                        continue;
+                    }
+                    if let Ok(voice_dirs) = std::fs::read_dir(lang_dir.path()) {
+                        for voice_dir in voice_dirs.flatten() {
+                            let p = voice_dir.path();
+                            if p.is_dir() {
+                                if let Ok(files) = std::fs::read_dir(&p) {
+                                    for f in files.flatten() {
+                                        let sub_path = f.path();
+                                        if sub_path.extension().is_some_and(|e| e == "onnx") {
+                                            let stem = sub_path.with_extension("");
+                                            debug!(path = %stem.display(), "Using first found Piper model");
+                                            return Ok(stem);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
         Err(TTSError::ProcessError(
-            "No Piper model (.onnx) found. Install a voice to ~/.insight-reader-2/models/".into(),
+            "No Piper model (.onnx) found. Download a voice in Settings.".into(),
         ))
     }
 }
