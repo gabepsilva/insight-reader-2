@@ -3,7 +3,7 @@
 use std::io::Cursor;
 use std::time::Duration;
 
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 use tracing::{debug, error, trace, warn};
 
 use super::TTSError;
@@ -16,6 +16,8 @@ pub struct AudioPlayer {
     sink: Option<Sink>,
     /// Current audio buffer (used by start_playback)
     audio_data: Vec<f32>,
+    /// Total duration in milliseconds (for raw audio)
+    total_duration_ms: u64,
 }
 
 impl AudioPlayer {
@@ -33,6 +35,7 @@ impl AudioPlayer {
             stream_handle: Some(stream_handle),
             sink: None,
             audio_data: Vec::new(),
+            total_duration_ms: 0,
         })
     }
 
@@ -40,6 +43,7 @@ impl AudioPlayer {
     pub fn play_audio(&mut self, audio_data: Vec<f32>) -> Result<(), TTSError> {
         debug!(samples = audio_data.len(), "AudioPlayer::play_audio");
         self.audio_data = audio_data;
+        self.total_duration_ms = 0;
         self.start_playback()
     }
 
@@ -47,7 +51,7 @@ impl AudioPlayer {
     pub fn play_audio_raw(
         &mut self,
         audio_data: Vec<u8>,
-        _sample_rate: u32,
+        sample_rate: u32,
     ) -> Result<(), TTSError> {
         debug!(samples = audio_data.len(), "AudioPlayer::play_audio_raw");
         if let Some(sink) = self.sink.take() {
@@ -63,11 +67,21 @@ impl AudioPlayer {
             return Err(TTSError::AudioError("No audio data to play".into()));
         }
 
-        let cursor = Cursor::new(audio_data);
+        // Clone audio_data to get a 'static lifetime for the Decoder
+        let audio_bytes = audio_data.clone();
+        let cursor = Cursor::new(audio_bytes);
         let source = Decoder::new(cursor).map_err(|e| {
             error!("Failed to decode audio: {}", e);
             TTSError::AudioError(format!("Failed to decode audio: {}", e))
         })?;
+
+        // Calculate duration from the decoded source
+        let duration: Option<Duration> = source.total_duration();
+        let total_duration_ms = duration.map(|d| d.as_millis() as u64).unwrap_or_else(|| {
+            // Fallback: estimate using 128 kbps bitrate for compressed audio
+            let bytes_per_sec = 128 / 8; // 128 kbps = 16 KB/s
+            (audio_data.len() as u64 * 1000) / bytes_per_sec
+        });
 
         let sink = Sink::try_new(stream_handle).map_err(|e| {
             error!("Failed to create audio sink: {}", e);
@@ -76,6 +90,8 @@ impl AudioPlayer {
 
         sink.append(source);
         self.sink = Some(sink);
+        self.total_duration_ms = total_duration_ms;
+        self.audio_data.clear(); // Clear so get_position uses total_duration_ms
         Ok(())
     }
 
@@ -151,11 +167,15 @@ impl AudioPlayer {
     /// Get current playback position and total duration in milliseconds.
     /// Returns (current_ms, total_ms). Returns (0, 0) if no audio is loaded.
     pub fn get_position(&self) -> (u64, u64) {
-        if self.audio_data.is_empty() {
+        let total_duration_ms = if !self.audio_data.is_empty() {
+            self.calculate_duration_ms()
+        } else {
+            self.total_duration_ms
+        };
+
+        if total_duration_ms == 0 {
             return (0, 0);
         }
-
-        let total_duration_ms = self.calculate_duration_ms();
 
         if let Some(sink) = &self.sink {
             let current_pos = sink.get_pos();
@@ -170,7 +190,9 @@ impl AudioPlayer {
     /// Seek by the given offset in milliseconds. Returns (success, at_start, at_end).
     /// Fails if audio is paused or if seeking is not supported.
     pub fn seek(&mut self, offset_ms: i64) -> Result<(bool, bool, bool), TTSError> {
-        if self.audio_data.is_empty() {
+        // Check if we have audio data (either f32 or raw)
+        let has_audio = !self.audio_data.is_empty() || self.total_duration_ms > 0;
+        if !has_audio {
             return Err(TTSError::AudioError("No audio data loaded".into()));
         }
 
@@ -189,7 +211,12 @@ impl AudioPlayer {
             return Err(TTSError::AudioError("Playback has finished".into()));
         }
 
-        let total_duration_ms = self.calculate_duration_ms();
+        let total_duration_ms = if !self.audio_data.is_empty() {
+            self.calculate_duration_ms()
+        } else {
+            self.total_duration_ms
+        };
+
         let current_pos = sink.get_pos();
         let current_ms = current_pos.as_millis() as u64;
 

@@ -7,20 +7,12 @@
 }
 
 :root {
-  font-family:
-    "Open Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif,
-    "Apple Color Emoji",
-    "Segoe UI Emoji";
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
 
-  color: #333;
+  color: #fafafa;
   background-color: transparent;
 
   font-synthesis: none;
@@ -61,19 +53,17 @@ body {
 
 .control-bar {
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid white;
-  border-radius: 0px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: #18181b;
+  border-radius: 5px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 2px solid #ffffff;
   width: 100%;
   height: 100%;
-  min-width: 400px;
-  min-height: 80px;
+  min-width: 320px;
+  min-height: 200px;
   position: relative;
   overflow: visible;
   cursor: grab;
@@ -84,296 +74,193 @@ body {
   cursor: grabbing;
 }
 
-.column {
+.header {
   display: flex;
   align-items: center;
-}
-
-.column-logo {
-  flex-shrink: 0;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-}
-
-.column-playback {
-  flex-shrink: 0;
-  flex-direction: column;
-  gap: 0;
-  align-items: center;
-  align-self: stretch;
   justify-content: space-between;
 }
 
-.playback-row {
+.brand {
   display: flex;
   align-items: center;
+  transform: translateY(3px);
+}
+
+.app-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+
+.app-icon {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.app-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fafafa;
+  letter-spacing: 0px;
+  line-height: 1;
+}
+
+.more-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.more-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.more-btn svg {
+  width: 22px;
+  height: 20px;
+  fill: #ffffff;
+}
+
+.time-display {
+  display: flex;
+  align-items: baseline;
   justify-content: center;
   gap: 4px;
-  width: 100%;
+  margin-bottom: 0;
 }
 
-.playback-row:first-child {
-  align-items: flex-start;
-  padding-top: 0;
+.current-time {
+  font-size: 28px;
+  font-weight: 200;
+  color: #fafafa;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
 }
 
-.playback-row:last-child {
-  align-items: flex-end;
-  padding-bottom: 0;
+.current-time.separator {
+  color: #71717a;
+  font-weight: 400;
 }
 
-.column-playback .control-button {
-  width: 34px;
-  height: 34px;
+.total-time {
+  font-size: 12px;
+  color: #71717a;
+  font-weight: 400;
 }
 
-.column-controls {
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+.total-time.separator {
+  font-size: 12px;
+  font-weight: 400;
 }
 
-.column-close {
-  flex-shrink: 0;
-  align-items: flex-start;
-}
-
-.logo-container {
+.controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.logo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.logo-label {
-  font-size: 9px;
-  line-height: 1.2;
-  color: #666;
-  text-align: center;
-  font-weight: 500;
-}
-
-.controls-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-}
-
-.control-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.control-btn {
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: 5px;
-  background: #f0f0f0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
-}
-
-.control-button:hover {
-  background: #e0e0e0;
-}
-
-.control-button:active {
-  transform: scale(0.95);
-}
-
-.control-button.play-pause {
-  background: #667eea;
-  color: white;
-}
-
-.control-button.play-pause:hover {
-  background: #5568d3;
-}
-
-.control-button.stop {
-  background: #f56565;
-  color: white;
-}
-
-.control-button.stop:hover {
-  background: #e53e3e;
-}
-
-.progress-container {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-
-
-.waveform-container {
-  flex: 0 0 auto;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  position: relative;
-  z-index: 1;
-}
-
-.waveform {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  height: 100%;
+  transition: all 0.2s;
+  color: #ffffff;
 }
 
-.waveform-bar {
-  width: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to top, #667eea, #764ba2);
-  border-radius: 1px;
-  animation: waveform-animation 1s ease-in-out infinite;
-  opacity: 0.6;
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+  transform: translateY(-1px);
 }
 
-@keyframes waveform-animation {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+.control-btn:active {
+  transform: translateY(0);
 }
 
-.control-button.settings,
-.control-button.camera,
-.control-button.editor {
-  background: #f0f0f0;
-  color: #666;
+.control-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
-.control-button.settings:hover,
-.control-button.camera:hover,
-.control-button.editor:hover {
-  background: #e0e0e0;
-  color: #333;
+.control-btn.play-btn {
+  width: 48px;
+  height: 48px;
+  background: #fafafa;
+  color: #18181b;
 }
 
-.close-row {
+.control-btn.play-btn:hover {
+  background: #ffffff;
+}
+
+.control-btn.play-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.footer {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.control-button.minimize,
-.control-button.close {
-  width: 12px;
+.speed-btn {
+  padding: 6px 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.speed-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+}
+
+.speed-btn.active {
+  background: #fafafa;
+  color: #18181b;
+}
+
+.divider {
+  width: 1px;
   height: 12px;
-  padding: 0;
-  min-width: 12px;
-  border-radius: 50%;
-}
-
-.control-button.minimize {
-  background: #ffbd2e;
-  color: #1f1f1f;
-}
-
-.control-button.minimize:hover {
-  background: #e6ab29;
-}
-
-.control-button.minimize:active,
-.control-button.close:active {
-  transform: scale(0.92);
-}
-
-.control-button.close {
-  background: #ff5f57;
-  color: white;
-}
-
-.control-button.close:hover {
-  background: #f04a42;
-}
-
-.control-button.minimize:hover,
-.control-button.close:hover {
-  transform: none;
-}
-
-.control-button.minimize svg,
-.control-button.close svg {
-  width: 6px;
-  height: 6px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: transparent;
-  }
-
-  .control-bar {
-    background: rgba(30, 30, 30, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  }
-
-  .control-button {
-    background: #2d2d2d;
-    color: #e0e0e0;
-  }
-
-  .control-button:hover {
-    background: #3d3d3d;
-  }
-
-  .control-button.settings,
-  .control-button.camera,
-  .control-button.editor {
-    background: #2d2d2d;
-    color: #999;
-  }
-
-  .control-button.settings:hover,
-  .control-button.camera:hover,
-  .control-button.editor:hover {
-    background: #3d3d3d;
-    color: #e0e0e0;
-  }
-
-
-  .logo-label {
-    color: #999;
-  }
-
-  .control-button.minimize {
-    background: #ffbd2e;
-    color: #1f1f1f;
-  }
-
-  .control-button.minimize:hover {
-    background: #e6ab29;
-  }
-
-  .control-button.close {
-    background: #ff5f57;
-  }
-
-  .control-button.close:hover {
-    background: #f04a42;
-  }
+  background: rgba(255, 255, 255, 0.06);
 }
