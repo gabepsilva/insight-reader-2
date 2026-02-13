@@ -11,10 +11,13 @@ jobs:
   test:
     runs-on: self-hosted
     container:
-      image: ghcr.io/tauri-apps/tauri
+      image: ubuntu:22.04
       options: --user root
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y curl unzip
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
