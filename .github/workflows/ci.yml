@@ -11,6 +11,9 @@ jobs:
   test:
     runs-on: self-hosted
     steps:
+      - name: Fix permissions
+        run: sudo rm -rf ${{ github.workspace }}
+
       - uses: actions/checkout@v4
         with:
           clean: false
@@ -44,6 +47,9 @@ jobs:
       image: ghcr.io/tauri-apps/tauri
       options: --user root
     steps:
+      - name: Fix permissions
+        run: sudo rm -rf ${{ github.workspace }}
+
       - uses: actions/checkout@v4
         with:
           clean: false
