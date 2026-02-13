@@ -20,7 +20,7 @@ interface Config {
 type Tab = 'general' | 'voices' | 'about';
 
 function Settings() {
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [activeTab, setActiveTab] = useState<Tab>('voices');
   const [config, setConfig] = useState<Config | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -145,16 +145,16 @@ function Settings() {
 
       <div className="settings-tabs">
         <button 
-          className={`tab ${activeTab === 'general' ? 'active' : ''}`}
-          onClick={() => setActiveTab('general')}
-        >
-          General
-        </button>
-        <button 
           className={`tab ${activeTab === 'voices' ? 'active' : ''}`}
           onClick={() => setActiveTab('voices')}
         >
           Voices
+        </button>
+        <button 
+          className={`tab ${activeTab === 'general' ? 'active' : ''}`}
+          onClick={() => setActiveTab('general')}
+        >
+          General
         </button>
         <button 
           className={`tab ${activeTab === 'about' ? 'active' : ''}`}
@@ -182,18 +182,6 @@ function Settings() {
 function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: Partial<Config>) => void }) {
   return (
     <div className="tab-content">
-      <div className="setting-group">
-        <label>Voice Provider</label>
-        <select 
-          value={config.voice_provider || 'microsoft'}
-          onChange={(e) => onChange({ voice_provider: e.target.value })}
-        >
-          <option value="piper">Piper (Offline)</option>
-          <option value="polly">AWS Polly</option>
-          <option value="microsoft">Microsoft Edge TTS</option>
-        </select>
-      </div>
-
       <div className="setting-group">
         <label>Log Level</label>
         <select 
@@ -340,31 +328,86 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
 
   const getCountryFlag = (langCode: string): string => {
     const flagMap: Record<string, string> = {
-      'en_US': '🇺🇸', 'en_GB': '🇬🇧', 'en_AU': '🇦🇺', 'en_CA': '🇨🇦',
-      'es_ES': '🇪🇸', 'es_MX': '🇲🇽',
-      'fr_FR': '🇫🇷', 'fr_CA': '🇨🇦',
-      'de_DE': '🇩🇪', 'it_IT': '🇮🇹', 'pt_BR': '🇧🇷', 'pt_PT': '🇵🇹',
-      'ru_RU': '🇷🇺', 'pl_PL': '🇵🇱', 'nl_NL': '🇳🇱',
-      'sv_SE': '🇸🇪', 'da_DK': '🇩🇰', 'no_NO': '🇳🇴', 'fi_FI': '🇫🇮',
-      'cs_CZ': '🇨🇿', 'hu_HU': '🇭🇺', 'ro_RO': '🇷🇴', 'sk_SK': '🇸🇰',
-      'uk_UA': '🇺🇦', 'el_GR': '🇬🇷', 'tr_TR': '🇹🇷',
-      'zh_CN': '🇨🇳', 'zh_TW': '🇹🇼', 'ja_JP': '🇯🇵', 'ko_KR': '🇰🇷',
-      'ar-SA': '🇸🇦', 'ar': '🌍', 'hi_IN': '🇮🇳', 'th_TH': '🇹🇭',
-      'vi_VN': '🇻🇳', 'id_ID': '🇮🇩', 'ms_MY': '🇲🇾', 'fil_PH': '🇵🇭',
-      'ca_ES': '🇪🇸', 'eu_ES': '🇪🇸', 'gl_ES': '🇪🇸', 'cy_GB': '🇬🇧',
-      'ga_IE': '🇮🇪', 'mt_MT': '🇲🇹', 'is_IS': '🇮🇸', 'lv_LV': '🇱🇻',
-      'lt_LT': '🇱🇹', 'et_EE': '🇪🇪', 'bg_BG': '🇧🇬', 'hr_HR': '🇭🇷',
-      'sr_RS': '🇷🇸', 'sl_SI': '🇸🇮', 'mk_MK': '🇲🇰', 'bs_BA': '🇧🇦',
-      'af_ZA': '🇿🇦', 'sw_KE': '🇰🇪', 'sw_TZ': '🇹🇿', 'zu_ZA': '🇿🇦',
-      'ha_NG': '🇳🇬', 'yo_NG': '🇳🇬', 'ig_NG': '🇳🇬', 'am_ET': '🇪🇹',
-      'ti_ER': '🇪🇷', 'om_ET': '🇪🇹', 'so_SO': '🇸🇴', 'ne_NP': '🇳🇵',
-      'mn_MN': '🇲🇳', 'kk_KZ': '🇰🇿', 'uz_UZ': '🇺🇿', 'tg_TJ': '🇹🇯',
-      'ky_KG': '🇰🇬', 'tk_TM': '🇹🇲', 'bn_BD': '🇧🇩', 'my_MM': '🇲🇲',
-      'km_KH': '🇰🇭', 'lo_LA': '🇱🇦', 'gu_IN': '🇮🇳', 'kn_IN': '🇮🇳',
-      'ta_IN': '🇮🇳', 'te_IN': '🇮🇳', 'mr_IN': '🇮🇳', 'pa_IN': '🇮🇳',
-      'ml_IN': '🇮🇳', 'si_LK': '🇱🇰', 'dv_MV': '🇲🇻',
+      // English
+      'en-US': '🇺🇸', 'en-GB': '🇬🇧', 'en-AU': '🇦🇺', 'en-CA': '🇨🇦',
+      'en-IN': '🇮🇳', 'en-IE': '🇮🇪', 'en-NZ': '🇳🇿', 'en-ZA': '🇿🇦',
+      'en-SG': '🇸🇬', 'en-HK': '🇭🇰', 'en-KE': '🇰🇪', 'en-NG': '🇳🇬',
+      'en-TZ': '🇹🇿', 'en-PH': '🇵🇭',
+      // Spanish
+      'es-ES': '🇪🇸', 'es-MX': '🇲🇽', 'es-AR': '🇦🇷', 'es-CO': '🇨🇴',
+      'es-CL': '🇨🇱', 'es-PE': '🇵🇪', 'es-VE': '🇻🇪', 'es-CU': '🇨🇺',
+      // French
+      'fr-FR': '🇫🇷', 'fr-CA': '🇨🇦', 'fr-BE': '🇧🇪', 'fr-CH': '🇨🇭',
+      // German
+      'de-DE': '🇩🇪', 'de-AT': '🇦🇹', 'de-CH': '🇨🇭',
+      // Portuguese
+      'pt-BR': '🇧🇷', 'pt-PT': '🇵🇹',
+      // Italian
+      'it-IT': '🇮🇹',
+      // Russian & Eastern European
+      'ru-RU': '🇷🇺', 'pl-PL': '🇵🇱', 'nl-NL': '🇳🇱', 'nl-BE': '🇧🇪',
+      'sv-SE': '🇸🇪', 'da-DK': '🇩🇰', 'no-NO': '🇳🇴', 'fi-FI': '🇫🇮',
+      'cs-CZ': '🇨🇿', 'hu-HU': '🇭🇺', 'ro-RO': '🇷🇴', 'sk-SK': '🇸🇰',
+      'uk-UA': '🇺🇦', 'el-GR': '🇬🇷', 'tr-TR': '🇹🇷',
+      // Asian
+      'zh-CN': '🇨🇳', 'zh-TW': '🇹🇼', 'zh-HK': '🇭🇰',
+      'zh-SG': '🇸🇬', 'zh-MY': '🇲🇾', 'zh-MO': '🇲🇴',
+      'zh-Hans': '🇨🇳', 'zh-Hant': '🇹🇼',
+      'yue-HK': '🇭🇰', 'yue-CN': '🇨🇳',
+      'cmn-CN': '🇨🇳', 'cmn-TW': '🇹🇼', 'cmn-HK': '🇭🇰',
+      'wuu-CN': '🇨🇳', 'dta-CN': '🇨🇳', 'ug-CN': '🇨🇳',
+      'lzh-CN': '🇨🇳', 'yue': '🇭🇰', 'cmn': '🇨🇳', 'zh': '🇨🇳',
+      'ja-JP': '🇯🇵', 'ko-KR': '🇰🇷', 'ko-KP': '🇰🇵',
+      'hi-IN': '🇮🇳', 'th-TH': '🇹🇭', 'vi-VN': '🇻🇳',
+      'id-ID': '🇮🇩', 'ms-MY': '🇲🇾', 'fil-PH': '🇵🇭',
+      // Middle Eastern
+      'ar-SA': '🇸🇦', 'ar-AE': '🇦🇪', 'ar-EG': '🇪🇬', 'ar-IQ': '🇮🇶',
+      'ar-JO': '🇯🇴', 'ar-KW': '🇰🇼', 'ar-LB': '🇱🇧', 'ar-LY': '🇱🇾',
+      'ar-MA': '🇲🇦', 'ar-OM': '🇴🇲', 'ar-QA': '🇶🇦', 'ar-SY': '🇸🇾',
+      'ar-TN': '🇹🇳', 'ar-YE': '🇾🇪', 'ar-BH': '🇧🇭', 'ar-DZ': '🇩🇿',
+      'he-IL': '🇮🇱', 'fa-IR': '🇮🇷',
+      // South Asian
+      'bn-BD': '🇧🇩', 'bn-IN': '🇮🇳', 'my-MM': '🇲🇲',
+      'km-KH': '🇰🇭', 'lo-LA': '🇱🇦',
+      'gu-IN': '🇮🇳', 'kn-IN': '🇮🇳', 'ta-IN': '🇮🇳', 'te-IN': '🇮🇳',
+      'mr-IN': '🇮🇳', 'pa-IN': '🇮🇳', 'ml-IN': '🇮🇳', 'si-LK': '🇱🇰',
+      'ne-NP': '🇳🇵', 'dv-MV': '🇲🇻',
+      // Nordic & Baltic
+      'is-IS': '🇮🇸', 'lv-LV': '🇱🇻', 'lt-LT': '🇱🇹', 'et-EE': '🇪🇪',
+      // Eastern European
+      'bg-BG': '🇧🇬', 'hr-HR': '🇭🇷', 'sr-RS': '🇷🇸', 'sl-SI': '🇸🇮',
+      'mk-MK': '🇲🇰', 'bs-BA': '🇧🇦',
+      // African
+      'af-ZA': '🇿🇦', 'sw-KE': '🇰🇪', 'sw-TZ': '🇹🇿', 'zu-ZA': '🇿🇦',
+      'ha-NG': '🇳🇬', 'yo-NG': '🇳🇬', 'ig-NG': '🇳🇬',
+      'am-ET': '🇪🇹', 'ti-ER': '🇪🇷', 'om-ET': '🇪🇹', 'so-SO': '🇸🇴',
+      // Central Asian
+      'mn-MN': '🇲🇳', 'kk-KZ': '🇰🇿', 'uz-UZ': '🇺🇿', 'tg-TJ': '🇹🇯',
+      'ky-KG': '🇰🇬', 'tk-TM': '🇹🇲',
+      // Other European
+      'ca-ES': '🇪🇸', 'eu-ES': '🇪🇸', 'gl-ES': '🇪🇸', 'cy-GB': '🇬🇧',
+      'ga-IE': '🇮🇪', 'mt-MT': '🇲🇹',
+      // Special
+      'iu-Latn-CA': '🇨🇦', 'iu-Cans-CA': '🇨🇦',
     };
-    return flagMap[langCode] || '🌍';
+
+    if (flagMap[langCode]) {
+      return flagMap[langCode];
+    }
+
+    const lang = langCode.split('-')[0];
+    if (lang === 'zh' || lang === 'yue' || lang === 'cmn' || lang === 'wuu' || lang === 'lzh') {
+      return '🇨🇳';
+    }
+
+    const region = langCode.split('-')[1];
+    if (region && region.length === 2) {
+      const codePoints = [...region.toUpperCase()]
+        .map(char => 127397 + char.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    }
+
+    return '🌍';
   };
 
   const formatPollyLanguage = (code: string): string => {
@@ -431,162 +474,180 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
 
   return (
     <div className="tab-content">
-      <h3>Piper Voices</h3>
-      {loadingPiper ? (
-        <p>Loading voices...</p>
-      ) : (
-        <>
-          <div className="language-grid">
-            {piperLanguages.map((lang) => (
-              <div
-                key={lang.code}
-                className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
-                onClick={() => { setSelectedPiperLanguage(lang.code); setPiperModalLanguage(lang.code); }}
-              >
-                <span className="language-flag">{lang.flag}</span>
-                <span className="language-name">{lang.name}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="setting-group">
+        <label>Voice Provider</label>
+        <select 
+          value={config.voice_provider || 'microsoft'}
+          onChange={(e) => onChange({ voice_provider: e.target.value })}
+        >
+          <option value="piper">Piper (Offline)</option>
+          <option value="polly">AWS Polly</option>
+          <option value="microsoft">Microsoft Edge TTS</option>
+        </select>
+      </div>
 
-      {piperModalLanguage && (
-        <div className="modal-overlay" onClick={() => setPiperModalLanguage(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Select Voice - {piperLanguages.find(l => l.code === piperModalLanguage)?.name}</h3>
-              <button className="close-button" onClick={() => setPiperModalLanguage(null)}>×</button>
+      {(config.voice_provider || 'microsoft') === 'piper' && (
+        <>
+          <h3>Piper Voices</h3>
+          {loadingPiper ? (
+            <p>Loading voices...</p>
+          ) : (
+            <div className="language-grid">
+              {piperLanguages.map((lang) => (
+                <div
+                  key={lang.code}
+                  className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
+                  onClick={() => { setSelectedPiperLanguage(lang.code); setPiperModalLanguage(lang.code); }}
+                >
+                  <span className="language-flag">{lang.flag}</span>
+                  <span className="language-name">{lang.name}</span>
+                </div>
+              ))}
             </div>
-            <div className="modal-body">
-              <div className="voice-list">
-                {piperVoices
-                  .filter((voice: any) => voice.language.code === piperModalLanguage)
-                  .map((voice: any) => (
-                    <div 
-                      key={voice.key} 
-                      className={`voice-item ${config.selected_voice === voice.key ? 'selected' : ''}`}
-                      onClick={() => { onChange({ selected_voice: voice.key }); setPiperModalLanguage(null); }}
-                    >
-                      <span className="voice-name">{voice.name || voice.key}</span>
-                      <span className="voice-badge">{voice.quality}</span>
-                      {downloadedVoices.includes(voice.key) ? (
-                        <span className="voice-badge downloaded">Downloaded</span>
-                      ) : (
-                        <button 
-                          className="download-btn"
-                          onClick={(e) => { e.stopPropagation(); handleDownloadVoice(voice.key); }}
-                          disabled={downloading === voice.key}
+          )}
+
+          {piperModalLanguage && (
+            <div className="modal-overlay" onClick={() => setPiperModalLanguage(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Select Voice - {piperLanguages.find(l => l.code === piperModalLanguage)?.name}</h3>
+                  <button className="close-button" onClick={() => setPiperModalLanguage(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="voice-list">
+                    {piperVoices
+                      .filter((voice: any) => voice.language.code === piperModalLanguage)
+                      .map((voice: any) => (
+                        <div 
+                          key={voice.key} 
+                          className={`voice-item ${config.selected_voice === voice.key ? 'selected' : ''}`}
+                          onClick={() => { onChange({ selected_voice: voice.key }); setPiperModalLanguage(null); }}
                         >
-                          {downloading === voice.key ? 'Downloading...' : 'Download'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                          <span className="voice-name">{voice.name || voice.key}</span>
+                          <span className="voice-badge">{voice.quality}</span>
+                          {downloadedVoices.includes(voice.key) ? (
+                            <span className="voice-badge downloaded">Downloaded</span>
+                          ) : (
+                            <button 
+                              className="download-btn"
+                              onClick={(e) => { e.stopPropagation(); handleDownloadVoice(voice.key); }}
+                              disabled={downloading === voice.key}
+                            >
+                              {downloading === voice.key ? 'Downloading...' : 'Download'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      <h3>AWS Polly Voices</h3>
-      {loadingPolly ? (
-        <p>Loading voices...</p>
-      ) : pollyVoices.length === 0 ? (
-        <p className="voice-error">No voices available. Check AWS credentials.</p>
-      ) : (
-        <>
-          <div className="language-grid">
-            {pollyLanguages.map((lang) => (
-              <div
-                key={lang.code}
-                className={`language-item ${selectedPollyLanguage === lang.code ? 'selected' : ''}`}
-                onClick={() => { setSelectedPollyLanguage(lang.code); setPollyModalLanguage(lang.code); }}
-              >
-                <span className="language-flag">{getCountryFlag(lang.code)}</span>
-                <span className="language-name">{lang.name}</span>
-              </div>
-            ))}
-          </div>
+          )}
         </>
       )}
 
-      {pollyModalLanguage && (
-        <div className="modal-overlay" onClick={() => setPollyModalLanguage(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Select Voice - {pollyLanguages.find(l => l.code === pollyModalLanguage)?.name}</h3>
-              <button className="close-button" onClick={() => setPollyModalLanguage(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="voice-list">
-                {pollyVoices
-                  .filter((voice: any) => voice.language_code === pollyModalLanguage)
-                  .map((voice: any) => (
-                    <div 
-                      key={voice.id}
-                      className={`voice-item ${config.selected_polly_voice === voice.id ? 'selected' : ''}`}
-                      onClick={() => { onChange({ selected_polly_voice: voice.id }); setPollyModalLanguage(null); }}
-                    >
-                      <span className="voice-name">{voice.name}</span>
-                      <span className="voice-lang">{voice.gender}</span>
-                      <span className="voice-badge">{voice.engine}</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <h3>Microsoft Edge Voices</h3>
-      {loadingMicrosoft ? (
-        <p>Loading voices...</p>
-      ) : microsoftVoices.length === 0 ? (
-        <p>No voices available.</p>
-      ) : (
+      {(config.voice_provider || 'microsoft') === 'polly' && (
         <>
-          <div className="language-grid">
-            {microsoftLanguages.map((lang) => (
-              <div
-                key={lang.code}
-                className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
-                onClick={() => { setSelectedMicrosoftLanguage(lang.code); setMicrosoftModalLanguage(lang.code); }}
-              >
-                <span className="language-flag">{getCountryFlag(lang.code)}</span>
-                <span className="language-name">{lang.code}</span>
+          <h3>AWS Polly Voices</h3>
+          {loadingPolly ? (
+            <p>Loading voices...</p>
+          ) : pollyVoices.length === 0 ? (
+            <p className="voice-error">No voices available. Check AWS credentials.</p>
+          ) : (
+            <div className="language-grid">
+              {pollyLanguages.map((lang) => (
+                <div
+                  key={lang.code}
+                  className={`language-item ${selectedPollyLanguage === lang.code ? 'selected' : ''}`}
+                  onClick={() => { setSelectedPollyLanguage(lang.code); setPollyModalLanguage(lang.code); }}
+                >
+                  <span className="language-flag">{getCountryFlag(lang.code)}</span>
+                  <span className="language-name">{lang.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pollyModalLanguage && (
+            <div className="modal-overlay" onClick={() => setPollyModalLanguage(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Select Voice - {pollyLanguages.find(l => l.code === pollyModalLanguage)?.name}</h3>
+                  <button className="close-button" onClick={() => setPollyModalLanguage(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="voice-list">
+                    {pollyVoices
+                      .filter((voice: any) => voice.language_code === pollyModalLanguage)
+                      .map((voice: any) => (
+                        <div 
+                          key={voice.id}
+                          className={`voice-item ${config.selected_polly_voice === voice.id ? 'selected' : ''}`}
+                          onClick={() => { onChange({ selected_polly_voice: voice.id }); setPollyModalLanguage(null); }}
+                        >
+                          <span className="voice-name">{voice.name}</span>
+                          <span className="voice-lang">{voice.gender}</span>
+                          <span className="voice-badge">{voice.engine}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </>
       )}
 
-      {microsoftModalLanguage && (
-        <div className="modal-overlay" onClick={() => setMicrosoftModalLanguage(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Select Voice - {microsoftModalLanguage}</h3>
-              <button className="close-button" onClick={() => setMicrosoftModalLanguage(null)}>×</button>
+      {(config.voice_provider || 'microsoft') === 'microsoft' && (
+        <>
+          <h3>Microsoft Edge Voices</h3>
+          {loadingMicrosoft ? (
+            <p>Loading voices...</p>
+          ) : microsoftVoices.length === 0 ? (
+            <p>No voices available.</p>
+          ) : (
+            <div className="language-grid">
+              {microsoftLanguages.map((lang) => (
+                <div
+                  key={lang.code}
+                  className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
+                  onClick={() => { setSelectedMicrosoftLanguage(lang.code); setMicrosoftModalLanguage(lang.code); }}
+                >
+                  <span className="language-flag">{getCountryFlag(lang.code)}</span>
+                  <span className="language-name">{lang.code}</span>
+                </div>
+              ))}
             </div>
-            <div className="modal-body">
-              <div className="voice-list">
-                {microsoftVoices
-                  .filter((voice: any) => voice.language_code === microsoftModalLanguage)
-                  .map((voice: any) => (
-                    <div 
-                      key={voice.name}
-                      className={`voice-item ${config.selected_microsoft_voice === voice.name ? 'selected' : ''}`}
-                      onClick={() => { onChange({ selected_microsoft_voice: voice.name }); setMicrosoftModalLanguage(null); }}
-                    >
-                      <span className="voice-name">{voice.short_name || voice.name}</span>
-                      <span className="voice-lang">{voice.gender}</span>
-                      <span className="voice-badge">{voice.voice_type}</span>
-                    </div>
-                  ))}
+          )}
+
+          {microsoftModalLanguage && (
+            <div className="modal-overlay" onClick={() => setMicrosoftModalLanguage(null)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Select Voice - {microsoftModalLanguage}</h3>
+                  <button className="close-button" onClick={() => setMicrosoftModalLanguage(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="voice-list">
+                    {microsoftVoices
+                      .filter((voice: any) => voice.language_code === microsoftModalLanguage)
+                      .map((voice: any) => (
+                        <div 
+                          key={voice.name}
+                          className={`voice-item ${config.selected_microsoft_voice === voice.name ? 'selected' : ''}`}
+                          onClick={() => { onChange({ selected_microsoft_voice: voice.name }); setMicrosoftModalLanguage(null); }}
+                        >
+                          <span className="voice-name">{voice.short_name || voice.name}</span>
+                          <span className="voice-lang">{voice.gender}</span>
+                          <span className="voice-badge">{voice.voice_type}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

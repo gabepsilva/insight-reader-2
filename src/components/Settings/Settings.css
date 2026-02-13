@@ -358,9 +358,9 @@ input[type="radio"]:hover {
 
 .language-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
   gap: 8px;
-  max-height: 200px;
+  max-height: 350px;
   overflow-y: auto;
 }
 
@@ -368,32 +368,32 @@ input[type="radio"]:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
+  gap: 2px;
+  padding: 4px 2px;
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid transparent;
 }
 
 .language-item:hover {
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .language-item.selected {
-  background: rgba(255, 255, 255, 0.12);
   border-color: #fafafa;
 }
 
 .language-flag {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .language-name {
   font-size: 11px;
   color: #a1a1aa;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px;
+  line-height: 1.2;
 }
 
 .modal-overlay {
