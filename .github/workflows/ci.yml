@@ -11,17 +11,9 @@ jobs:
   test:
     runs-on: self-hosted
     steps:
-      - name: Fix permissions
-        run: |
-          rm -rf ${{ github.workspace }}
-          mkdir -p ${{ github.workspace }}
-
-      - name: Install dependencies
-        run: apt-get update && apt-get install -y unzip
-
       - uses: actions/checkout@v4
         with:
-          clean: false
+          fetch-depth: 0
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -52,17 +44,9 @@ jobs:
       image: ghcr.io/tauri-apps/tauri
       options: --user root
     steps:
-      - name: Fix permissions
-        run: |
-          rm -rf ${{ github.workspace }}
-          mkdir -p ${{ github.workspace }}
-
-      - name: Install dependencies
-        run: apt-get update && apt-get install -y unzip
-
       - uses: actions/checkout@v4
         with:
-          clean: false
+          fetch-depth: 0
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
