@@ -10,12 +10,11 @@ on:
 jobs:
   test:
     runs-on: self-hosted
+    container:
+      image: ghcr.io/tauri-apps/tauri
+      options: --user root
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
-          sparse-checkout: ""
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -47,10 +46,6 @@ jobs:
       options: --user root
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
-          sparse-checkout: ""
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
