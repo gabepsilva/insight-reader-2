@@ -12,7 +12,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Fix permissions
-        run: rm -rf ${{ github.workspace }}
+        run: |
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
 
       - uses: actions/checkout@v4
         with:
@@ -48,7 +50,9 @@ jobs:
       options: --user root
     steps:
       - name: Fix permissions
-        run: rm -rf ${{ github.workspace }}
+        run: |
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
 
       - uses: actions/checkout@v4
         with:
