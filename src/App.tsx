@@ -49,6 +49,7 @@ function App() {
           setAtEnd(currentMs >= totalMs);
         } else {
           setCurrentTimeMs(0);
+          setTotalTimeMs(0);
           setAtEnd(false);
         }
       } catch (e) {

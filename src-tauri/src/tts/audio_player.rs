@@ -41,9 +41,16 @@ impl AudioPlayer {
 
     /// Load audio data and start playback. Audio should be normalized f32, -1.0 to 1.0.
     pub fn play_audio(&mut self, audio_data: Vec<f32>) -> Result<(), TTSError> {
-        debug!(samples = audio_data.len(), "AudioPlayer::play_audio");
+        debug!(
+            samples = audio_data.len(),
+            sample_rate = self.sample_rate,
+            "AudioPlayer::play_audio"
+        );
+        // Calculate duration: samples / sample_rate = seconds, * 1000 = ms
+        let total_duration_ms = (audio_data.len() as f32 / self.sample_rate as f32 * 1000.0) as u64;
+        debug!(total_duration_ms = total_duration_ms, "Calculated duration");
+        self.total_duration_ms = total_duration_ms;
         self.audio_data = audio_data;
-        self.total_duration_ms = 0;
         self.start_playback()
     }
 
@@ -67,7 +74,8 @@ impl AudioPlayer {
             return Err(TTSError::AudioError("No audio data to play".into()));
         }
 
-        // Clone audio_data to get a 'static lifetime for the Decoder
+        // Clone audio_data - once for Cursor (moved), once for length check
+        let audio_bytes_len = audio_data.len();
         let audio_bytes = audio_data.clone();
         let cursor = Cursor::new(audio_bytes);
         let source = Decoder::new(cursor).map_err(|e| {
@@ -75,13 +83,20 @@ impl AudioPlayer {
             TTSError::AudioError(format!("Failed to decode audio: {}", e))
         })?;
 
-        // Calculate duration from the decoded source
-        let duration: Option<Duration> = source.total_duration();
-        let total_duration_ms = duration.map(|d| d.as_millis() as u64).unwrap_or_else(|| {
-            // Fallback: estimate using 128 kbps bitrate for compressed audio
-            let bytes_per_sec = 128 / 8; // 128 kbps = 16 KB/s
-            (audio_data.len() as u64 * 1000) / bytes_per_sec
-        });
+        // Calculate duration from the decoded source, or estimate from data size
+        let total_duration_ms = if let Some(duration) = source.total_duration() {
+            duration.as_millis() as u64
+        } else if audio_bytes_len > 0 {
+            let estimated_bitrate_bps = 48000u64;
+            let estimated_duration_ms = (audio_bytes_len as u64 * 8 * 1000) / estimated_bitrate_bps;
+            debug!(
+                estimated_ms = estimated_duration_ms,
+                "Estimated duration from data size"
+            );
+            estimated_duration_ms
+        } else {
+            0
+        };
 
         let sink = Sink::try_new(stream_handle).map_err(|e| {
             error!("Failed to create audio sink: {}", e);
@@ -167,6 +182,12 @@ impl AudioPlayer {
     /// Get current playback position and total duration in milliseconds.
     /// Returns (current_ms, total_ms). Returns (0, 0) if no audio is loaded.
     pub fn get_position(&self) -> (u64, u64) {
+        trace!(
+            audio_len = self.audio_data.len(),
+            total_ms = self.total_duration_ms,
+            "get_position"
+        );
+
         let total_duration_ms = if !self.audio_data.is_empty() {
             self.calculate_duration_ms()
         } else {
