@@ -10,6 +10,9 @@ on:
 jobs:
   test:
     runs-on: self-hosted
+    container:
+      image: ghcr.io/tauri-apps/tauri
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
