@@ -1,0 +1,5 @@
+# Permission to invoke list_polly_voices (list available Polly voices)
+[[permission]]
+identifier = "allow-list-polly-voices"
+description = "Allows invoking list_polly_voices to list available AWS Polly TTS voices"
+commands.allow = ["list_polly_voices"]

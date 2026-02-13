@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "settings",
+  "description": "Capability for the settings window",
+  "windows": ["settings"],
+  "permissions": [
+    "core:default",
+    "allow-get-config",
+    "allow-save-config",
+    "allow-list-piper-voices",
+    "allow-list-polly-voices",
+    "allow-download-voice",
+    "allow-get-download-progress",
+    "allow-list-downloaded-voices",
+    "allow-check-polly-credentials",
+    "allow-get-polly-voice",
+    "allow-save-polly-voice"
+  ]
+}

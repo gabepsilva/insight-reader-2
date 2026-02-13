@@ -1,0 +1,5 @@
+# Permission to invoke get_config (get the full app configuration)
+[[permission]]
+identifier = "allow-get-config"
+description = "Allows invoking get_config to retrieve the full app configuration"
+commands.allow = ["get_config"]

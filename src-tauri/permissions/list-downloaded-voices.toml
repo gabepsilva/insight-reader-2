@@ -1,0 +1,5 @@
+# Permission to invoke list_downloaded_voices (list downloaded voices)
+[[permission]]
+identifier = "allow-list-downloaded-voices"
+description = "Allows invoking list_downloaded_voices to list locally downloaded voices"
+commands.allow = ["list_downloaded_voices"]

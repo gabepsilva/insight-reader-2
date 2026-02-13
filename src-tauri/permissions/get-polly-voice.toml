@@ -1,0 +1,5 @@
+# Permission to invoke get_polly_voice (get saved Polly voice)
+[[permission]]
+identifier = "allow-get-polly-voice"
+description = "Allows invoking get_polly_voice to retrieve the saved Polly voice"
+commands.allow = ["get_polly_voice"]

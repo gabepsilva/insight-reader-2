@@ -1,0 +1,5 @@
+# Permission to invoke download_voice (download a Piper voice)
+[[permission]]
+identifier = "allow-download-voice"
+description = "Allows invoking download_voice to download a Piper TTS voice"
+commands.allow = ["download_voice"]

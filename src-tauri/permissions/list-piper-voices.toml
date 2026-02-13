@@ -1,0 +1,5 @@
+# Permission to invoke list_piper_voices (list available Piper voices)
+[[permission]]
+identifier = "allow-list-piper-voices"
+description = "Allows invoking list_piper_voices to list available Piper TTS voices"
+commands.allow = ["list_piper_voices"]

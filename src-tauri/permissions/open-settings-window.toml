@@ -1,0 +1,5 @@
+# Permission to invoke open_settings_window (open or focus the settings window)
+[[permission]]
+identifier = "allow-open-settings-window"
+description = "Allows invoking open_settings_window to open or focus the settings window"
+commands.allow = ["open_settings_window"]

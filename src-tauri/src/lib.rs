@@ -1,7 +1,9 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod config;
 mod paths;
 mod system;
 mod tts;
+mod voices;
 
 use std::sync::{Arc, Mutex};
 use tauri::{
@@ -10,6 +12,11 @@ use tauri::{
 };
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
+
+use voices::download::{
+    get_current_progress, list_downloaded_voices as list_local_downloaded_voices, DownloadProgress,
+    DownloadedVoice,
+};
 
 /// Managed state for initial text passed to the editor window.
 type EditorInitialText = Arc<Mutex<Option<String>>>;
@@ -221,9 +228,10 @@ fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<
     let provider = match provider.to_lowercase().as_str() {
         "piper" => tts::TtsProvider::Piper,
         "microsoft" => tts::TtsProvider::Microsoft,
+        "polly" => tts::TtsProvider::Polly,
         _ => {
             return Err(format!(
-                "Unknown provider: {}. Use 'piper' or 'microsoft'.",
+                "Unknown provider: {}. Use 'piper', 'microsoft', or 'polly'.",
                 provider
             ))
         }
@@ -344,6 +352,97 @@ fn get_platform() -> &'static str {
     return "linux";
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     return "unknown";
+}
+
+#[tauri::command]
+fn get_config() -> Result<String, String> {
+    let cfg = config::load_full_config()?;
+    serde_json::to_string(&cfg).map_err(|e| format!("Failed to serialize config: {}", e))
+}
+
+#[tauri::command]
+fn save_config(config_json: String) -> Result<(), String> {
+    let cfg: config::FullConfig = serde_json::from_str(&config_json)
+        .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
+    config::save_full_config(cfg)
+}
+
+#[tauri::command]
+async fn list_piper_voices() -> Result<Vec<voices::VoiceInfo>, String> {
+    let voices = voices::fetch_piper_voices().await?;
+    Ok(voices.into_values().collect())
+}
+
+#[tauri::command]
+async fn list_polly_voices() -> Result<Vec<voices::PollyVoiceInfo>, String> {
+    voices::fetch_polly_voices().await
+}
+
+#[tauri::command]
+async fn download_voice(voice_key: String) -> Result<String, String> {
+    let voices = voices::fetch_piper_voices().await?;
+    let voice_info = voices
+        .get(&voice_key)
+        .ok_or_else(|| format!("Voice not found: {}", voice_key))?;
+    let path = voices::download::download_voice(&voice_key, voice_info).await?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn get_download_progress() -> Option<DownloadProgress> {
+    get_current_progress()
+}
+
+#[tauri::command]
+fn list_downloaded_voices() -> Result<Vec<DownloadedVoice>, String> {
+    list_local_downloaded_voices()
+}
+
+#[tauri::command]
+fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    // Check if settings window already exists
+    if let Some(win) = app.get_webview_window("settings") {
+        win.show().map_err(|e| e.to_string())?;
+        win.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    let url = build_webview_url(&app, "settings.html")?;
+
+    WebviewWindowBuilder::new(&app, "settings", url)
+        .title("Settings - Insight Reader")
+        .inner_size(600.0, 600.0)
+        .min_inner_size(500.0, 500.0)
+        .resizable(true)
+        .decorations(true)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn cleanup_text(text: String) -> Result<String, String> {
+    system::cleanup_text(&text).await
+}
+
+#[tauri::command]
+fn check_polly_credentials() -> Result<bool, String> {
+    match tts::check_polly_credentials() {
+        Ok(()) => Ok(true),
+        Err(_) => Ok(false),
+    }
+}
+
+#[tauri::command]
+fn get_polly_voice() -> Option<String> {
+    config::load_selected_polly_voice()
+}
+
+#[tauri::command]
+fn save_polly_voice(voice_id: String) {
+    config::save_selected_polly_voice(voice_id)
 }
 
 /// Unified error type for screenshot and OCR operations
@@ -474,6 +573,18 @@ pub fn run() {
             take_live_text_image_path,
             take_live_text_data,
             get_platform,
+            get_config,
+            save_config,
+            list_piper_voices,
+            list_polly_voices,
+            download_voice,
+            get_download_progress,
+            list_downloaded_voices,
+            open_settings_window,
+            cleanup_text,
+            check_polly_credentials,
+            get_polly_voice,
+            save_polly_voice,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

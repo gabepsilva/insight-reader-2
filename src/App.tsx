@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import logoSvg from "./assets/logo.svg";
-import { PencilIcon } from "./components/icons";
+import { PencilIcon, SettingsIcon } from "./components/icons";
 import { SeekButton } from "./components/SeekButton";
 import { ProgressBar } from "./components/ProgressBar";
 import "./App.css";
@@ -129,8 +129,12 @@ function App() {
     }
   };
 
-  const handleSettings = () => {
-    // TODO: Open settings window
+  const handleSettings = async () => {
+    try {
+      await invoke("open_settings_window");
+    } catch (e) {
+      console.error("Failed to open settings:", e);
+    }
   };
 
   const handleCamera = async () => {
@@ -344,19 +348,7 @@ function App() {
               onClick={handleSettings}
               aria-label="Settings"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                <path
-                  fillRule="evenodd"
-                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <SettingsIcon size={18} />
             </button>
 
             <button

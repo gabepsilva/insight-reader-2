@@ -1,0 +1,5 @@
+# Permission to invoke save_config (save the full app configuration)
+[[permission]]
+identifier = "allow-save-config"
+description = "Allows invoking save_config to save the full app configuration"
+commands.allow = ["save_config"]

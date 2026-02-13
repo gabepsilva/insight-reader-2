@@ -1,0 +1,5 @@
+# Permission to invoke get_download_progress (get voice download progress)
+[[permission]]
+identifier = "allow-get-download-progress"
+description = "Allows invoking get_download_progress to check voice download status"
+commands.allow = ["get_download_progress"]

@@ -7,11 +7,13 @@
 mod audio_player;
 mod microsoft;
 mod piper;
+mod polly;
 
 use std::sync::mpsc;
 
 use microsoft::MicrosoftTTSProvider;
 use piper::PiperTTSProvider;
+use polly::PollyTTSProvider;
 
 /// Errors that can occur during TTS operations.
 #[derive(Debug)]
@@ -51,11 +53,17 @@ pub enum TtsProvider {
     Piper,
     #[default]
     Microsoft,
+    Polly,
+}
+
+pub fn check_polly_credentials() -> Result<(), String> {
+    PollyTTSProvider::check_credentials()
 }
 
 enum TtsProviderImpl {
     Piper(PiperTTSProvider),
     Microsoft(MicrosoftTTSProvider),
+    Polly(PollyTTSProvider),
 }
 
 impl TtsProviderImpl {
@@ -63,6 +71,12 @@ impl TtsProviderImpl {
         match provider {
             TtsProvider::Piper => Ok(Self::Piper(PiperTTSProvider::new()?)),
             TtsProvider::Microsoft => Ok(Self::Microsoft(MicrosoftTTSProvider::new()?)),
+            TtsProvider::Polly => {
+                if let Err(e) = PollyTTSProvider::check_credentials() {
+                    return Err(TTSError::ProcessError(e));
+                }
+                Ok(Self::Polly(PollyTTSProvider::new()?))
+            }
         }
     }
 
@@ -70,6 +84,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.speak(text),
             Self::Microsoft(p) => p.speak(text),
+            Self::Polly(p) => p.speak(text),
         }
     }
 
@@ -77,6 +92,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.stop(),
             Self::Microsoft(p) => p.stop(),
+            Self::Polly(p) => p.stop(),
         }
     }
 
@@ -84,6 +100,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.toggle_pause(),
             Self::Microsoft(p) => p.toggle_pause(),
+            Self::Polly(p) => p.toggle_pause(),
         }
     }
 
@@ -91,6 +108,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.get_status(),
             Self::Microsoft(p) => p.get_status(),
+            Self::Polly(p) => p.get_status(),
         }
     }
 
@@ -98,6 +116,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.seek(offset_ms),
             Self::Microsoft(p) => p.seek(offset_ms),
+            Self::Polly(p) => p.seek(offset_ms),
         }
     }
 
@@ -105,6 +124,7 @@ impl TtsProviderImpl {
         match self {
             Self::Piper(p) => p.get_position(),
             Self::Microsoft(p) => p.get_position(),
+            Self::Polly(p) => p.get_position(),
         }
     }
 }
