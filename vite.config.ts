@@ -14,6 +14,7 @@ export default defineConfig(async () => ({
       fs: resolve(process.cwd(), "src/shims/fs.ts"),
     },
   },
+  assetsInclude: ['**/*.svg'],
 
   build: {
     rollupOptions: {
