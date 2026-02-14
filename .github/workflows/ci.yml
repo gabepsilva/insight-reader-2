@@ -41,12 +41,16 @@ jobs:
       - name: Run tests
         run: bun run test
 
-  build:
+  build-linux-artifacts:
     runs-on: self-hosted
     needs: test
     container:
       image: ubuntu:24.04
       options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: [deb, rpm, appimage]
     steps:
       - uses: actions/checkout@v4
 
@@ -78,10 +82,17 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build frontend
-        run: bun run build
+      - name: Build Linux bundle
+        run: |
+          if [ "${{ matrix.bundle }}" = "appimage" ]; then
+            NO_STRIP=1 bun run tauri build --bundles appimage
+          else
+            bun run tauri build --bundles ${{ matrix.bundle }}
+          fi
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Linux bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.bundle }}
+          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/
+          if-no-files-found: error
