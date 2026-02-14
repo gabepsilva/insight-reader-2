@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
-  binary,
+  binaryInlined,
   Dialect,
   type Lint,
   WorkerLinter,
@@ -124,7 +124,7 @@ export default function EditorPage() {
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
     const l = new WorkerLinter({
-      binary,
+      binary: binaryInlined,
       dialect: Dialect.American,
     });
     await l.setup();
@@ -423,11 +423,9 @@ export default function EditorPage() {
         )}
       </div>
       <div className="editor-legend" aria-label="Lint count">
-        {lints.length > 0 && (
-          <span className="editor-legend-count">
-            {lints.length} issue{lints.length === 1 ? "" : "s"}
-          </span>
-        )}
+        <span className="editor-legend-count">
+          {lints.length} issue{lints.length === 1 ? "" : "s"}
+        </span>
       </div>
       {config && (
         <div className="editor-status-bar">
