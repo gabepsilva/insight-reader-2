@@ -44,12 +44,23 @@ interface Config {
   hotkey_key: string | null;
 }
 
+interface HotkeyStatus {
+  mode: string;
+  session_type: string;
+  enabled: boolean;
+  native_active: boolean;
+  read_shortcut: string;
+  pause_shortcut: string;
+  last_error: string | null;
+}
+
 type Tab = 'general' | 'voices' | 'about';
 
 function Settings() {
   const [activeTab, setActiveTab] = useState<Tab>('voices');
   const [config, setConfig] = useState<Config | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [hotkeyStatus, setHotkeyStatus] = useState<HotkeyStatus | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,8 +127,12 @@ function Settings() {
 
   const loadConfig = async () => {
     try {
-      const cfg = await invoke<Config>('get_config');
+      const [cfg, status] = await Promise.all([
+        invoke<Config>('get_config'),
+        invoke<HotkeyStatus>('get_hotkey_status'),
+      ]);
       setConfig(cfg);
+      setHotkeyStatus(status);
     } catch (e) {
       console.error('Failed to load config:', e);
     }
@@ -203,7 +218,7 @@ function Settings() {
 
       <div className="settings-content">
         {activeTab === 'general' && (
-          <GeneralTab config={config} onChange={updateConfig} />
+          <GeneralTab config={config} onChange={updateConfig} hotkeyStatus={hotkeyStatus} />
         )}
         {activeTab === 'voices' && (
           <VoicesTab config={config} onChange={updateConfig} />
@@ -216,7 +231,24 @@ function Settings() {
   );
 }
 
-function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: Partial<Config>) => void }) {
+function GeneralTab({
+  config,
+  onChange,
+  hotkeyStatus,
+}: {
+  config: Config;
+  onChange: (updates: Partial<Config>) => void;
+  hotkeyStatus: HotkeyStatus | null;
+}) {
+  const readShortcut = hotkeyStatus?.read_shortcut || `${config.hotkey_modifiers || 'control'}+${config.hotkey_key || 'r'}`;
+  const pauseShortcut = hotkeyStatus?.pause_shortcut || `${config.hotkey_modifiers || 'control'}+shift+${config.hotkey_key || 'r'}`;
+
+  const modeHelp = hotkeyStatus?.mode === 'wayland-compositor'
+    ? 'Wayland session detected: configure your compositor shortcut to run `insight-reader action read-selected`.'
+    : hotkeyStatus?.native_active
+      ? `Global shortcuts are active in-app: ${readShortcut} (read), ${pauseShortcut} (pause/resume).`
+      : 'Global shortcuts are currently not active in-app.';
+
   return (
     <div className="tab-content">
       <div className="setting-group">
@@ -234,13 +266,17 @@ function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: 
         <label>Hotkey</label>
         <input 
           type="text"
-          value={`${config.hotkey_modifiers || 'control'}+${config.hotkey_key || 'r'}`}
+          value={readShortcut}
           disabled
           className="hotkey-input"
         />
         <p className="setting-help">
-          Current: Ctrl+R (Windows/Linux) or Cmd+R (macOS)
+          {modeHelp}
         </p>
+        <p className="setting-help">
+          Secondary: {pauseShortcut} ({hotkeyStatus?.mode === 'wayland-compositor' ? 'map this to `insight-reader action pause` in your compositor' : 'pause/resume'})
+        </p>
+        {hotkeyStatus?.last_error && <p className="setting-help">Hotkey error: {hotkeyStatus.last_error}</p>}
       </div>
 
       <div className="setting-group">

@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "allow-get-config",
+    "allow-get-hotkey-status",
     "allow-save-config",
     "allow-list-piper-voices",
     "allow-refresh-piper-voices",

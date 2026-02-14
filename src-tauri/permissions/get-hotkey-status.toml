@@ -1,0 +1,5 @@
+# Permission to invoke get_hotkey_status (runtime hotkey mode/status)
+[[permission]]
+identifier = "allow-get-hotkey-status"
+description = "Allows invoking get_hotkey_status to retrieve hotkey mode and registration status"
+commands.allow = ["get_hotkey_status"]

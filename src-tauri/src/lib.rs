@@ -7,10 +7,17 @@ mod voices;
 
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
+#[cfg(unix)]
+use std::{
+    io::{Read, Write},
+    os::unix::net::{UnixListener, UnixStream},
+    path::PathBuf,
+};
 use tauri::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -32,10 +39,247 @@ struct LiveTextData {
 /// Managed state for live text data passed to live text viewer windows.
 /// Maps window label to live text data (image path and optional OCR result).
 type LiveTextWindows = Arc<Mutex<std::collections::HashMap<String, LiveTextData>>>;
+type GlobalHotkeyState = Arc<Mutex<HotkeyRuntime>>;
+
+#[derive(Debug, Clone)]
+struct HotkeyRuntime {
+    mode: String,
+    session_type: String,
+    enabled: bool,
+    native_active: bool,
+    read_shortcut: Option<Shortcut>,
+    pause_shortcut: Option<Shortcut>,
+    read_shortcut_label: String,
+    pause_shortcut_label: String,
+    last_error: Option<String>,
+}
+
+impl Default for HotkeyRuntime {
+    fn default() -> Self {
+        Self {
+            mode: "native".to_string(),
+            session_type: "unknown".to_string(),
+            enabled: true,
+            native_active: false,
+            read_shortcut: None,
+            pause_shortcut: None,
+            read_shortcut_label: default_read_shortcut_label(),
+            pause_shortcut_label: default_pause_shortcut_label(),
+            last_error: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct HotkeyStatus {
+    mode: String,
+    session_type: String,
+    enabled: bool,
+    native_active: bool,
+    read_shortcut: String,
+    pause_shortcut: String,
+    last_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct EffectiveHotkeyConfig {
+    enabled: bool,
+    modifiers: String,
+    key: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AppAction {
+    ReadSelected,
+    TogglePause,
+    Stop,
+}
 
 /// Tray icon: app logo at 32x32 (icons/32x32.png).
 const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/logo.png");
 const TEXT_CAPTURE_TIMEOUT_MS: u64 = 1200;
+
+fn default_modifier_key() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "command"
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "control"
+    }
+}
+
+fn default_read_shortcut_label() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        "Cmd+R".to_string()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "Ctrl+R".to_string()
+    }
+}
+
+fn default_pause_shortcut_label() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        "Cmd+Shift+R".to_string()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "Ctrl+Shift+R".to_string()
+    }
+}
+
+fn current_session_type() -> String {
+    std::env::var("XDG_SESSION_TYPE")
+        .unwrap_or_else(|_| "unknown".to_string())
+        .to_lowercase()
+}
+
+fn is_wayland_session() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        current_session_type() == "wayland"
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
+fn supports_native_hotkeys() -> bool {
+    !is_wayland_session()
+}
+
+fn parse_modifier_token(token: &str) -> Option<Modifiers> {
+    match token {
+        "control" | "ctrl" => Some(Modifiers::CONTROL),
+        "shift" => Some(Modifiers::SHIFT),
+        "alt" | "option" => Some(Modifiers::ALT),
+        "command" | "cmd" | "super" | "meta" => Some(Modifiers::SUPER),
+        _ => None,
+    }
+}
+
+fn parse_modifiers(raw: &str) -> Result<Option<Modifiers>, String> {
+    let mut modifiers = Modifiers::empty();
+    for token in raw
+        .split(|c: char| c == '+' || c == ',' || c.is_whitespace())
+        .map(|t| t.trim().to_lowercase())
+        .filter(|t| !t.is_empty())
+    {
+        let parsed = parse_modifier_token(&token)
+            .ok_or_else(|| format!("Unsupported modifier token: {token}"))?;
+        modifiers |= parsed;
+    }
+
+    if modifiers.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(modifiers))
+    }
+}
+
+fn parse_key_code(raw: &str) -> Result<Code, String> {
+    match raw.trim().to_uppercase().as_str() {
+        "A" => Ok(Code::KeyA),
+        "B" => Ok(Code::KeyB),
+        "C" => Ok(Code::KeyC),
+        "D" => Ok(Code::KeyD),
+        "E" => Ok(Code::KeyE),
+        "F" => Ok(Code::KeyF),
+        "G" => Ok(Code::KeyG),
+        "H" => Ok(Code::KeyH),
+        "I" => Ok(Code::KeyI),
+        "J" => Ok(Code::KeyJ),
+        "K" => Ok(Code::KeyK),
+        "L" => Ok(Code::KeyL),
+        "M" => Ok(Code::KeyM),
+        "N" => Ok(Code::KeyN),
+        "O" => Ok(Code::KeyO),
+        "P" => Ok(Code::KeyP),
+        "Q" => Ok(Code::KeyQ),
+        "R" => Ok(Code::KeyR),
+        "S" => Ok(Code::KeyS),
+        "T" => Ok(Code::KeyT),
+        "U" => Ok(Code::KeyU),
+        "V" => Ok(Code::KeyV),
+        "W" => Ok(Code::KeyW),
+        "X" => Ok(Code::KeyX),
+        "Y" => Ok(Code::KeyY),
+        "Z" => Ok(Code::KeyZ),
+        "0" => Ok(Code::Digit0),
+        "1" => Ok(Code::Digit1),
+        "2" => Ok(Code::Digit2),
+        "3" => Ok(Code::Digit3),
+        "4" => Ok(Code::Digit4),
+        "5" => Ok(Code::Digit5),
+        "6" => Ok(Code::Digit6),
+        "7" => Ok(Code::Digit7),
+        "8" => Ok(Code::Digit8),
+        "9" => Ok(Code::Digit9),
+        other => Err(format!("Unsupported hotkey key: {other}")),
+    }
+}
+
+fn format_modifier_label(raw: &str) -> String {
+    raw.split(|c: char| c == '+' || c == ',' || c.is_whitespace())
+        .filter_map(|token| {
+            let normalized = token.trim().to_lowercase();
+            if normalized.is_empty() {
+                return None;
+            }
+            let label = match normalized.as_str() {
+                "control" | "ctrl" => "Ctrl",
+                "shift" => "Shift",
+                "alt" | "option" => "Alt",
+                "command" | "cmd" => "Cmd",
+                "super" | "meta" => "Super",
+                _ => token.trim(),
+            };
+            Some(label.to_string())
+        })
+        .collect::<Vec<_>>()
+        .join("+")
+}
+
+fn build_shortcut(modifiers: &str, key: &str) -> Result<Shortcut, String> {
+    let mods = parse_modifiers(modifiers)?;
+    let code = parse_key_code(key)?;
+    Ok(Shortcut::new(mods, code))
+}
+
+fn shortcut_label(modifiers: &str, key: &str) -> String {
+    let mod_label = format_modifier_label(modifiers);
+    let upper_key = key.trim().to_uppercase();
+    if mod_label.is_empty() {
+        upper_key
+    } else {
+        format!("{mod_label}+{upper_key}")
+    }
+}
+
+fn load_effective_hotkey_config() -> EffectiveHotkeyConfig {
+    let config = config::load_full_config().unwrap_or_default();
+    EffectiveHotkeyConfig {
+        enabled: config.hotkey_enabled.unwrap_or(true),
+        modifiers: config
+            .hotkey_modifiers
+            .unwrap_or_else(|| default_modifier_key().to_string()),
+        key: config.hotkey_key.unwrap_or_else(|| "r".to_string()),
+    }
+}
+
+fn pause_shortcut_parts(config: &EffectiveHotkeyConfig) -> (String, String) {
+    let modifiers = if config.modifiers.to_lowercase().contains("shift") {
+        config.modifiers.clone()
+    } else {
+        format!("{}+shift", config.modifiers)
+    };
+    (modifiers, config.key.clone())
+}
 
 fn read_text_with_timeout<F>(source: &'static str, reader: F) -> Option<String>
 where
@@ -96,6 +340,346 @@ fn get_text_or_clipboard() -> String {
 #[tauri::command]
 fn get_clipboard_text() -> Option<String> {
     get_clipboard_text_impl()
+}
+
+fn execute_action<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    action: AppAction,
+    source: &'static str,
+) {
+    match action {
+        AppAction::ReadSelected => {
+            let Some(tts_tx) = app
+                .try_state::<tts::TtsState>()
+                .map(|state| state.inner().clone())
+            else {
+                warn!(source, "Read Selected: TtsState not found");
+                return;
+            };
+
+            std::thread::spawn(move || {
+                let text = get_text_or_clipboard_impl();
+                if text.is_empty() {
+                    warn!(source, "Read Selected: no text available");
+                    return;
+                }
+                log_selected_text(&Some(text.clone()));
+
+                let (resp_tx, resp_rx) = mpsc::sync_channel(0);
+                if let Err(e) = tts_tx.send(tts::TtsRequest::Speak(text, resp_tx)) {
+                    warn!(source, error = %e, "Read Selected: failed to send speak request");
+                    return;
+                }
+
+                match resp_rx.recv() {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => {
+                        warn!(source, error = %e, "Read Selected: tts_speak failed");
+                    }
+                    Err(_) => {
+                        warn!(source, "Read Selected: TTS worker disconnected");
+                    }
+                }
+            });
+        }
+        AppAction::TogglePause => {
+            let Some(tts_tx) = app
+                .try_state::<tts::TtsState>()
+                .map(|state| state.inner().clone())
+            else {
+                warn!(source, "Toggle Pause: TtsState not found");
+                return;
+            };
+
+            let (resp_tx, resp_rx) = mpsc::sync_channel(0);
+            if let Err(e) = tts_tx.send(tts::TtsRequest::TogglePause(resp_tx)) {
+                warn!(source, error = %e, "Toggle Pause: failed to send request");
+                return;
+            }
+
+            match resp_rx.recv() {
+                Ok(Ok(paused)) => {
+                    debug!(source, paused, "Toggle Pause: updated playback state");
+                }
+                Ok(Err(e)) => {
+                    warn!(source, error = %e, "Toggle Pause: request failed");
+                }
+                Err(_) => {
+                    warn!(source, "Toggle Pause: TTS worker disconnected");
+                }
+            }
+        }
+        AppAction::Stop => {
+            if let Some(tts_tx) = app
+                .try_state::<tts::TtsState>()
+                .map(|state| state.inner().clone())
+            {
+                if let Err(e) = tts_tx.send(tts::TtsRequest::Stop) {
+                    warn!(source, error = %e, "Stop: failed to send request");
+                }
+            } else {
+                warn!(source, "Stop: TtsState not found");
+            }
+        }
+    }
+}
+
+fn parse_app_action(raw: &str) -> Option<AppAction> {
+    match raw.trim().to_lowercase().as_str() {
+        "read" | "read-selected" | "read_selected" => Some(AppAction::ReadSelected),
+        "pause" | "pause-toggle" | "toggle-pause" | "toggle_pause" => Some(AppAction::TogglePause),
+        "stop" => Some(AppAction::Stop),
+        _ => None,
+    }
+}
+
+fn update_hotkey_runtime_on_error(state: &GlobalHotkeyState, message: String) {
+    if let Ok(mut runtime) = state.lock() {
+        runtime.native_active = false;
+        runtime.last_error = Some(message);
+    }
+}
+
+fn refresh_global_hotkeys<R: tauri::Runtime>(app: &tauri::AppHandle<R>, state: &GlobalHotkeyState) {
+    let effective = load_effective_hotkey_config();
+    let session_type = current_session_type();
+    let mode = if supports_native_hotkeys() {
+        "native"
+    } else {
+        "wayland-compositor"
+    };
+
+    let read_label = shortcut_label(&effective.modifiers, &effective.key);
+    let (pause_modifiers, pause_key) = pause_shortcut_parts(&effective);
+    let pause_label = shortcut_label(&pause_modifiers, &pause_key);
+
+    if let Ok(mut runtime) = state.lock() {
+        runtime.mode = mode.to_string();
+        runtime.session_type = session_type;
+        runtime.enabled = effective.enabled;
+        runtime.read_shortcut_label = read_label.clone();
+        runtime.pause_shortcut_label = pause_label.clone();
+        runtime.last_error = None;
+        runtime.native_active = false;
+        runtime.read_shortcut = None;
+        runtime.pause_shortcut = None;
+    }
+
+    if !supports_native_hotkeys() || !effective.enabled {
+        if let Err(e) = app.global_shortcut().unregister_all() {
+            warn!(error = %e, "Failed to unregister global shortcuts");
+        }
+        return;
+    }
+
+    let read_shortcut = match build_shortcut(&effective.modifiers, &effective.key) {
+        Ok(shortcut) => shortcut,
+        Err(e) => {
+            update_hotkey_runtime_on_error(state, e.clone());
+            warn!(error = %e, "Failed to build read shortcut");
+            return;
+        }
+    };
+
+    let pause_shortcut = match build_shortcut(&pause_modifiers, &pause_key) {
+        Ok(shortcut) => shortcut,
+        Err(e) => {
+            update_hotkey_runtime_on_error(state, e.clone());
+            warn!(error = %e, "Failed to build pause shortcut");
+            return;
+        }
+    };
+
+    if let Err(e) = app.global_shortcut().unregister_all() {
+        let message = format!("Failed to clear old global shortcuts: {e}");
+        update_hotkey_runtime_on_error(state, message.clone());
+        warn!(error = %e, "Failed to clear old global shortcuts");
+        return;
+    }
+
+    if let Err(e) = app.global_shortcut().register(read_shortcut.clone()) {
+        let message = format!("Failed to register {}: {}", read_label, e);
+        update_hotkey_runtime_on_error(state, message.clone());
+        warn!(error = %e, shortcut = %read_label, "Failed to register read shortcut");
+        return;
+    }
+
+    if let Err(e) = app.global_shortcut().register(pause_shortcut.clone()) {
+        let message = format!("Failed to register {}: {}", pause_label, e);
+        update_hotkey_runtime_on_error(state, message.clone());
+        warn!(error = %e, shortcut = %pause_label, "Failed to register pause shortcut");
+        return;
+    }
+
+    if let Ok(mut runtime) = state.lock() {
+        runtime.native_active = true;
+        runtime.read_shortcut = Some(read_shortcut);
+        runtime.pause_shortcut = Some(pause_shortcut);
+    }
+}
+
+fn handle_global_shortcut_event<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    shortcut: &Shortcut,
+    event_state: ShortcutState,
+    hotkey_state: &GlobalHotkeyState,
+) {
+    if event_state != ShortcutState::Pressed {
+        return;
+    }
+
+    let action = {
+        let Ok(runtime) = hotkey_state.lock() else {
+            return;
+        };
+
+        if !runtime.native_active {
+            return;
+        }
+
+        if runtime
+            .read_shortcut
+            .as_ref()
+            .map(|registered| registered == shortcut)
+            .unwrap_or(false)
+        {
+            Some(AppAction::ReadSelected)
+        } else if runtime
+            .pause_shortcut
+            .as_ref()
+            .map(|registered| registered == shortcut)
+            .unwrap_or(false)
+        {
+            Some(AppAction::TogglePause)
+        } else {
+            None
+        }
+    };
+
+    if let Some(action) = action {
+        execute_action(app, action, "global-hotkey");
+    }
+}
+
+#[cfg(unix)]
+pub fn action_socket_path() -> PathBuf {
+    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+        let candidate = PathBuf::from(runtime_dir).join("insight-reader.sock");
+        if let Some(parent) = candidate.parent() {
+            if parent.exists() {
+                return candidate;
+            }
+        }
+    }
+
+    let uid = std::fs::metadata("/proc/self")
+        .map(|meta| std::os::unix::fs::MetadataExt::uid(&meta))
+        .unwrap_or(0);
+    let run_user = PathBuf::from(format!("/run/user/{uid}"));
+    if run_user.exists() {
+        return run_user.join("insight-reader.sock");
+    }
+
+    PathBuf::from(format!("/tmp/insight-reader-{uid}.sock"))
+}
+
+#[cfg(not(unix))]
+pub fn action_socket_path() -> std::path::PathBuf {
+    std::path::PathBuf::from("insight-reader.sock")
+}
+
+#[cfg(unix)]
+pub fn send_action_to_running_instance(action: &str) -> Result<(), String> {
+    let uid = std::fs::metadata("/proc/self")
+        .map(|meta| std::os::unix::fs::MetadataExt::uid(&meta))
+        .unwrap_or(0);
+
+    let mut candidates = Vec::new();
+    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+        candidates.push(PathBuf::from(runtime_dir).join("insight-reader.sock"));
+    }
+    candidates.push(PathBuf::from(format!(
+        "/run/user/{uid}/insight-reader.sock"
+    )));
+    candidates.push(PathBuf::from(format!("/tmp/insight-reader-{uid}.sock")));
+    candidates.sort();
+    candidates.dedup();
+
+    for path in candidates {
+        let mut stream = match UnixStream::connect(&path) {
+            Ok(stream) => stream,
+            Err(_) => continue,
+        };
+
+        stream
+            .write_all(action.trim().as_bytes())
+            .map_err(|e| format!("failed to send action to running instance: {e}"))?;
+        return Ok(());
+    }
+
+    Err("could not connect to a running instance action socket".to_string())
+}
+
+#[cfg(not(unix))]
+pub fn send_action_to_running_instance(_action: &str) -> Result<(), String> {
+    Err("action bridge is not supported on this platform".to_string())
+}
+
+fn start_action_socket_listener<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
+    #[cfg(unix)]
+    {
+        let path = action_socket_path();
+        std::thread::spawn(move || {
+            let listener = match UnixListener::bind(&path) {
+                Ok(listener) => listener,
+                Err(bind_err) => {
+                    if path.exists() {
+                        match UnixStream::connect(&path) {
+                            Ok(_) => {
+                                warn!(path = %path.display(), "Action socket already in use by another instance");
+                                return;
+                            }
+                            Err(_) => {
+                                let _ = std::fs::remove_file(&path);
+                                match UnixListener::bind(&path) {
+                                    Ok(listener) => listener,
+                                    Err(e) => {
+                                        warn!(error = %e, path = %path.display(), "Failed to bind action socket after cleanup");
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        warn!(error = %bind_err, path = %path.display(), "Failed to bind action socket");
+                        return;
+                    }
+                }
+            };
+
+            for stream_result in listener.incoming() {
+                let mut stream = match stream_result {
+                    Ok(stream) => stream,
+                    Err(e) => {
+                        warn!(error = %e, "Action socket accept failed");
+                        continue;
+                    }
+                };
+
+                let mut payload = String::new();
+                if let Err(e) = stream.read_to_string(&mut payload) {
+                    warn!(error = %e, "Action socket read failed");
+                    continue;
+                }
+
+                let action_raw = payload.trim();
+                match parse_app_action(action_raw) {
+                    Some(action) => execute_action(&app, action, "socket"),
+                    None => warn!(action = %action_raw, "Unknown action command"),
+                }
+            }
+        });
+    }
 }
 
 /// Builds a WebviewUrl for the given HTML file path.
@@ -402,10 +986,39 @@ fn get_config() -> Result<config::FullConfig, String> {
 }
 
 #[tauri::command]
+fn get_hotkey_status(state: State<GlobalHotkeyState>) -> HotkeyStatus {
+    match state.inner().lock() {
+        Ok(runtime) => HotkeyStatus {
+            mode: runtime.mode.clone(),
+            session_type: runtime.session_type.clone(),
+            enabled: runtime.enabled,
+            native_active: runtime.native_active,
+            read_shortcut: runtime.read_shortcut_label.clone(),
+            pause_shortcut: runtime.pause_shortcut_label.clone(),
+            last_error: runtime.last_error.clone(),
+        },
+        Err(_) => HotkeyStatus {
+            mode: "unknown".to_string(),
+            session_type: "unknown".to_string(),
+            enabled: false,
+            native_active: false,
+            read_shortcut: default_read_shortcut_label(),
+            pause_shortcut: default_pause_shortcut_label(),
+            last_error: Some("Hotkey state unavailable".to_string()),
+        },
+    }
+}
+
+#[tauri::command]
 fn save_config(app: tauri::AppHandle, config_json: String) -> Result<(), String> {
     let cfg: config::FullConfig = serde_json::from_str(&config_json)
         .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
     config::save_full_config(cfg).map_err(|e| e.to_string())?;
+
+    if let Some(state) = app.try_state::<GlobalHotkeyState>() {
+        refresh_global_hotkeys(&app, &state.inner().clone());
+    }
+
     let _ = app.emit("config-changed", ());
     Ok(())
 }
@@ -600,12 +1213,28 @@ pub fn run() {
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
     let live_text_windows: LiveTextWindows = Arc::new(Mutex::new(std::collections::HashMap::new()));
     let tts_state = tts::create_tts_state();
+    let hotkey_state: GlobalHotkeyState = Arc::new(Mutex::new(HotkeyRuntime::default()));
+
+    let hotkey_state_for_handler = hotkey_state.clone();
 
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, shortcut, event| {
+                    handle_global_shortcut_event(
+                        app,
+                        shortcut,
+                        event.state(),
+                        &hotkey_state_for_handler,
+                    );
+                })
+                .build(),
+        )
         .manage(editor_initial)
         .manage(live_text_windows)
         .manage(tts_state)
+        .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
             get_selected_text,
             get_clipboard_text,
@@ -625,6 +1254,7 @@ pub fn run() {
             take_live_text_data,
             get_platform,
             get_config,
+            get_hotkey_status,
             save_config,
             list_piper_voices,
             refresh_piper_voices,
@@ -711,38 +1341,7 @@ pub fn run() {
                     let id = event.id().0.as_str();
                     match id {
                         "read_selected" => {
-                            let Some(tts_tx) = app
-                                .try_state::<tts::TtsState>()
-                                .map(|state| state.inner().clone())
-                            else {
-                                warn!("Read Selected: TtsState not found");
-                                return;
-                            };
-
-                            std::thread::spawn(move || {
-                                let text = get_text_or_clipboard_impl();
-                                if text.is_empty() {
-                                    warn!("Read Selected: no text available");
-                                    return;
-                                }
-                                log_selected_text(&Some(text.clone()));
-
-                                let (resp_tx, resp_rx) = mpsc::sync_channel(0);
-                                if let Err(e) = tts_tx.send(tts::TtsRequest::Speak(text, resp_tx)) {
-                                    warn!(error = %e, "Read Selected: failed to send speak request");
-                                    return;
-                                }
-
-                                match resp_rx.recv() {
-                                    Ok(Ok(())) => {}
-                                    Ok(Err(e)) => {
-                                        warn!(error = %e, "Read Selected: tts_speak failed");
-                                    }
-                                    Err(_) => {
-                                        warn!("Read Selected: TTS worker disconnected");
-                                    }
-                                }
-                            });
+                            execute_action(app, AppAction::ReadSelected, "tray");
                         }
                         "insight_editor" => {
                             let text = get_text_or_clipboard_impl();
@@ -812,6 +1411,22 @@ pub fn run() {
                 // Set window size after instantiation
                 let _ = win.set_size(tauri::LogicalSize::new(487.0, 85.0));
             }
+
+            let app_handle = app.handle().clone();
+
+            if let Some(state) = app.try_state::<GlobalHotkeyState>() {
+                refresh_global_hotkeys(&app_handle, &state.inner().clone());
+            }
+
+            start_action_socket_listener(app_handle.clone());
+
+            if let Ok(start_action) = std::env::var("INSIGHT_READER_START_ACTION") {
+                if let Some(action) = parse_app_action(&start_action) {
+                    execute_action(&app_handle, action, "startup-action");
+                }
+                std::env::remove_var("INSIGHT_READER_START_ACTION");
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
