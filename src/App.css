@@ -177,27 +177,42 @@ body {
   line-height: 1;
 }
 
-.more-btn {
-  width: 24px;
-  height: 24px;
+.window-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-top: -8px;
+  margin-right: -8px;
+}
+
+.window-btn {
+  width: 40px;
+  height: 28px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  color: #d4d4d8;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.more-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+.window-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 
-.more-btn svg {
-  width: 22px;
-  height: 20px;
-  fill: #ffffff;
+.window-btn-close:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.window-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 .time-display {

@@ -3,7 +3,7 @@ import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import logoSvg from "./assets/logo.svg";
-import { SettingsIcon } from "./components/icons";
+import { CloseIcon, MinimizeIcon, SettingsIcon } from "./components/icons";
 import "./App.css";
 
 interface Config {
@@ -232,6 +232,16 @@ function App() {
     await appWindow.startDragging();
   };
 
+  const handleMinimize = async () => {
+    const appWindow = getCurrentWindow();
+    await appWindow.minimize();
+  };
+
+  const handleClose = async () => {
+    const appWindow = getCurrentWindow();
+    await appWindow.close();
+  };
+
   return (
     <main className="main-container">
       <div className="control-bar" onMouseDown={handleMouseDown}>
@@ -266,11 +276,14 @@ function App() {
               )}
             </div>
           )}
-          <button className="more-btn" aria-label="More options">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
+          <div className="window-controls">
+            <button className="window-btn" onClick={handleMinimize} aria-label="Minimize window">
+              <MinimizeIcon size={14} />
+            </button>
+            <button className="window-btn window-btn-close" onClick={handleClose} aria-label="Close window">
+              <CloseIcon size={14} />
+            </button>
+          </div>
         </div>
 
         <div className="time-display">
