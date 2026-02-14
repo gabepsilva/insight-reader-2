@@ -5,7 +5,8 @@ mod system;
 mod tts;
 mod voices;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
@@ -34,19 +35,54 @@ type LiveTextWindows = Arc<Mutex<std::collections::HashMap<String, LiveTextData>
 
 /// Tray icon: app logo at 32x32 (icons/32x32.png).
 const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/logo.png");
+const TEXT_CAPTURE_TIMEOUT_MS: u64 = 1200;
+
+fn read_text_with_timeout<F>(source: &'static str, reader: F) -> Option<String>
+where
+    F: FnOnce() -> Option<String> + Send + 'static,
+{
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(reader());
+    });
+
+    match rx.recv_timeout(Duration::from_millis(TEXT_CAPTURE_TIMEOUT_MS)) {
+        Ok(text) => text,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            warn!(
+                source,
+                timeout_ms = TEXT_CAPTURE_TIMEOUT_MS,
+                "Text capture timed out"
+            );
+            None
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            warn!(source, "Text capture worker disconnected");
+            None
+        }
+    }
+}
+
+fn get_selected_text_impl() -> Option<String> {
+    read_text_with_timeout("selected", system::get_selected_text)
+}
+
+fn get_clipboard_text_impl() -> Option<String> {
+    read_text_with_timeout("clipboard", system::get_clipboard_text)
+}
 
 /// Gets the currently selected text from the system.
 #[tauri::command]
 fn get_selected_text() -> Option<String> {
-    let result = system::get_selected_text();
+    let result = get_selected_text_impl();
     log_selected_text(&result);
     result
 }
 
 /// Gets selected text or falls back to clipboard text. Returns empty string if neither available.
 fn get_text_or_clipboard_impl() -> String {
-    system::get_selected_text()
-        .or_else(system::get_clipboard_text)
+    get_selected_text_impl()
+        .or_else(get_clipboard_text_impl)
         .unwrap_or_default()
 }
 
@@ -59,7 +95,7 @@ fn get_text_or_clipboard() -> String {
 /// Gets the current clipboard text (e.g. from Ctrl+C / Cmd+C).
 #[tauri::command]
 fn get_clipboard_text() -> Option<String> {
-    system::get_clipboard_text()
+    get_clipboard_text_impl()
 }
 
 /// Builds a WebviewUrl for the given HTML file path.
@@ -452,11 +488,6 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn cleanup_text(text: String) -> Result<String, String> {
-    system::cleanup_text(&text).await
-}
-
-#[tauri::command]
 fn check_polly_credentials() -> Result<bool, String> {
     match tts::check_polly_credentials() {
         Ok(()) => Ok(true),
@@ -603,7 +634,6 @@ pub fn run() {
             get_download_progress,
             list_downloaded_voices,
             open_settings_window,
-            cleanup_text,
             check_polly_credentials,
         ])
         .on_window_event(|window, event| {
@@ -681,19 +711,38 @@ pub fn run() {
                     let id = event.id().0.as_str();
                     match id {
                         "read_selected" => {
-                            let text = get_text_or_clipboard_impl();
-                            if text.is_empty() {
-                                warn!("Read Selected: no text available");
-                                return;
-                            }
-                            log_selected_text(&Some(text.clone()));
-                            if let Some(state) = app.try_state::<tts::TtsState>() {
-                                if let Err(e) = tts_speak(state, text) {
-                                    warn!(error = %e, "Read Selected: tts_speak failed");
-                                }
-                            } else {
+                            let Some(tts_tx) = app
+                                .try_state::<tts::TtsState>()
+                                .map(|state| state.inner().clone())
+                            else {
                                 warn!("Read Selected: TtsState not found");
-                            }
+                                return;
+                            };
+
+                            std::thread::spawn(move || {
+                                let text = get_text_or_clipboard_impl();
+                                if text.is_empty() {
+                                    warn!("Read Selected: no text available");
+                                    return;
+                                }
+                                log_selected_text(&Some(text.clone()));
+
+                                let (resp_tx, resp_rx) = mpsc::sync_channel(0);
+                                if let Err(e) = tts_tx.send(tts::TtsRequest::Speak(text, resp_tx)) {
+                                    warn!(error = %e, "Read Selected: failed to send speak request");
+                                    return;
+                                }
+
+                                match resp_rx.recv() {
+                                    Ok(Ok(())) => {}
+                                    Ok(Err(e)) => {
+                                        warn!(error = %e, "Read Selected: tts_speak failed");
+                                    }
+                                    Err(_) => {
+                                        warn!("Read Selected: TTS worker disconnected");
+                                    }
+                                }
+                            });
                         }
                         "insight_editor" => {
                             let text = get_text_or_clipboard_impl();

@@ -209,7 +209,7 @@ export default function EditorPage() {
           setText(initial);
           setTimeout(() => {
             scheduleLintRef.current?.(true);
-          }, 1000);
+          }, 2000);
         }
       } catch (e) {
         if (isMounted)

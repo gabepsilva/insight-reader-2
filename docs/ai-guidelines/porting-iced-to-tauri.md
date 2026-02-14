@@ -27,7 +27,7 @@ Reference for porting Insight Reader from Iced to Tauri 2. Informational only: c
 
 ## What stays in Rust vs moves to frontend
 
-- **Rust:** config; providers (Piper, Polly, audio_player); voices (fetch, aws, download); system (clipboard, screenshot, OCR, text_cleanup, single_instance, focus_tracker). Tray and hotkey: tray-icon crate, global-hotkey crate.
+- **Rust:** config; providers (Piper, Polly, audio_player); voices (fetch, aws, download); system (clipboard, screenshot, OCR, single_instance, focus_tracker). Tray and hotkey: tray-icon crate, global-hotkey crate.
 - **Frontend (replacing Iced UI):** All of `view.rs`, `styles.rs`, `ui/`, and `flags/` Iced widgets (SVGs/assets). Waveform/FFT: currently `rustfft` in Rust; can remain or move depending on design.
 - **Iced-only, to be dropped:** `app.rs`, `view.rs`, `styles.rs`, `ui/` Iced code; `window::Id`, `text_editor::Content`, `Message` in their Iced form; `Task`, `Subscription`, `window::*`, `iced::exit`, `keyboard::listen` in the Iced sense.
 
@@ -71,15 +71,15 @@ Reference for porting Insight Reader from Iced to Tauri 2. Informational only: c
 - **Iced:** `iced` (features: svg, tokio, image).
 - **Pencil (omit):** `tao`, `wry` only for `system/webview.rs`; with pencil omitted, not needed for the port.
 - **Tray / hotkey:** `tray-icon`, `global-hotkey`; Tauri has its own tray and global-shortcut mechanisms.
-- **Rest:** clap, thiserror, rodio, rustfft, dirs, serde, serde_json, aws-*, tokio, tracing, tracing-subscriber, tracing-appender, chrono, reqwest, pulldown-cmark, md5, arboard, open, fs2, image (tray icon), euro-focus. Platform: core-foundation, macos-accessibility-client, gtk, windows, enigo.
+- **Rest:** clap, thiserror, rodio, rustfft, dirs, serde, serde_json, aws-*, tokio, tracing, tracing-subscriber, tracing-appender, chrono, reqwest, md5, arboard, open, fs2, image (tray icon), euro-focus. Platform: core-foundation, macos-accessibility-client, gtk, windows, enigo.
 
 ---
 
 ## Views / screens
 
 - Main bar: play/pause, stop, progress, waveform, settings, camera, clipboard.
-- Settings: provider, log level, text cleanup, OCR, hotkey, voice selectors, links.
-- Windows/modals: Voice selection, Polly info, OCR info, Text-cleanup info, Screenshot viewer, Extracted-text dialog.
+- Settings: provider, log level, OCR, hotkey, voice selectors, links.
+- Windows/modals: Voice selection, Polly info, OCR info, Screenshot viewer, Extracted-text dialog.
 
 ---
 

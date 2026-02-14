@@ -26,8 +26,6 @@ struct RawConfig {
     #[serde(default)]
     log_level: Option<String>,
     #[serde(default)]
-    text_cleanup_enabled: Option<bool>,
-    #[serde(default)]
     selected_voice: Option<String>,
     #[serde(default)]
     selected_polly_voice: Option<String>,
@@ -47,7 +45,6 @@ struct RawConfig {
 pub struct FullConfig {
     pub voice_provider: Option<String>,
     pub log_level: Option<String>,
-    pub text_cleanup_enabled: Option<bool>,
     pub selected_voice: Option<String>,
     pub selected_polly_voice: Option<String>,
     pub selected_microsoft_voice: Option<String>,
@@ -62,7 +59,6 @@ impl From<RawConfig> for FullConfig {
         Self {
             voice_provider: raw.voice_provider,
             log_level: raw.log_level,
-            text_cleanup_enabled: raw.text_cleanup_enabled,
             selected_voice: raw.selected_voice,
             selected_polly_voice: raw.selected_polly_voice,
             selected_microsoft_voice: raw.selected_microsoft_voice,
@@ -79,7 +75,6 @@ impl From<FullConfig> for RawConfig {
         Self {
             voice_provider: json.voice_provider,
             log_level: json.log_level,
-            text_cleanup_enabled: json.text_cleanup_enabled,
             selected_voice: json.selected_voice,
             selected_polly_voice: json.selected_polly_voice,
             selected_microsoft_voice: json.selected_microsoft_voice,

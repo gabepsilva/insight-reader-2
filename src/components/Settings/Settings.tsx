@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -35,7 +35,6 @@ const VoiceProviderIcon = ({ provider }: { provider: string }) => {
 interface Config {
   voice_provider: string | null;
   log_level: string | null;
-  text_cleanup_enabled: boolean | null;
   selected_voice: string | null;
   selected_polly_voice: string | null;
   selected_microsoft_voice: string | null;
@@ -221,44 +220,6 @@ function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: 
   return (
     <div className="tab-content">
       <div className="setting-group">
-        <label>Log Level</label>
-        <select 
-          value={config.log_level || 'info'}
-          onChange={(e) => onChange({ log_level: e.target.value })}
-        >
-          <option value="error">Error</option>
-          <option value="warn">Warning</option>
-          <option value="info">Info</option>
-          <option value="debug">Debug</option>
-        </select>
-      </div>
-
-      <div className="setting-group">
-        <label>
-          <input 
-            type="checkbox"
-            checked={config.text_cleanup_enabled || false}
-            onChange={(e) => onChange({ text_cleanup_enabled: e.target.checked })}
-          />
-          Enable Text Cleanup (Natural Reading)
-        </label>
-        <p className="setting-help">
-          Automatically clean up text before reading (removes extra punctuation, fixes formatting)
-        </p>
-      </div>
-
-      <div className="setting-group">
-        <label>OCR Backend</label>
-        <select 
-          value={config.ocr_backend || 'default'}
-          onChange={(e) => onChange({ ocr_backend: e.target.value })}
-        >
-          <option value="default">Default</option>
-          <option value="better_ocr">Better OCR</option>
-        </select>
-      </div>
-
-      <div className="setting-group">
         <label>
           <input 
             type="checkbox"
@@ -281,6 +242,38 @@ function GeneralTab({ config, onChange }: { config: Config; onChange: (updates: 
           Current: Ctrl+R (Windows/Linux) or Cmd+R (macOS)
         </p>
       </div>
+
+      <div className="setting-group">
+        <label>Log Level</label>
+        <select 
+          value={config.log_level || 'info'}
+          onChange={(e) => onChange({ log_level: e.target.value })}
+        >
+          <option value="error">Error</option>
+          <option value="warn">Warning</option>
+          <option value="info">Info</option>
+          <option value="debug">Debug</option>
+        </select>
+      </div>
+
+      <div className="setting-group">
+        <div className="setting-label-with-info">
+          <label>OCR Backend</label>
+          <span className="setting-info-icon" aria-label="Future feature">
+            i
+            <span className="setting-info-tooltip">Future feature</span>
+          </span>
+        </div>
+        <select 
+          value={config.ocr_backend || 'default'}
+          onChange={(e) => onChange({ ocr_backend: e.target.value })}
+          disabled
+        >
+          <option value="default">Default</option>
+          <option value="better_ocr">Better OCR</option>
+        </select>
+        <p className="setting-help">Read and copy text directly from images.</p>
+      </div>
     </div>
   );
 }
@@ -290,7 +283,6 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
   const [pollyVoices, setPollyVoices] = useState<any[]>([]);
   const [microsoftVoices, setMicrosoftVoices] = useState<any[]>([]);
   const [piperLanguages, setPiperLanguages] = useState<{code: string; name: string; flag: string}[]>([]);
-  const [pollyLanguages, setPollyLanguages] = useState<{code: string; name: string}[]>([]);
   const [selectedPollyLanguage, setSelectedPollyLanguage] = useState<string>('');
   const [pollyModalLanguage, setPollyModalLanguage] = useState<string | null>(null);
   const [selectedPiperLanguage, setSelectedPiperLanguage] = useState<string>('');
@@ -326,25 +318,6 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
       setPiperLanguages(langs);
     }
   }, [piperVoices]);
-
-  useEffect(() => {
-    if (pollyVoices.length > 0) {
-      const langMap = new Map<string, string>();
-      pollyVoices.forEach((voice: any) => {
-        if (!langMap.has(voice.language_code)) {
-          const langName = formatPollyLanguage(voice.language_code);
-          langMap.set(voice.language_code, langName);
-        }
-      });
-      const langs = Array.from(langMap.entries())
-        .map(([code, name]) => ({ code, name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      setPollyLanguages(langs);
-      if (!selectedPollyLanguage && langs.length > 0) {
-        setSelectedPollyLanguage(langs[0].code);
-      }
-    }
-  }, [pollyVoices]);
 
   useEffect(() => {
     if (microsoftVoices.length > 0) {
@@ -449,13 +422,85 @@ function VoicesTab({ config, onChange }: { config: Config; onChange: (updates: P
     return '🌍';
   };
 
-  const formatPollyLanguage = (code: string): string => {
-    const parts = code.split('-');
-    if (parts.length >= 2) {
-      return `${parts[0].toUpperCase()} (${parts[1]})`;
+  const formatLanguageCode = (code: string): string => {
+    const normalizedCode = code.replace(/_/g, '-');
+    const [language, region] = normalizedCode.split('-');
+
+    const fallback = region
+      ? `${language.toUpperCase()} (${region.toUpperCase()})`
+      : language.toUpperCase();
+
+    try {
+      const languageDisplay = new Intl.DisplayNames(['en'], { type: 'language' }).of(language);
+      if (!languageDisplay) {
+        return fallback;
+      }
+
+      if (!region) {
+        return languageDisplay;
+      }
+
+      const regionDisplay = new Intl.DisplayNames(['en'], { type: 'region' }).of(region.toUpperCase());
+      return regionDisplay ? `${languageDisplay} (${regionDisplay})` : `${languageDisplay} (${region.toUpperCase()})`;
+    } catch {
+      return fallback;
     }
-    return code.toUpperCase();
   };
+
+  const pollyVoicesByLanguage = useMemo(() => {
+    const groups = new Map<string, any[]>();
+
+    for (const voice of pollyVoices) {
+      if (!voice?.id || !voice?.language_code || voice.engine !== 'Neural') {
+        continue;
+      }
+
+      if (!groups.has(voice.language_code)) {
+        groups.set(voice.language_code, []);
+      }
+
+      groups.get(voice.language_code)?.push(voice);
+    }
+
+    for (const [languageCode, voices] of groups.entries()) {
+      const dedupedById = new Map<string, any>();
+      voices.forEach((voice) => {
+        if (!dedupedById.has(voice.id)) {
+          dedupedById.set(voice.id, voice);
+        }
+      });
+
+      const sorted = Array.from(dedupedById.values()).sort((a, b) => {
+        const byName = (a.name || '').localeCompare(b.name || '');
+        if (byName !== 0) return byName;
+        return (a.id || '').localeCompare(b.id || '');
+      });
+
+      groups.set(languageCode, sorted);
+    }
+
+    return groups;
+  }, [pollyVoices]);
+
+  const pollyLanguages = useMemo(() => {
+    return Array.from(pollyVoicesByLanguage.keys())
+      .map((code) => ({ code, name: formatLanguageCode(code) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [pollyVoicesByLanguage]);
+
+  useEffect(() => {
+    if (!pollyLanguages.length) {
+      if (selectedPollyLanguage) {
+        setSelectedPollyLanguage('');
+      }
+      return;
+    }
+
+    const hasSelection = pollyLanguages.some((lang) => lang.code === selectedPollyLanguage);
+    if (!hasSelection) {
+      setSelectedPollyLanguage(pollyLanguages[0].code);
+    }
+  }, [pollyLanguages, selectedPollyLanguage]);
 
   const loadVoices = async () => {
     setLoadingPiper(true);
@@ -688,7 +733,7 @@ aws_secret_access_key = your-secret-key</pre>
           <h3>AWS Polly Voices</h3>
           {loadingPolly ? (
             <p>Loading voices...</p>
-          ) : pollyVoices.length === 0 ? (
+          ) : pollyLanguages.length === 0 ? (
             <p className="voice-error">No voices available. Check AWS credentials.</p>
           ) : (
             <div className="language-grid">
@@ -699,11 +744,11 @@ aws_secret_access_key = your-secret-key</pre>
                   onClick={() => { setSelectedPollyLanguage(lang.code); setPollyModalLanguage(lang.code); }}
                 >
                   <span className="language-flag">{getCountryFlag(lang.code)}</span>
-                  <span className="language-name">{lang.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
+                    <span className="language-name">{lang.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
           {pollyModalLanguage && (
             <div className="modal-overlay" onClick={() => setPollyModalLanguage(null)}>
@@ -714,8 +759,7 @@ aws_secret_access_key = your-secret-key</pre>
                 </div>
                 <div className="modal-body">
                   <div className="voice-list">
-                    {pollyVoices
-                      .filter((voice: any) => voice.language_code === pollyModalLanguage)
+                    {((pollyModalLanguage ? pollyVoicesByLanguage.get(pollyModalLanguage) : []) ?? [])
                       .map((voice: any) => (
                         <div 
                           key={voice.id}

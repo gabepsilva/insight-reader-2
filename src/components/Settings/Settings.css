@@ -169,6 +169,54 @@ body {
   gap: 8px;
 }
 
+.setting-label-with-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-info-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #facc15;
+  color: #18181b;
+  line-height: 1;
+  position: relative;
+}
+
+.setting-info-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  background: #27272a;
+  color: #fafafa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 10;
+}
+
+.setting-info-icon:hover .setting-info-tooltip,
+.setting-info-icon:focus-within .setting-info-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
 .voice-provider-label {
   font-size: 22px;
   font-weight: 600;
