@@ -205,7 +205,13 @@ export default function EditorPage() {
         const initial =
           (await invoke<string | null>("take_editor_initial_text")) ?? "";
         // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
-        if (isMounted && initial.length > 0) setText(initial);
+        if (isMounted && initial.length > 0) {
+          setText(initial);
+          // Trigger lint after setting initial text (delayed to ensure editor is ready)
+          setTimeout(() => {
+            scheduleLintRef.current?.(true);
+          }, 100);
+        }
       } catch (e) {
         if (isMounted)
           console.warn("[EditorPage] take_editor_initial_text failed:", e);
