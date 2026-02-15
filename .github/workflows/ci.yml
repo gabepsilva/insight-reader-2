@@ -103,7 +103,7 @@ jobs:
         run: rm -rf src-tauri/target/release/bundle
 
   build-windows-artifacts:
-    runs-on: [self-hosted, Windows]
+    runs-on: windows-2022
     needs: test
     defaults:
       run:
