@@ -1,9 +1,16 @@
-import { useState, useEffect, useRef } from "react";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import logoSvg from "./assets/logo.svg";
-import { CloseIcon, MinimizeIcon, SettingsIcon } from "./components/icons";
+import {
+  CloseIcon,
+  MinimizeIcon,
+  PauseIcon,
+  PencilIcon,
+  PlayIcon,
+  SettingsIcon,
+  StopIcon,
+} from "./components/icons";
 import "./App.css";
 
 interface Config {
@@ -56,6 +63,12 @@ function App() {
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
+
+  const [volume, setVolume] = useState(80);
+  const [isMuted, setIsMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTooltipLeave = () => {
@@ -80,42 +93,33 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof console === 'undefined') return;
+    if (typeof console === "undefined") return;
     const originalError = console.error;
+
     console.error = (...args) => {
       originalError.apply(console, args);
-      const msg = args.map(a => {
-        try {
-          return typeof a === 'object' ? JSON.stringify(a) : String(a);
-        } catch {
-          return '[unserializable]';
-        }
-      }).join(' ');
-      setErrors(prev => {
-        const newErrors = [...prev, msg].slice(-5);
-        return newErrors;
-      });
+      const msg = args
+        .map((a) => {
+          try {
+            return typeof a === "object" ? JSON.stringify(a) : String(a);
+          } catch {
+            return "[unserializable]";
+          }
+        })
+        .join(" ");
+
+      setErrors((prev) => [...prev, msg].slice(-5));
     };
-    return () => { console.error = originalError; };
+
+    return () => {
+      console.error = originalError;
+    };
   }, []);
 
   useEffect(() => {
-    const resizeToContent = async () => {
-      try {
-        const appWindow = getCurrentWindow();
-        await appWindow.setSize(new LogicalSize(340, 320));
-      } catch (e) {
-        console.warn("[resizeToContent] setSize failed or not in Tauri:", e);
-      }
-    };
-    resizeToContent();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const cfg = await invoke<Config>("get_config");
-        console.log("[App] config loaded:", cfg);
         setConfig(cfg);
       } catch (e) {
         console.warn("[App] get_config failed:", e);
@@ -132,6 +136,7 @@ function App() {
         console.warn("[App] config-changed get_config failed:", e);
       }
     });
+
     return () => {
       unlisten.then((fn) => fn());
     };
@@ -142,6 +147,7 @@ function App() {
       try {
         const status = await invoke<[boolean, boolean]>("tts_get_status");
         const [isPlayingBackend, isPausedBackend] = status;
+
         setIsPlaying(isPlayingBackend && !isPausedBackend);
         setIsPaused(isPausedBackend);
 
@@ -153,16 +159,18 @@ function App() {
             setCurrentTimeMs(currentMs);
             setTotalTimeMs(totalMs);
           }
+
           setAtEnd(currentMs >= totalMs);
         } else {
           setCurrentTimeMs(0);
           setTotalTimeMs(0);
           setAtEnd(false);
         }
-      } catch (e) {
+      } catch {
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentTimeMs(0);
+        setTotalTimeMs(0);
         setAtEnd(false);
       }
     }, 500);
@@ -172,8 +180,7 @@ function App() {
 
   const handlePlayPause = async () => {
     try {
-      const status = await invoke<[boolean, boolean]>("tts_get_status");
-      const [isPlayingBackend] = status;
+      const [isPlayingBackend] = await invoke<[boolean, boolean]>("tts_get_status");
 
       if (isPlayingBackend) {
         const newPausedState = await invoke<boolean>("tts_toggle_pause");
@@ -196,6 +203,7 @@ function App() {
     setCurrentTimeMs(0);
     setTotalTimeMs(0);
     setAtEnd(false);
+
     try {
       await invoke("tts_stop");
     } catch (e) {
@@ -207,27 +215,21 @@ function App() {
     if (disabled) return;
 
     try {
-      await invoke<[boolean, boolean, boolean]>("tts_seek", {
-        offsetMs,
-      });
-      const position = await invoke<[number, number]>("tts_get_position");
-      const [currentMs, totalMs] = position;
-
+      await invoke<[boolean, boolean, boolean]>("tts_seek", { offsetMs });
+      const [currentMs, totalMs] = await invoke<[number, number]>("tts_get_position");
       setAtEnd(currentMs >= totalMs);
       setCurrentTimeMs(currentMs);
     } catch (e) {
-      console.warn(`tts_seek failed:`, e);
+      console.warn("tts_seek failed:", e);
     }
   };
 
   const handleBackward = () => handleSeek(-5000, isPaused || currentTimeMs < 5000);
   const handleForward = () => handleSeek(5000, isPaused || atEnd);
 
-  const handleMouseDown = async (e: React.MouseEvent) => {
+  const handleMouseDown = async (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest("button")) {
-      return;
-    }
+    if (target.closest("button, input, [data-no-drag='true']")) return;
     const appWindow = getCurrentWindow();
     await appWindow.startDragging();
   };
@@ -243,19 +245,30 @@ function App() {
   };
 
   return (
-    <main className="main-container">
-      <div className="control-bar" onMouseDown={handleMouseDown}>
-        <div className="header">
-          <div className="brand">
-            <div className="app-icon">
-              <img src={logoSvg} alt="Insight Reader" />
+    <main className="main-shell" onMouseDown={handleMouseDown}>
+      <section className="player-card">
+        <header className="card-header">
+          <div className="title-wrap">
+            <div className="title-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                <path d="M8 10h.01M12 10h.01M16 10h.01" />
+              </svg>
             </div>
+            <h1 className="app-name">Insight Reader</h1>
           </div>
-          <div className="app-title">
-            <span className="app-name">Insight Reader</span>
+
+          <div className="header-actions">
+            <button className="window-btn" onClick={handleMinimize} aria-label="Minimize window">
+              <MinimizeIcon size={14} />
+            </button>
+            <button className="window-btn close" onClick={handleClose} aria-label="Close window">
+              <CloseIcon size={14} />
+            </button>
           </div>
+
           {errors.length > 0 && (
-            <div 
+            <div
               className="error-indicator"
               onMouseEnter={handleTooltipEnter}
               onMouseLeave={handleTooltipLeave}
@@ -265,116 +278,140 @@ function App() {
               </svg>
               {showTooltip && (
                 <div className="error-tooltip">
-                  <button 
+                  <button
                     className="copy-errors-btn"
-                    onClick={() => navigator.clipboard.writeText(errors.join('\n'))}
+                    onClick={() => navigator.clipboard.writeText(errors.join("\n"))}
                   >
                     Copy
                   </button>
-                  {errors.map((err, i) => <div key={i}>{err}</div>)}
+                  {errors.map((err, i) => (
+                    <div key={i}>{err}</div>
+                  ))}
                 </div>
               )}
             </div>
           )}
-          <div className="window-controls">
-            <button className="window-btn" onClick={handleMinimize} aria-label="Minimize window">
-              <MinimizeIcon size={14} />
+        </header>
+
+        <div className="card-content">
+          <div className="time-display">
+            <span className="current-time">{formatTime(currentTimeMs)}</span>
+            <span className="total-time">/ {formatTime(totalTimeMs)}</span>
+          </div>
+
+          <div className="controls-row">
+            <button className="control-btn" onClick={handleBackward} disabled={isPaused || currentTimeMs < 5000}>
+              -5s
             </button>
-            <button className="window-btn window-btn-close" onClick={handleClose} aria-label="Close window">
-              <CloseIcon size={14} />
+
+            <button className="control-btn" onClick={handleForward} disabled={isPaused || atEnd}>
+              +5s
+            </button>
+
+            <button className="control-btn play-btn" onClick={handlePlayPause} aria-label={isPlaying ? "Pause" : "Play"}>
+              {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+            </button>
+
+            <button className="control-btn stop-btn" onClick={handleStop} aria-label="Stop">
+              <StopIcon size={16} />
+            </button>
+
+            <div className="speed-wrap" data-no-drag="true">
+              <button className="speed-btn" aria-label="Playback speed">
+                {playbackSpeed}x
+              </button>
+              <div className="speed-menu">
+                {speeds.map((speed) => (
+                  <button
+                    key={speed}
+                    className={playbackSpeed === speed ? "speed-item active" : "speed-item"}
+                    onClick={() => setPlaybackSpeed(speed)}
+                  >
+                    {speed}x
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="volume-row">
+            <button
+              className="volume-toggle"
+              onClick={() => setIsMuted((prev) => !prev)}
+              aria-label={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 5 6 9H2v6h4l5 4V5z" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 5 6 9H2v6h4l5 4V5z" />
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                  <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                </svg>
+              )}
+            </button>
+
+            <div className="volume-track">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={isMuted ? 0 : volume}
+                onChange={(e) => {
+                  setVolume(Number.parseInt(e.target.value, 10));
+                  if (isMuted) setIsMuted(false);
+                }}
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${isMuted ? 0 : volume}%, #374151 ${isMuted ? 0 : volume}%, #374151 100%)`,
+                }}
+              />
+            </div>
+
+            <span className="volume-value">{isMuted ? 0 : volume}</span>
+          </div>
+
+          <div className="action-row">
+            <button
+              className="action-btn"
+              onClick={async () => {
+                const text = await invoke<string>("get_text_or_clipboard");
+                void invoke("open_editor_window", { initialText: text });
+              }}
+              aria-label="Open grammar editor"
+            >
+              <PencilIcon size={15} />
+              <span>Edit</span>
+            </button>
+
+            <button
+              className="action-btn"
+              onClick={() => {
+                void invoke("open_settings_window");
+              }}
+              aria-label="Open settings"
+            >
+              <SettingsIcon size={15} />
+              <span>Settings</span>
             </button>
           </div>
         </div>
 
-        <div className="time-display">
-          <span className="current-time">{formatTime(currentTimeMs)}</span>
-          <span className="total-time separator">/</span>
-          <span className="total-time">{formatTime(totalTimeMs)}</span>
-        </div>
-
-        <div className="controls">
-          <button
-            className="control-btn"
-            onClick={handleBackward}
-            disabled={isPaused || currentTimeMs < 5000}
-          >
-            -5s
-          </button>
-
-          <button
-            className="control-btn play-btn"
-            onClick={handlePlayPause}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <svg viewBox="0 0 24 24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
-          </button>
-
-          <button
-            className="control-btn"
-            onClick={handleStop}
-            aria-label="Stop"
-          >
-            <svg viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" fill="currentColor" />
-            </svg>
-          </button>
-
-          <button
-            className="control-btn"
-            onClick={handleForward}
-            disabled={isPaused || atEnd}
-          >
-            +5s
-          </button>
-        </div>
-
-        <div className="grammar-row">
-          <button
-            className="grammar-btn"
-            onClick={async () => {
-              const text = await invoke<string>("get_text_or_clipboard");
-              invoke("open_editor_window", { initialText: text });
-            }}
-            aria-label="Open grammar editor"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16">
-              <path
-                fill="currentColor"
-                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-              />
-            </svg>
-          </button>
-          <button
-            className="grammar-btn"
-            onClick={() => invoke("open_settings_window")}
-            aria-label="Open settings"
-          >
-            <SettingsIcon size={16} />
-          </button>
-        </div>
-        <div className="status-bar">
+        <footer className="status-bar">
           <span className="status-item">
             <span className="status-label">Provider:</span>
-            <span className="status-value">
-              {config ? getProviderLabel(config.voice_provider) : "Loading..."}
-            </span>
+            <span className="status-value">{config ? getProviderLabel(config.voice_provider) : "Loading..."}</span>
           </span>
+          <span className="status-separator" />
           <span className="status-item">
             <span className="status-label">Voice:</span>
-            <span className="status-value">
-              {config ? getVoiceLabel(config) : "Loading..."}
-            </span>
+            <span className="status-value">{config ? getVoiceLabel(config) : "Loading..."}</span>
           </span>
-        </div>
-      </div>
+        </footer>
+      </section>
     </main>
   );
 }
