@@ -133,9 +133,16 @@ jobs:
           cache-on-failure: true
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+        shell: cmd
+        run: |
+          if not exist "%USERPROFILE%\.bun\bin\bun.exe" (
+            curl -L --retry 3 --output "%TEMP%\bun-windows-x64.zip" https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%TEMP%\\bun-windows-x64.zip' -DestinationPath '%TEMP%\\bun-extract' -Force"
+            if not exist "%USERPROFILE%\.bun\bin" mkdir "%USERPROFILE%\.bun\bin"
+            copy /Y "%TEMP%\bun-extract\bun-windows-x64\bun.exe" "%USERPROFILE%\.bun\bin\bun.exe"
+          )
+          echo %USERPROFILE%\.bun\bin>>"%GITHUB_PATH%"
+          "%USERPROFILE%\.bun\bin\bun.exe" --version
 
       - name: Cache node_modules
         uses: actions/cache@v4
