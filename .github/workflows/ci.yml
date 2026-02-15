@@ -130,11 +130,9 @@ jobs:
       - name: Ensure MSVC build tools
         run: |
           where link >nul 2>nul && exit /b 0
-          where winget >nul 2>nul || (
-            echo winget not found and MSVC linker is missing
-            exit /b 1
-          )
-          winget install --id Microsoft.VisualStudio.2022.BuildTools --silent --accept-package-agreements --accept-source-agreements --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --norestart"
+          curl -L --retry 3 --output "%TEMP%\vs_BuildTools.exe" https://aka.ms/vs/17/release/vs_BuildTools.exe
+          "%TEMP%\vs_BuildTools.exe" --quiet --wait --norestart --nocache --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
+          if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 3010 exit /b %ERRORLEVEL%
 
       - name: Cache Rust and Tauri artifacts
         uses: Swatinem/rust-cache@v2
