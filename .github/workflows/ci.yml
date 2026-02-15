@@ -159,4 +159,22 @@ jobs:
         run: bun install
 
       - name: Build Windows bundle
-        run: bun run tauri build --bundles ${{ matrix.bundle }}
+        run: |
+          set "VSDEVCMD="
+          for %%I in (
+            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+            "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+            "%ProgramFiles%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+          ) do (
+            if exist "%%~I" set "VSDEVCMD=%%~I"
+          )
+
+          if not defined VSDEVCMD (
+            echo Visual Studio Build Tools not found
+            exit /b 1
+          )
+
+          call "%VSDEVCMD%" -arch=x64 -host_arch=x64
+          where link
+          bun run tauri build --bundles ${{ matrix.bundle }}
