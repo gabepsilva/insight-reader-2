@@ -110,11 +110,7 @@ jobs:
         shell: cmd
     strategy:
       fail-fast: false
-      matrix:Insight Reader
-      
-      
-      0:00
-      / 0:00
+      matrix:
         bundle: [msi, nsis]
     steps:
       - uses: actions/checkout@v4
