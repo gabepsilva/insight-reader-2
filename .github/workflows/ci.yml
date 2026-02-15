@@ -130,11 +130,11 @@ jobs:
       - name: Ensure MSVC build tools
         run: |
           where link >nul 2>nul && exit /b 0
-          where choco >nul 2>nul || (
-            echo Chocolatey not found and MSVC linker is missing
+          where winget >nul 2>nul || (
+            echo winget not found and MSVC linker is missing
             exit /b 1
           )
-          choco install visualstudio2022buildtools visualstudio2022-workload-vctools --yes --no-progress --package-parameters "--includeRecommended --passive --norestart"
+          winget install --id Microsoft.VisualStudio.2022.BuildTools --silent --accept-package-agreements --accept-source-agreements --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --norestart"
 
       - name: Cache Rust and Tauri artifacts
         uses: Swatinem/rust-cache@v2
