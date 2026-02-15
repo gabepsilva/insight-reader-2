@@ -105,6 +105,9 @@ jobs:
   build-windows-artifacts:
     runs-on: [self-hosted, Windows]
     needs: test
+    defaults:
+      run:
+        shell: cmd
     strategy:
       fail-fast: false
       matrix:
