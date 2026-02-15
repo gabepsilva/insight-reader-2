@@ -127,6 +127,15 @@ jobs:
           "%USERPROFILE%\.cargo\bin\rustc.exe" --version
           "%USERPROFILE%\.cargo\bin\cargo.exe" --version
 
+      - name: Ensure MSVC build tools
+        run: |
+          where link >nul 2>nul && exit /b 0
+          where choco >nul 2>nul || (
+            echo Chocolatey not found and MSVC linker is missing
+            exit /b 1
+          )
+          choco install visualstudio2022buildtools visualstudio2022-workload-vctools --yes --no-progress --package-parameters "--includeRecommended --passive --norestart"
+
       - name: Cache Rust and Tauri artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -161,13 +170,22 @@ jobs:
       - name: Build Windows bundle
         run: |
           set "VSDEVCMD="
-          for %%I in (
-            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
-            "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
-            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
-            "%ProgramFiles%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
-          ) do (
-            if exist "%%~I" set "VSDEVCMD=%%~I"
+
+          if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
+            for /f "usebackq delims=" %%I in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find **\VsDevCmd.bat`) do set "VSDEVCMD=%%I"
+          )
+
+          if not defined VSDEVCMD (
+            for %%I in (
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
+            ) do (
+              if exist "%%~I" set "VSDEVCMD=%%~I"
+            )
           )
 
           if not defined VSDEVCMD (
