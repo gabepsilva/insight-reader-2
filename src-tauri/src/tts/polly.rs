@@ -174,7 +174,7 @@ impl PollyTTSProvider {
                 .sample_rate("16000")
                 .send()
                 .await
-                .map_err(|e| TTSError::ProcessError(format!("AWS Polly API error: {e}")))?;
+                .map_err(|_| TTSError::ProcessError("AWS Polly API error".to_string()))?;
 
             let audio_stream = response.audio_stream;
             let bytes = audio_stream

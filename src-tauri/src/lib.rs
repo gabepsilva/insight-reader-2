@@ -1204,11 +1204,19 @@ fn build_tray_menu<R: tauri::Runtime>(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    let mut env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    for directive in [
+        "aws_config::profile::credentials=warn",
+        "aws_credential_types=warn",
+    ] {
+        if let Ok(parsed) = directive.parse() {
+            env_filter = env_filter.add_directive(parsed);
+        }
+    }
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
     let live_text_windows: LiveTextWindows = Arc::new(Mutex::new(std::collections::HashMap::new()));

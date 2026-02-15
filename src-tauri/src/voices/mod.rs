@@ -164,7 +164,7 @@ pub async fn fetch_polly_voices() -> Result<Vec<PollyVoiceInfo>, String> {
         .describe_voices()
         .send()
         .await
-        .map_err(|e| format!("Failed to fetch Polly voices: {}", e))?;
+        .map_err(|_| "Failed to fetch Polly voices".to_string())?;
 
     let aws_voices = response.voices();
     let mut voices: Vec<PollyVoiceInfo> = Vec::new();
