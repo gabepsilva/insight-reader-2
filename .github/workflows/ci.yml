@@ -110,7 +110,11 @@ jobs:
         shell: cmd
     strategy:
       fail-fast: false
-      matrix:
+      matrix:Insight Reader
+      
+      
+      0:00
+      / 0:00
         bundle: [msi, nsis]
     steps:
       - uses: actions/checkout@v4
@@ -174,6 +178,8 @@ jobs:
               "%ProgramFiles%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
               "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
               "%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat"
             ) do (
               if exist "%%~I" set "VSDEVCMD=%%~I"
             )
