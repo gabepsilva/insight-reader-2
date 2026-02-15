@@ -101,3 +101,45 @@ jobs:
       - name: Remove generated bundle outputs
         if: always()
         run: rm -rf src-tauri/target/release/bundle
+
+  build-windows-artifacts:
+    runs-on: [self-hosted, Windows]
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: [msi, nsis]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          profile: minimal
+
+      - name: Cache Rust and Tauri artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-directories: |
+            ~/.cache/tauri
+          cache-on-failure: true
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-bun-modules-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-modules-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build Windows bundle
+        run: bun run tauri build --bundles ${{ matrix.bundle }}
