@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux]
     container:
       image: ubuntu:22.04
       options: --user root
@@ -42,7 +42,7 @@ jobs:
         run: bun run test
 
   build-linux-artifacts:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux]
     needs: test
     container:
       image: ubuntu:24.04
