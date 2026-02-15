@@ -113,9 +113,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cargoBin = Join-Path $env:USERPROFILE '.cargo\bin'
+          $rustupExe = Join-Path $cargoBin 'rustup.exe'
+
+          if (-not (Test-Path $rustupExe)) {
+            $rustupInit = Join-Path $env:TEMP 'rustup-init.exe'
+            Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile $rustupInit
+            & $rustupInit -y --profile minimal --default-toolchain stable
+          }
+
+          $cargoBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & $rustupExe default stable
+          & (Join-Path $cargoBin 'rustc.exe') --version
+          & (Join-Path $cargoBin 'cargo.exe') --version
 
       - name: Cache Rust and Tauri artifacts
         uses: Swatinem/rust-cache@v2
