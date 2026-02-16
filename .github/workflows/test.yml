@@ -11,6 +11,13 @@ jobs:
   test:
     runs-on: [self-hosted, Linux]
     steps:
+      - name: Fix workspace ownership from previous runs
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || \
+              chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Verify system dependencies are preinstalled on runner
