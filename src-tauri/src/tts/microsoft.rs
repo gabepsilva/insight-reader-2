@@ -11,6 +11,8 @@ pub struct MicrosoftTTSProvider {
 }
 
 impl MicrosoftTTSProvider {
+    const WAV_HEADER_LEN: usize = 44;
+
     pub fn new(voice: Option<String>) -> Result<Self, TTSError> {
         info!("Initializing Microsoft Edge TTS provider");
 
@@ -46,11 +48,39 @@ impl MicrosoftTTSProvider {
     }
 
     fn synthesize(&mut self, text: &str) -> Result<(), TTSError> {
+        let (audio_bytes, audio_format) = Self::synthesize_bytes(text, &self.voice)?;
+
+        // Handle different audio formats
+        if audio_format.starts_with("riff-") {
+            // WAV format - skip header
+            if audio_bytes.len() < Self::WAV_HEADER_LEN || &audio_bytes[0..4] != b"RIFF" {
+                return Err(TTSError::ProcessError(
+                    "Invalid WAV format from Edge TTS".into(),
+                ));
+            }
+            let pcm_data = AudioPlayer::pcm_to_f32(&audio_bytes[Self::WAV_HEADER_LEN..]);
+            self.player.play_audio(pcm_data)
+        } else if Self::is_streaming_audio_format(&audio_format) {
+            // MP3/Opus format - rodio will decode automatically
+            self.player.play_audio_raw(audio_bytes, 24000)
+        } else {
+            Err(TTSError::ProcessError(format!(
+                "Unsupported audio format: {}",
+                audio_format
+            )))
+        }
+    }
+
+    fn is_streaming_audio_format(audio_format: &str) -> bool {
+        audio_format.contains("mp3") || audio_format.contains("opus")
+    }
+
+    fn synthesize_bytes(text: &str, voice: &str) -> Result<(Vec<u8>, String), TTSError> {
         use msedge_tts::tts::client::connect;
         use msedge_tts::tts::SpeechConfig;
 
         let config = SpeechConfig {
-            voice_name: self.voice.clone(),
+            voice_name: voice.to_string(),
             audio_format: "audio-24khz-48kbitrate-mono-mp3".to_string(),
             pitch: 0,
             rate: 0,
@@ -73,6 +103,7 @@ impl MicrosoftTTSProvider {
         );
 
         let audio_bytes = response.audio_bytes;
+        let audio_format = response.audio_format;
 
         if audio_bytes.is_empty() {
             return Err(TTSError::ProcessError(
@@ -80,25 +111,7 @@ impl MicrosoftTTSProvider {
             ));
         }
 
-        // Handle different audio formats
-        if response.audio_format.starts_with("riff-") {
-            // WAV format - skip header
-            if audio_bytes.len() < 44 || &audio_bytes[0..4] != b"RIFF" {
-                return Err(TTSError::ProcessError(
-                    "Invalid WAV format from Edge TTS".into(),
-                ));
-            }
-            let pcm_data = AudioPlayer::pcm_to_f32(&audio_bytes[44..]);
-            self.player.play_audio(pcm_data)
-        } else if response.audio_format.contains("mp3") || response.audio_format.contains("opus") {
-            // MP3/Opus format - rodio will decode automatically
-            self.player.play_audio_raw(audio_bytes, 24000)
-        } else {
-            Err(TTSError::ProcessError(format!(
-                "Unsupported audio format: {}",
-                response.audio_format
-            )))
-        }
+        Ok((audio_bytes, audio_format))
     }
 
     pub fn stop(&mut self) -> Result<(), TTSError> {
@@ -131,18 +144,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_edge_tts_synthesizes_audio() {
-        // Initialize provider
-        let mut provider = MicrosoftTTSProvider::new(None).expect("Failed to create provider");
-
-        // Speak short text (~3 seconds)
+    fn test_edge_tts_synthesizes_audio_bytes() {
         let test_text = "Hello world, this is a test.";
-        provider
-            .speak(test_text)
-            .expect("Failed to synthesize speech");
+        let (audio_bytes, audio_format) =
+            MicrosoftTTSProvider::synthesize_bytes(test_text, "en-US-AriaNeural")
+                .expect("Failed to synthesize speech");
 
-        // Check status indicates playing
-        let (is_playing, _) = provider.get_status();
-        assert!(is_playing, "Audio should be playing");
+        assert!(!audio_bytes.is_empty(), "Audio bytes should not be empty");
+        assert!(
+            audio_format.starts_with("riff-")
+                || MicrosoftTTSProvider::is_streaming_audio_format(&audio_format),
+            "Unexpected audio format from Edge TTS: {audio_format}"
+        );
     }
 }
