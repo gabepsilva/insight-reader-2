@@ -277,7 +277,18 @@ jobs:
       - name: Install macOS build dependencies
         run: |
           if ! command -v brew >/dev/null 2>&1; then
-            echo "Homebrew is required on the macOS runner."
+            echo "Homebrew is missing, installing..."
+            NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+            if [ -x /opt/homebrew/bin/brew ]; then
+              eval "$(/opt/homebrew/bin/brew shellenv)"
+            elif [ -x /usr/local/bin/brew ]; then
+              eval "$(/usr/local/bin/brew shellenv)"
+            fi
+          fi
+
+          if ! command -v brew >/dev/null 2>&1; then
+            echo "Failed to install Homebrew on the macOS runner."
             exit 1
           fi
 
