@@ -29,6 +29,7 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           rustup default stable
+          rustup component add rustfmt clippy
           rustc --version
           cargo --version
 
