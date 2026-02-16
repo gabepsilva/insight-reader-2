@@ -23,6 +23,7 @@
     "allow-open-live-text-viewer",
     "allow-get-platform",
     "allow-open-settings-window",
-    "allow-get-config"
+    "allow-get-config",
+    "allow-save-config"
   ]
 }

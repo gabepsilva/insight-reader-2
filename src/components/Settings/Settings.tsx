@@ -42,6 +42,10 @@ interface Config {
   hotkey_enabled: boolean | null;
   hotkey_modifiers: string | null;
   hotkey_key: string | null;
+  ui_volume?: number | null;
+  ui_muted?: boolean | null;
+  ui_theme?: string | null;
+  editor_dark_mode?: boolean | null;
 }
 
 interface HotkeyStatus {

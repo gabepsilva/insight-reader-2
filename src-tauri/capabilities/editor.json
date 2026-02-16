@@ -6,6 +6,8 @@
   "permissions": [
     "core:default",
     "allow-take-editor-initial-text",
+    "allow-get-config",
+    "allow-save-config",
     "allow-tts-speak",
     "allow-tts-pause"
   ]

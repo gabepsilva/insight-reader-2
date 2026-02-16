@@ -497,14 +497,14 @@ fn refresh_global_hotkeys<R: tauri::Runtime>(app: &tauri::AppHandle<R>, state: &
         return;
     }
 
-    if let Err(e) = app.global_shortcut().register(read_shortcut.clone()) {
+    if let Err(e) = app.global_shortcut().register(read_shortcut) {
         let message = format!("Failed to register {}: {}", read_label, e);
         update_hotkey_runtime_on_error(state, message.clone());
         warn!(error = %e, shortcut = %read_label, "Failed to register read shortcut");
         return;
     }
 
-    if let Err(e) = app.global_shortcut().register(pause_shortcut.clone()) {
+    if let Err(e) = app.global_shortcut().register(pause_shortcut) {
         let message = format!("Failed to register {}: {}", pause_label, e);
         update_hotkey_runtime_on_error(state, message.clone());
         warn!(error = %e, shortcut = %pause_label, "Failed to register pause shortcut");

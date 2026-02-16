@@ -21,30 +21,13 @@ interface Config {
   selected_voice: string | null;
   selected_polly_voice: string | null;
   selected_microsoft_voice: string | null;
+  editor_dark_mode?: boolean | null;
 }
 
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
 const FONT_SIZE_STEP = 2;
 const FONT_SIZE_DEFAULT = 14;
-const STORAGE_KEY = "insight-editor-dark-mode";
-
-function loadDarkMode(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function saveDarkMode(value: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
-  } catch {
-    // ignore
-  }
-}
-
 const POPUP_CORNER_OFFSET = 3;
 const POPUP_EDGE_MARGIN = 12;
 const POPUP_MAX_WIDTH = 360;
@@ -115,11 +98,20 @@ export default function EditorPage() {
   const dismissedLintKeysRef = useRef<Set<string>>(new Set());
   const scheduleLintRef = useRef<((immediate?: boolean) => void) | null>(null);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
-  const [darkMode, setDarkMode] = useState(loadDarkMode);
+  const [darkMode, setDarkMode] = useState(false);
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
   const textRef = useRef(text);
   const [config, setConfig] = useState<Config | null>(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const hasHydratedUiPrefsRef = useRef(false);
+
+  const applyConfigToUiState = useCallback((cfg: Config) => {
+    setConfig(cfg);
+    if (cfg.editor_dark_mode != null) {
+      setDarkMode(cfg.editor_dark_mode);
+    }
+  }, []);
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -133,25 +125,23 @@ export default function EditorPage() {
   }, []);
 
   useEffect(() => {
-    saveDarkMode(darkMode);
-  }, [darkMode]);
-
-  useEffect(() => {
     (async () => {
       try {
         const cfg = await invoke<Config>("get_config");
-        setConfig(cfg);
+        applyConfigToUiState(cfg);
       } catch (e) {
         console.warn("[EditorPage] get_config failed:", e);
+      } finally {
+        setConfigLoaded(true);
       }
     })();
-  }, []);
+  }, [applyConfigToUiState]);
 
   useEffect(() => {
     const unlisten = listen("config-changed", async () => {
       try {
         const cfg = await invoke<Config>("get_config");
-        setConfig(cfg);
+        applyConfigToUiState(cfg);
       } catch (e) {
         console.warn("[EditorPage] config-changed get_config failed:", e);
       }
@@ -162,7 +152,42 @@ export default function EditorPage() {
         () => {},
       );
     };
-  }, []);
+  }, [applyConfigToUiState]);
+
+  useEffect(() => {
+    if (!configLoaded) return;
+
+    if (!hasHydratedUiPrefsRef.current) {
+      hasHydratedUiPrefsRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const latestConfig = await invoke<Config>("get_config");
+        if (cancelled) {
+          return;
+        }
+
+        if ((latestConfig.editor_dark_mode ?? false) === darkMode) {
+          return;
+        }
+
+        const nextConfig: Config = { ...latestConfig, editor_dark_mode: darkMode };
+        setConfig(nextConfig);
+        await invoke("save_config", { configJson: JSON.stringify(nextConfig) });
+      } catch (e) {
+        if (!cancelled) {
+          console.warn("[EditorPage] save_config failed:", e);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configLoaded, darkMode]);
 
   useEffect(
     () => () => {

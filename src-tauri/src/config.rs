@@ -39,6 +39,14 @@ struct RawConfig {
     hotkey_modifiers: Option<String>,
     #[serde(default)]
     hotkey_key: Option<String>,
+    #[serde(default)]
+    ui_volume: Option<u8>,
+    #[serde(default)]
+    ui_muted: Option<bool>,
+    #[serde(default)]
+    ui_theme: Option<String>,
+    #[serde(default)]
+    editor_dark_mode: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,6 +60,10 @@ pub struct FullConfig {
     pub hotkey_enabled: Option<bool>,
     pub hotkey_modifiers: Option<String>,
     pub hotkey_key: Option<String>,
+    pub ui_volume: Option<u8>,
+    pub ui_muted: Option<bool>,
+    pub ui_theme: Option<String>,
+    pub editor_dark_mode: Option<bool>,
 }
 
 impl From<RawConfig> for FullConfig {
@@ -66,6 +78,10 @@ impl From<RawConfig> for FullConfig {
             hotkey_enabled: raw.hotkey_enabled,
             hotkey_modifiers: raw.hotkey_modifiers,
             hotkey_key: raw.hotkey_key,
+            ui_volume: raw.ui_volume,
+            ui_muted: raw.ui_muted,
+            ui_theme: raw.ui_theme,
+            editor_dark_mode: raw.editor_dark_mode,
         }
     }
 }
@@ -82,6 +98,10 @@ impl From<FullConfig> for RawConfig {
             hotkey_enabled: json.hotkey_enabled,
             hotkey_modifiers: json.hotkey_modifiers,
             hotkey_key: json.hotkey_key,
+            ui_volume: json.ui_volume,
+            ui_muted: json.ui_muted,
+            ui_theme: json.ui_theme,
+            editor_dark_mode: json.editor_dark_mode,
         }
     }
 }

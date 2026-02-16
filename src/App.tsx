@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -16,14 +16,17 @@ import {
 import "./App.css";
 
 const DEFAULT_VOLUME = 80;
-const VOLUME_STORAGE_KEY = "insight-reader-ui-volume";
-const MUTE_STORAGE_KEY = "insight-reader-ui-muted";
+
+type ThemeMode = "dark" | "light";
 
 interface Config {
   voice_provider: string | null;
   selected_voice: string | null;
   selected_polly_voice: string | null;
   selected_microsoft_voice: string | null;
+  ui_volume?: number | null;
+  ui_muted?: boolean | null;
+  ui_theme?: string | null;
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -64,17 +67,29 @@ function clampVolume(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-function parseStoredVolume(value: string | null): number | null {
+function parseConfigVolume(value: number | null | undefined): number | null {
   if (value == null) return null;
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed)) return null;
-  return clampVolume(parsed);
+  if (!Number.isFinite(value)) return null;
+  return clampVolume(Math.round(value));
+}
+
+function parseThemeMode(value: string | null | undefined): ThemeMode | null {
+  if (value === "dark" || value === "light") return value;
+  return null;
 }
 
 function getRestoredVolume(currentVolume: number, previousVolume: number): number {
   if (currentVolume > 0) return currentVolume;
   if (previousVolume > 0) return previousVolume;
   return DEFAULT_VOLUME;
+}
+
+function hasMatchingUiPrefs(left: Config, right: Config): boolean {
+  return (
+    (left.ui_volume ?? null) === (right.ui_volume ?? null) &&
+    (left.ui_muted ?? null) === (right.ui_muted ?? null) &&
+    (left.ui_theme ?? null) === (right.ui_theme ?? null)
+  );
 }
 
 function App() {
@@ -86,14 +101,50 @@ function App() {
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const [isMuted, setIsMuted] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const isSpeedControlEnabled = false;
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const previousVolumeRef = useRef(DEFAULT_VOLUME);
+  const hasHydratedUiPrefsRef = useRef(false);
+  const hasPendingUiPrefChangeRef = useRef(false);
 
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const applyUiPrefsFromConfig = useCallback((cfg: Config) => {
+    const configVolume = parseConfigVolume(cfg.ui_volume);
+    if (configVolume != null) {
+      setVolume(configVolume);
+      if (configVolume > 0) {
+        previousVolumeRef.current = configVolume;
+      }
+    }
+
+    if (cfg.ui_muted != null) {
+      setIsMuted(cfg.ui_muted);
+    }
+
+    const parsedTheme = parseThemeMode(cfg.ui_theme);
+    if (parsedTheme != null) {
+      setThemeMode(parsedTheme);
+    }
+
+    return { configVolume, parsedTheme };
+  }, []);
+
+  const applyCurrentUiPrefsToConfig = useCallback(
+    (baseConfig: Config): Config => ({
+      ...baseConfig,
+      ui_volume: clampVolume(volume),
+      ui_muted: isMuted,
+      ui_theme: themeMode,
+    }),
+    [isMuted, themeMode, volume],
+  );
 
   const handleTooltipLeave = () => {
     tooltipTimeoutRef.current = setTimeout(() => {
@@ -115,35 +166,6 @@ function App() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    try {
-      const storedVolume = parseStoredVolume(window.localStorage.getItem(VOLUME_STORAGE_KEY));
-      const storedMuted = window.localStorage.getItem(MUTE_STORAGE_KEY);
-
-      if (storedVolume != null) {
-        setVolume(storedVolume);
-        if (storedVolume > 0) {
-          previousVolumeRef.current = storedVolume;
-        }
-      }
-
-      if (storedMuted != null) {
-        setIsMuted(storedMuted === "true");
-      }
-    } catch {
-      // Ignore localStorage availability errors.
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(volume));
-      window.localStorage.setItem(MUTE_STORAGE_KEY, String(isMuted));
-    } catch {
-      // Ignore localStorage availability errors.
-    }
-  }, [volume, isMuted]);
 
   useEffect(() => {
     if (typeof console === "undefined") return;
@@ -173,18 +195,39 @@ function App() {
     void (async () => {
       try {
         const cfg = await invoke<Config>("get_config");
-        setConfig(cfg);
+        const { configVolume, parsedTheme } = applyUiPrefsFromConfig(cfg);
+
+        const normalizedConfig: Config = {
+          ...cfg,
+          ui_volume: configVolume ?? DEFAULT_VOLUME,
+          ui_muted: cfg.ui_muted ?? false,
+          ui_theme: parsedTheme ?? "dark",
+        };
+
+        setConfig(normalizedConfig);
+
+        const shouldBackfillUiPrefs =
+          cfg.ui_volume == null ||
+          cfg.ui_muted == null ||
+          parsedTheme == null;
+
+        if (shouldBackfillUiPrefs) {
+          await invoke("save_config", { configJson: JSON.stringify(normalizedConfig) });
+        }
       } catch (e) {
         console.warn("[App] get_config failed:", e);
+      } finally {
+        setConfigLoaded(true);
       }
     })();
-  }, []);
+  }, [applyUiPrefsFromConfig]);
 
   useEffect(() => {
     const unlisten = listen("config-changed", async () => {
       try {
         const cfg = await invoke<Config>("get_config");
         setConfig(cfg);
+        applyUiPrefsFromConfig(cfg);
       } catch (e) {
         console.warn("[App] config-changed get_config failed:", e);
       }
@@ -193,7 +236,47 @@ function App() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [applyUiPrefsFromConfig]);
+
+  useEffect(() => {
+    if (!configLoaded) return;
+
+    if (!hasHydratedUiPrefsRef.current) {
+      hasHydratedUiPrefsRef.current = true;
+      if (!hasPendingUiPrefChangeRef.current) {
+        return;
+      }
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const latestConfig = await invoke<Config>("get_config");
+        const nextConfig = applyCurrentUiPrefsToConfig(latestConfig);
+
+        const unchanged = hasMatchingUiPrefs(latestConfig, nextConfig);
+
+        if (unchanged) {
+          hasPendingUiPrefChangeRef.current = false;
+          return;
+        }
+
+        if (!cancelled) {
+          setConfig(nextConfig);
+        }
+        await invoke("save_config", { configJson: JSON.stringify(nextConfig) });
+        hasPendingUiPrefChangeRef.current = false;
+      } catch (e) {
+        if (!cancelled) {
+          console.warn("[App] save_config failed:", e);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyCurrentUiPrefsToConfig, configLoaded]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -295,6 +378,8 @@ function App() {
   }, [effectiveVolume]);
 
   const handleMuteToggle = () => {
+    hasPendingUiPrefChangeRef.current = true;
+
     if (isMuted) {
       const restored = getRestoredVolume(volume, previousVolumeRef.current);
       setVolume(restored);
@@ -311,6 +396,8 @@ function App() {
   const handleVolumeChange = (rawValue: string) => {
     const nextValue = Number.parseInt(rawValue, 10);
     if (Number.isNaN(nextValue)) return;
+
+    hasPendingUiPrefChangeRef.current = true;
 
     const clamped = clampVolume(nextValue);
     setVolume(clamped);
@@ -339,6 +426,19 @@ function App() {
   };
 
   const handleClose = async () => {
+    try {
+      const latestConfig = await invoke<Config>("get_config");
+      const nextConfig = applyCurrentUiPrefsToConfig(latestConfig);
+      const unchanged = hasMatchingUiPrefs(latestConfig, nextConfig);
+
+      if (!unchanged) {
+        await invoke("save_config", { configJson: JSON.stringify(nextConfig) });
+        hasPendingUiPrefChangeRef.current = false;
+      }
+    } catch (e) {
+      console.warn("[App] pre-close save_config failed:", e);
+    }
+
     const appWindow = getCurrentWindow();
     await appWindow.close();
   };
@@ -347,8 +447,13 @@ function App() {
     void invoke("open_settings_window");
   };
 
+  const handleThemeToggle = () => {
+    hasPendingUiPrefChangeRef.current = true;
+    setThemeMode((current) => (current === "dark" ? "light" : "dark"));
+  };
+
   return (
-    <main className="main-shell" onMouseDown={handleMouseDown}>
+    <main className={`main-shell main-shell--${themeMode}`} onMouseDown={handleMouseDown}>
       <section className="player-card">
         <header className="card-header">
           <div className="title-wrap">
@@ -362,6 +467,30 @@ function App() {
           </div>
 
           <div className="header-actions">
+            <button
+              className="window-btn"
+              onClick={handleThemeToggle}
+              aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {themeMode === "dark" ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2" />
+                  <path d="M12 20v2" />
+                  <path d="m4.93 4.93 1.41 1.41" />
+                  <path d="m17.66 17.66 1.41 1.41" />
+                  <path d="M2 12h2" />
+                  <path d="M20 12h2" />
+                  <path d="m6.34 17.66-1.41 1.41" />
+                  <path d="m19.07 4.93-1.41 1.41" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3a7 7 0 1 0 9 9 9 9 0 1 1-9-9z" />
+                </svg>
+              )}
+            </button>
             <button className="window-btn" onClick={handleOpenSettings} aria-label="Open settings">
               <SettingsIcon size={14} />
             </button>
@@ -422,21 +551,32 @@ function App() {
               <StopIcon size={16} />
             </button>
 
-            <div className="speed-wrap" data-no-drag="true">
-              <button className="speed-btn" aria-label="Playback speed">
+            <div
+              className={`speed-wrap${!isSpeedControlEnabled ? " speed-wrap--disabled" : ""}`}
+              data-no-drag="true"
+              data-tooltip={!isSpeedControlEnabled ? "Coming soon" : undefined}
+            >
+              <button
+                className="speed-btn"
+                aria-label="Playback speed"
+                disabled={!isSpeedControlEnabled}
+                title={isSpeedControlEnabled ? "Playback speed" : undefined}
+              >
                 {playbackSpeed}x
               </button>
-              <div className="speed-menu">
-                {speeds.map((speed) => (
-                  <button
-                    key={speed}
-                    className={playbackSpeed === speed ? "speed-item active" : "speed-item"}
-                    onClick={() => setPlaybackSpeed(speed)}
-                  >
-                    {speed}x
-                  </button>
-                ))}
-              </div>
+              {isSpeedControlEnabled && (
+                <div className="speed-menu">
+                  {speeds.map((speed) => (
+                    <button
+                      key={speed}
+                      className={playbackSpeed === speed ? "speed-item active" : "speed-item"}
+                      onClick={() => setPlaybackSpeed(speed)}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -470,7 +610,7 @@ function App() {
                 onChange={(e) => handleVolumeChange(e.target.value)}
                 aria-valuetext={`${effectiveVolume}%`}
                 style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${effectiveVolume}%, #374151 ${effectiveVolume}%, #374151 100%)`,
+                  background: `linear-gradient(to right, var(--volume-fill-color) 0%, var(--volume-fill-color) ${effectiveVolume}%, var(--volume-track-color) ${effectiveVolume}%, var(--volume-track-color) 100%)`,
                 }}
               />
             </div>
