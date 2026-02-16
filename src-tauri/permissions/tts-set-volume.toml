@@ -1,0 +1,6 @@
+# Permission to invoke tts_set_volume (adjust active TTS playback volume)
+
+[[permission]]
+identifier = "allow-tts-set-volume"
+description = "Allows windows to adjust TTS playback volume"
+commands.allow = ["tts_set_volume"]

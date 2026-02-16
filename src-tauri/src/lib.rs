@@ -848,6 +848,20 @@ fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
         .map_err(|_| "TTS worker disconnected".to_string())
 }
 
+/// Sets TTS playback volume as percentage from 0 to 100.
+#[tauri::command]
+fn tts_set_volume(state: State<tts::TtsState>, volume_percent: u8) -> Result<(), String> {
+    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+    state
+        .inner()
+        .send(tts::TtsRequest::SetVolume(volume_percent, resp_tx))
+        .map_err(|e| format!("TTS channel: {e}"))?;
+    resp_rx
+        .recv()
+        .map_err(|_| "TTS worker disconnected".to_string())?
+        .map_err(|e| e.to_string())
+}
+
 /// Switches the TTS provider. provider should be "piper" or "microsoft".
 #[tauri::command]
 fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<(), String> {
@@ -1255,6 +1269,7 @@ pub fn run() {
             tts_get_status,
             tts_seek,
             tts_get_position,
+            tts_set_volume,
             tts_switch_provider,
             capture_screenshot_and_ocr,
             open_live_text_viewer,

@@ -120,6 +120,10 @@ impl MicrosoftTTSProvider {
     pub fn get_position(&self) -> (u64, u64) {
         self.player.get_position()
     }
+
+    pub fn set_volume(&mut self, volume_percent: u8) {
+        self.player.set_volume_percent(volume_percent);
+    }
 }
 
 #[cfg(test)]

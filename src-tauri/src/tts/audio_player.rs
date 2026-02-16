@@ -14,6 +14,7 @@ pub struct AudioPlayer {
     _stream: Option<OutputStream>,
     stream_handle: Option<OutputStreamHandle>,
     sink: Option<Sink>,
+    volume: f32,
     /// Current audio buffer (used by start_playback)
     audio_data: Vec<f32>,
     /// Total duration in milliseconds (for raw audio)
@@ -34,6 +35,7 @@ impl AudioPlayer {
             _stream: Some(stream),
             stream_handle: Some(stream_handle),
             sink: None,
+            volume: 1.0,
             audio_data: Vec::new(),
             total_duration_ms: 0,
         })
@@ -103,6 +105,7 @@ impl AudioPlayer {
             TTSError::AudioError(format!("Failed to create audio sink: {}", e))
         })?;
 
+        sink.set_volume(self.volume);
         sink.append(source);
         self.sink = Some(sink);
         self.total_duration_ms = total_duration_ms;
@@ -145,6 +148,15 @@ impl AudioPlayer {
             }
         } else {
             Ok(false)
+        }
+    }
+
+    /// Set playback volume as percentage [0..=100].
+    pub fn set_volume_percent(&mut self, volume_percent: u8) {
+        let normalized = (volume_percent as f32 / 100.0).clamp(0.0, 1.0);
+        self.volume = normalized;
+        if let Some(sink) = &self.sink {
+            sink.set_volume(normalized);
         }
     }
 
@@ -298,6 +310,7 @@ impl AudioPlayer {
             TTSError::AudioError(format!("Failed to create audio sink: {e}"))
         })?;
 
+        sink.set_volume(self.volume);
         sink.append(source);
         self.sink = Some(sink);
         Ok(())

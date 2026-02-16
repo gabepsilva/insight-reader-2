@@ -41,6 +41,7 @@ pub enum TtsRequest {
     GetStatus(mpsc::SyncSender<(bool, bool)>),
     Seek(i64, mpsc::SyncSender<Result<(bool, bool, bool), TTSError>>),
     GetPosition(mpsc::SyncSender<(u64, u64)>),
+    SetVolume(u8, mpsc::SyncSender<Result<(), TTSError>>),
     SwitchProvider(TtsProvider, mpsc::SyncSender<Result<(), TTSError>>),
     Shutdown,
 }
@@ -171,6 +172,14 @@ impl TtsProviderImpl {
             Self::Polly(p) => p.get_position(),
         }
     }
+
+    fn set_volume(&mut self, volume_percent: u8) {
+        match self {
+            Self::Piper(p) => p.set_volume(volume_percent),
+            Self::Microsoft(p) => p.set_volume(volume_percent),
+            Self::Polly(p) => p.set_volume(volume_percent),
+        }
+    }
 }
 
 /// Spawn the TTS worker and return the channel sender to manage.
@@ -181,6 +190,7 @@ pub fn create_tts_state() -> TtsState {
 
     std::thread::spawn(move || {
         tracing::info!(provider = ?default_provider, "Initializing TTS worker");
+        let mut current_volume_percent: u8 = 100;
         let mut provider = match TtsProviderImpl::new(default_provider, &config_snapshot) {
             Ok(p) => {
                 tracing::info!("TTS worker initialized successfully");
@@ -211,6 +221,11 @@ pub fn create_tts_state() -> TtsState {
                         }
                         Ok(TtsRequest::GetPosition(resp)) => {
                             let _ = resp.send((0, 0));
+                        }
+                        Ok(TtsRequest::SetVolume(_, resp)) => {
+                            let _ = resp.send(Err(TTSError::ProcessError(
+                                "TTS not available: provider could not be initialized.".into(),
+                            )));
                         }
                         Ok(TtsRequest::SwitchProvider(_, resp)) => {
                             let _ = resp.send(Err(TTSError::ProcessError(
@@ -257,7 +272,8 @@ pub fn create_tts_state() -> TtsState {
                             "TTS config changed, reloading provider"
                         );
                         match TtsProviderImpl::new(current_provider, &new_config) {
-                            Ok(new_provider) => {
+                            Ok(mut new_provider) => {
+                                new_provider.set_volume(current_volume_percent);
                                 provider = new_provider;
                                 config_snapshot = new_config;
                             }
@@ -288,11 +304,17 @@ pub fn create_tts_state() -> TtsState {
                 TtsRequest::GetPosition(resp) => {
                     let _ = resp.send(provider.get_position());
                 }
+                TtsRequest::SetVolume(volume_percent, resp) => {
+                    current_volume_percent = volume_percent;
+                    provider.set_volume(volume_percent);
+                    let _ = resp.send(Ok(()));
+                }
                 TtsRequest::SwitchProvider(new_provider, resp) => {
                     let _ = provider.stop();
                     let new_config = load_tts_config();
                     match TtsProviderImpl::new(new_provider, &new_config) {
-                        Ok(new_provider) => {
+                        Ok(mut new_provider) => {
+                            new_provider.set_volume(current_volume_percent);
                             provider = new_provider;
                             config_snapshot = new_config;
                             let _ = resp.send(Ok(()));

@@ -388,17 +388,18 @@ body,
 }
 
 .action-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .action-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   height: 40px;
+  padding: 0 10px;
   border: none;
   border-radius: 12px;
   background: rgba(51, 65, 85, 0.55);
@@ -408,13 +409,77 @@ body,
 }
 
 .action-btn span {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .action-btn:hover {
   background: rgba(71, 85, 105, 0.9);
   color: #f8fafc;
+}
+
+.disabled-action-wrap {
+  position: relative;
+}
+
+.disabled-action-wrap .action-btn {
+  width: 100%;
+}
+
+.disabled-action-wrap::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.disabled-action-wrap:hover::after {
+  opacity: 1;
+}
+
+.action-btn:disabled {
+  background: rgba(51, 65, 85, 0.35);
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+  background: rgba(51, 65, 85, 0.35);
+  color: #94a3b8;
+}
+
+.quick-replay-btn {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: 0;
+  padding: 0 8px;
+}
+
+.quick-replay-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-replay-label {
+  display: block;
+  text-align: left;
+  line-height: 1.05;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: normal;
 }
 
 .status-bar {

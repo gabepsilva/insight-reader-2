@@ -17,6 +17,7 @@
     "allow-tts-speak",
     "allow-tts-stop",
     "allow-tts-pause",
+    "allow-tts-set-volume",
     "allow-tts-switch-provider",
     "allow-capture-screenshot-and-ocr",
     "allow-open-live-text-viewer",

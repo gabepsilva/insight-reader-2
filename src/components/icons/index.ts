@@ -6,5 +6,7 @@ export { SettingsIcon } from "./SettingsIcon";
 export { CameraIcon } from "./CameraIcon";
 export { ClipboardIcon } from "./ClipboardIcon";
 export { PencilIcon } from "./PencilIcon";
+export { SummaryIcon } from "./SummaryIcon";
+export { QuickReplayIcon } from "./QuickReplayIcon";
 export { MinimizeIcon } from "./MinimizeIcon";
 export { CloseIcon } from "./CloseIcon";

@@ -8,10 +8,16 @@ import {
   PauseIcon,
   PencilIcon,
   PlayIcon,
+  QuickReplayIcon,
   SettingsIcon,
   StopIcon,
+  SummaryIcon,
 } from "./components/icons";
 import "./App.css";
+
+const DEFAULT_VOLUME = 80;
+const VOLUME_STORAGE_KEY = "insight-reader-ui-volume";
+const MUTE_STORAGE_KEY = "insight-reader-ui-muted";
 
 interface Config {
   voice_provider: string | null;
@@ -54,6 +60,23 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function clampVolume(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+function parseStoredVolume(value: string | null): number | null {
+  if (value == null) return null;
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return null;
+  return clampVolume(parsed);
+}
+
+function getRestoredVolume(currentVolume: number, previousVolume: number): number {
+  if (currentVolume > 0) return currentVolume;
+  if (previousVolume > 0) return previousVolume;
+  return DEFAULT_VOLUME;
+}
+
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -64,10 +87,11 @@ function App() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
 
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const previousVolumeRef = useRef(DEFAULT_VOLUME);
 
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,6 +115,35 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const storedVolume = parseStoredVolume(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+      const storedMuted = window.localStorage.getItem(MUTE_STORAGE_KEY);
+
+      if (storedVolume != null) {
+        setVolume(storedVolume);
+        if (storedVolume > 0) {
+          previousVolumeRef.current = storedVolume;
+        }
+      }
+
+      if (storedMuted != null) {
+        setIsMuted(storedMuted === "true");
+      }
+    } catch {
+      // Ignore localStorage availability errors.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(volume));
+      window.localStorage.setItem(MUTE_STORAGE_KEY, String(isMuted));
+    } catch {
+      // Ignore localStorage availability errors.
+    }
+  }, [volume, isMuted]);
 
   useEffect(() => {
     if (typeof console === "undefined") return;
@@ -227,6 +280,52 @@ function App() {
   const handleBackward = () => handleSeek(-5000, isPaused || currentTimeMs < 5000);
   const handleForward = () => handleSeek(5000, isPaused || atEnd);
 
+  const effectiveVolume = isMuted ? 0 : volume;
+
+  const syncVolumeWithBackend = async (volumePercent: number) => {
+    try {
+      await invoke("tts_set_volume", { volumePercent });
+    } catch (e) {
+      console.warn("tts_set_volume failed:", e);
+    }
+  };
+
+  useEffect(() => {
+    void syncVolumeWithBackend(effectiveVolume);
+  }, [effectiveVolume]);
+
+  const handleMuteToggle = () => {
+    if (isMuted) {
+      const restored = getRestoredVolume(volume, previousVolumeRef.current);
+      setVolume(restored);
+      setIsMuted(false);
+      return;
+    }
+
+    if (volume > 0) {
+      previousVolumeRef.current = volume;
+    }
+    setIsMuted(true);
+  };
+
+  const handleVolumeChange = (rawValue: string) => {
+    const nextValue = Number.parseInt(rawValue, 10);
+    if (Number.isNaN(nextValue)) return;
+
+    const clamped = clampVolume(nextValue);
+    setVolume(clamped);
+
+    if (clamped === 0) {
+      setIsMuted(true);
+      return;
+    }
+
+    previousVolumeRef.current = clamped;
+    if (isMuted) {
+      setIsMuted(false);
+    }
+  };
+
   const handleMouseDown = async (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest("button, input, [data-no-drag='true']")) return;
@@ -244,6 +343,10 @@ function App() {
     await appWindow.close();
   };
 
+  const handleOpenSettings = () => {
+    void invoke("open_settings_window");
+  };
+
   return (
     <main className="main-shell" onMouseDown={handleMouseDown}>
       <section className="player-card">
@@ -259,6 +362,9 @@ function App() {
           </div>
 
           <div className="header-actions">
+            <button className="window-btn" onClick={handleOpenSettings} aria-label="Open settings">
+              <SettingsIcon size={14} />
+            </button>
             <button className="window-btn" onClick={handleMinimize} aria-label="Minimize window">
               <MinimizeIcon size={14} />
             </button>
@@ -337,7 +443,7 @@ function App() {
           <div className="volume-row">
             <button
               className="volume-toggle"
-              onClick={() => setIsMuted((prev) => !prev)}
+              onClick={handleMuteToggle}
               aria-label={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? (
@@ -360,18 +466,16 @@ function App() {
                 type="range"
                 min="0"
                 max="100"
-                value={isMuted ? 0 : volume}
-                onChange={(e) => {
-                  setVolume(Number.parseInt(e.target.value, 10));
-                  if (isMuted) setIsMuted(false);
-                }}
+                value={effectiveVolume}
+                onChange={(e) => handleVolumeChange(e.target.value)}
+                aria-valuetext={`${effectiveVolume}%`}
                 style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${isMuted ? 0 : volume}%, #374151 ${isMuted ? 0 : volume}%, #374151 100%)`,
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${effectiveVolume}%, #374151 ${effectiveVolume}%, #374151 100%)`,
                 }}
               />
             </div>
 
-            <span className="volume-value">{isMuted ? 0 : volume}</span>
+            <span className="volume-value">{effectiveVolume}</span>
           </div>
 
           <div className="action-row">
@@ -387,16 +491,25 @@ function App() {
               <span>Edit</span>
             </button>
 
-            <button
-              className="action-btn"
-              onClick={() => {
-                void invoke("open_settings_window");
-              }}
-              aria-label="Open settings"
-            >
-              <SettingsIcon size={15} />
-              <span>Settings</span>
-            </button>
+            <div className="disabled-action-wrap" data-tooltip="Coming soon">
+              <button className="action-btn" aria-label="Open summary" disabled>
+                <SummaryIcon size={15} />
+                <span>Summary</span>
+              </button>
+            </div>
+
+            <div className="disabled-action-wrap" data-tooltip="Coming soon">
+              <button className="action-btn quick-replay-btn" aria-label="Quick replay" disabled>
+                <span className="quick-replay-icon-wrap" aria-hidden="true">
+                  <QuickReplayIcon size={14} />
+                </span>
+                <span className="quick-replay-label">
+                  Quick
+                  <br />
+                  Replay
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
