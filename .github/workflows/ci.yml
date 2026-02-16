@@ -274,6 +274,22 @@ jobs:
 
           xcrun --find clang
 
+      - name: Install macOS build dependencies
+        run: |
+          if ! command -v brew >/dev/null 2>&1; then
+            echo "Homebrew is required on the macOS runner."
+            exit 1
+          fi
+
+          brew install pkgconf openssl@3
+
+          OPENSSL_PREFIX=$(brew --prefix openssl@3)
+          echo "$OPENSSL_PREFIX/bin" >> "$GITHUB_PATH"
+          echo "OPENSSL_DIR=$OPENSSL_PREFIX" >> "$GITHUB_ENV"
+          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PREFIX/include" >> "$GITHUB_ENV"
+          echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX/lib" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$OPENSSL_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
+
       - name: Install Rust
         run: |
           if ! command -v rustup >/dev/null 2>&1; then
