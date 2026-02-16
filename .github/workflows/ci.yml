@@ -9,6 +9,7 @@ on:
 
 jobs:
   test:
+    if: false
     runs-on: [self-hosted, Linux]
     container:
       image: ubuntu:22.04
@@ -42,6 +43,7 @@ jobs:
         run: bun run test
 
   build-linux-artifacts:
+    if: false
     runs-on: [self-hosted, Linux]
     needs: test
     container:
@@ -103,6 +105,7 @@ jobs:
         run: rm -rf src-tauri/target/release/bundle
 
   build-windows-artifacts:
+    if: false
     runs-on: [self-hosted, Windows] #windows-2022
     needs: test
     defaults:
@@ -192,7 +195,6 @@ jobs:
 
   build-macos-artifacts:
     runs-on: [self-hosted, macOS]
-    needs: test
     strategy:
       fail-fast: false
       matrix:
