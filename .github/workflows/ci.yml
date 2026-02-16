@@ -2,56 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, "**"]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
   test:
-    if: false
     runs-on: [self-hosted, Linux]
     container:
       image: ubuntu:22.04
       options: --user root
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure macOS developer tools
-        run: |
-          if ! xcode-select -p >/dev/null 2>&1; then
-            echo "Xcode Command Line Tools are missing, attempting installation..."
-            touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-            TOOL_LABEL=$(softwareupdate --list 2>/dev/null | grep -E "\* Label: .*Command Line Tools" | tail -n1 | cut -d: -f2- | xargs)
-            rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-
-            if [ -n "$TOOL_LABEL" ]; then
-              sudo softwareupdate --install "$TOOL_LABEL" --verbose
-              if [ -d "/Library/Developer/CommandLineTools" ]; then
-                sudo xcode-select --switch /Library/Developer/CommandLineTools
-              fi
-            fi
-          fi
-
-          if xcode-select -p >/dev/null 2>&1; then
-            echo "Using developer directory: $(xcode-select -p)"
-          elif [ -d "/Applications/Xcode.app/Contents/Developer" ]; then
-            echo "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer" >> "$GITHUB_ENV"
-            echo "/Applications/Xcode.app/Contents/Developer/usr/bin" >> "$GITHUB_PATH"
-            export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-            echo "Using developer directory: $DEVELOPER_DIR"
-          elif [ -d "/Library/Developer/CommandLineTools" ]; then
-            echo "DEVELOPER_DIR=/Library/Developer/CommandLineTools" >> "$GITHUB_ENV"
-            echo "/Library/Developer/CommandLineTools/usr/bin" >> "$GITHUB_PATH"
-            export DEVELOPER_DIR=/Library/Developer/CommandLineTools
-            echo "Using developer directory: $DEVELOPER_DIR"
-          else
-            echo "Xcode Command Line Tools are not installed on this runner."
-            echo "Install CLT with: sudo xcode-select --install"
-            exit 1
-          fi
-
-          xcrun --find clang
 
       - name: Install dependencies
         run: apt-get update && apt-get install -y curl unzip
@@ -79,7 +40,6 @@ jobs:
         run: bun run test
 
   build-linux-artifacts:
-    if: false
     runs-on: [self-hosted, Linux]
     needs: test
     container:
@@ -141,8 +101,7 @@ jobs:
         run: rm -rf src-tauri/target/release/bundle
 
   build-windows-artifacts:
-    if: false
-    runs-on: [self-hosted, Windows] #windows-2022
+    runs-on: [self-hosted, Windows]
     needs: test
     defaults:
       run:
@@ -231,6 +190,7 @@ jobs:
 
   build-macos-artifacts:
     runs-on: [self-hosted, macOS]
+    needs: test
     strategy:
       fail-fast: false
       matrix:
