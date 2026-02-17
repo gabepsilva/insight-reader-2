@@ -10,9 +10,6 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Linux]
-    container:
-      image: ubuntu:22.04
-      options: --user root
     steps:
       - uses: actions/checkout@v4
         with:
