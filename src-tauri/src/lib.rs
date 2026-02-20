@@ -1009,6 +1009,69 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Default backend base URL for ReadingService.
+const BACKEND_BASE_URL: &str = "http://grars-backend.i.psilva.org:8080";
+
+/// Calls the ReadingService backend POST /api/prompt. Returns the response string on success.
+/// See backend-api.md for task semantics (SUMMARIZE, TTS, EXPLAIN1, EXPLAIN2, PROMPT).
+/// Backend URL: config.backend_url > INSIGHT_READER_BACKEND_URL env > localhost:8080.
+#[tauri::command]
+fn backend_prompt(task: String, content: String) -> Result<String, String> {
+    let base = config::load_full_config()
+        .ok()
+        .and_then(|c| c.backend_url)
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| std::env::var("INSIGHT_READER_BACKEND_URL").ok())
+        .unwrap_or_else(|| BACKEND_BASE_URL.to_string());
+    let url = format!("{}/api/prompt", base.trim_end_matches('/'));
+
+    #[derive(serde::Serialize)]
+    struct Request {
+        task: String,
+        content: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct SuccessResponse {
+        response: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        error: Option<String>,
+    }
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| format!("HTTP client: {}", e))?;
+
+    let resp = client
+        .post(&url)
+        .json(&Request { task, content })
+        .send()
+        .map_err(|e| {
+            format!(
+                "Could not reach the backend at {}. Check Settings → General → Backend URL. \
+                 Ensure the server is running and reachable. ({})",
+                base, e
+            )
+        })?;
+
+    let status = resp.status();
+    let body = resp.text().map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if status.is_success() {
+        let parsed: SuccessResponse =
+            serde_json::from_str(&body).map_err(|e| format!("Invalid response: {}", e))?;
+        Ok(parsed.response)
+    } else {
+        let err_msg = serde_json::from_str::<ErrorResponse>(&body)
+            .ok()
+            .and_then(|r| r.error)
+            .unwrap_or_else(|| format!("HTTP {}: {}", status, body));
+        Err(err_msg)
+    }
+}
+
 #[tauri::command]
 fn check_polly_credentials() -> Result<bool, String> {
     match tts::check_polly_credentials() {
@@ -1024,13 +1087,15 @@ fn log_selected_text(result: &Option<String>) {
     }
 }
 
-/// Builds the tray menu with Read Selected, Insight Editor, Show/Hide, and Quit.
+/// Builds the tray menu with Read Selected, Summarize Selected, Insight Editor, Show/Hide, and Quit.
 fn build_tray_menu<R: tauri::Runtime>(
     app: &impl tauri::Manager<R>,
     toggle_label: &str,
 ) -> Result<Menu<R>, tauri::Error> {
     let read_selected =
         MenuItem::with_id(app, "read_selected", "Read Selected", true, None::<&str>)?;
+    let summarize_selected =
+        MenuItem::with_id(app, "summarize_selected", "Summarize Selected", true, None::<&str>)?;
     let insight_editor =
         MenuItem::with_id(app, "insight_editor", "Insight Editor", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
@@ -1041,6 +1106,7 @@ fn build_tray_menu<R: tauri::Runtime>(
         app,
         &[
             &read_selected,
+            &summarize_selected,
             &insight_editor,
             &sep1,
             &toggle,
@@ -1091,6 +1157,7 @@ pub fn run() {
         .manage(tts_state)
         .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
+            backend_prompt,
             get_selected_text,
             get_clipboard_text,
             get_text_or_clipboard,
@@ -1159,6 +1226,40 @@ pub fn run() {
                     match id {
                         "read_selected" => {
                             execute_action(app, AppAction::ReadSelected, "tray");
+                        }
+                        "summarize_selected" => {
+                            let app = app.clone();
+                            std::thread::spawn(move || {
+                                let text = get_text_or_clipboard_impl();
+                                if text.trim().is_empty() {
+                                    warn!("Summarize Selected: no text available");
+                                    return;
+                                }
+                                match backend_prompt("SUMMARIZE".to_string(), text) {
+                                    Ok(summary) => {
+                                        if let Some(state) = app.try_state::<EditorInitialText>() {
+                                            if let Err(e) =
+                                                open_or_focus_editor_with_text(&app, &state, summary)
+                                            {
+                                                warn!(error = %e, "Summarize Selected: open_editor_window failed");
+                                            }
+                                        } else {
+                                            warn!("Summarize Selected: EditorInitialText state not found");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        if let Some(state) = app.try_state::<EditorInitialText>() {
+                                            let _ = open_or_focus_editor_with_text(
+                                                &app,
+                                                &state,
+                                                format!("Summary failed: {}", e),
+                                            );
+                                        } else {
+                                            warn!(error = %e, "Summarize Selected: backend_prompt failed");
+                                        }
+                                    }
+                                }
+                            });
                         }
                         "insight_editor" => {
                             let text = get_text_or_clipboard_impl();

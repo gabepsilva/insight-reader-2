@@ -651,7 +651,10 @@ function App() {
             <button
               className="action-btn"
               onClick={async () => {
-                const text = await invoke<string>("get_text_or_clipboard");
+                const text =
+                  platform === "macos"
+                    ? ((await invoke<string | null>("get_clipboard_text")) ?? "")
+                    : await invoke<string>("get_text_or_clipboard");
                 void invoke("open_editor_window", { initialText: text });
               }}
               aria-label="Open grammar editor"
@@ -667,7 +670,10 @@ function App() {
               onClick={async () => {
                 setIsSummarizing(true);
                 try {
-                  const text = await invoke<string>("get_text_or_clipboard");
+                  const text =
+                    platform === "macos"
+                      ? ((await invoke<string | null>("get_clipboard_text")) ?? "")
+                      : await invoke<string>("get_text_or_clipboard");
                   const trimmed = text?.trim() ?? "";
                   if (!trimmed) {
                     setErrors((prev) => [...prev.slice(-4), "Summary: no text (copy or select text first)."]);
@@ -676,7 +682,12 @@ function App() {
                   const textToShow = await callBackendPrompt("SUMMARIZE", trimmed);
                   await invoke("open_editor_window", { initialText: textToShow });
                 } catch (e) {
-                  const msg = e instanceof Error ? e.message : "Summary request failed.";
+                  const msg =
+                    e instanceof Error
+                      ? e.message
+                      : typeof e === "string"
+                        ? e
+                        : "Summary request failed.";
                   setErrors((prev) => [...prev.slice(-4), msg]);
                 } finally {
                   setIsSummarizing(false);

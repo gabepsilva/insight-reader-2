@@ -33,6 +33,7 @@ const VoiceProviderIcon = ({ provider }: { provider: string }) => {
 };
 
 interface Config {
+  backend_url?: string | null;
   voice_provider: string | null;
   log_level: string | null;
   selected_voice: string | null;
@@ -254,6 +255,20 @@ function GeneralTab({
 
   return (
     <div className="tab-content">
+      <div className="setting-group">
+        <label>Summary / LLM Backend URL</label>
+        <input
+          type="url"
+          placeholder="http://grars-backend.i.psilva.org:8080"
+          value={config.backend_url ?? ''}
+          onChange={(e) => onChange({ backend_url: e.target.value.trim() || null })}
+          className="setting-input"
+        />
+        <p className="setting-help">
+          URL of the ReadingService backend for Summary and other LLM features. Leave empty for default.
+        </p>
+      </div>
+
       <div className="setting-group">
         <label>
           <input 

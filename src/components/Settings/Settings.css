@@ -224,7 +224,9 @@ body {
 }
 
 .setting-group select,
-.setting-group input[type="text"] {
+.setting-group input[type="text"],
+.setting-group input[type="url"],
+.setting-group .setting-input {
   background: #3f3f46 !important;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff !important;
@@ -241,7 +243,9 @@ body {
 }
 
 .setting-group select:focus,
-.setting-group input[type="text"]:focus {
+.setting-group input[type="text"]:focus,
+.setting-group input[type="url"]:focus,
+.setting-group .setting-input:focus {
   outline: none;
   border-color: #fafafa;
 }
@@ -254,6 +258,11 @@ body {
 
 .hotkey-input {
   width: 200px;
+}
+
+.setting-group input.setting-input {
+  width: 100%;
+  max-width: 400px;
 }
 
 .settings-message {

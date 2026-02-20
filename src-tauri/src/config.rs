@@ -22,6 +22,8 @@ fn config_path() -> Option<PathBuf> {
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct RawConfig {
     #[serde(default)]
+    backend_url: Option<String>,
+    #[serde(default)]
     voice_provider: Option<String>,
     #[serde(default)]
     log_level: Option<String>,
@@ -49,6 +51,7 @@ struct RawConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FullConfig {
+    pub backend_url: Option<String>,
     pub voice_provider: Option<String>,
     pub log_level: Option<String>,
     pub selected_voice: Option<String>,
@@ -66,6 +69,7 @@ pub struct FullConfig {
 impl From<RawConfig> for FullConfig {
     fn from(raw: RawConfig) -> Self {
         Self {
+            backend_url: raw.backend_url,
             voice_provider: raw.voice_provider,
             log_level: raw.log_level,
             selected_voice: raw.selected_voice,
@@ -85,6 +89,7 @@ impl From<RawConfig> for FullConfig {
 impl From<FullConfig> for RawConfig {
     fn from(json: FullConfig) -> Self {
         Self {
+            backend_url: json.backend_url,
             voice_provider: json.voice_provider,
             log_level: json.log_level,
             selected_voice: json.selected_voice,
