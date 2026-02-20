@@ -1,14 +1,1 @@
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "editor",
-  "description": "Capability for the grammar editor window",
-  "windows": ["editor"],
-  "permissions": [
-    "core:default",
-    "allow-take-editor-initial-text",
-    "allow-get-config",
-    "allow-save-config",
-    "allow-tts-speak",
-    "allow-tts-pause"
-  ]
-}
+{"$schema":"../gen/schemas/desktop-schema.json","identifier":"editor","description":"Capability for the grammar editor window","windows":["editor"],"permissions":["core:default","allow-take-editor-initial-text","allow-get-config","allow-save-config","allow-tts-speak","allow-tts-pause","allow-backend-prompt"]}

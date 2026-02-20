@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { marked } from "marked";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor, JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -9,11 +10,28 @@ import "./TipTapEditor.css";
 
 const noopLint: (text: string) => Promise<Lint[]> = async () => [];
 
+/** Heuristic: content looks like Markdown (e.g. from Clear text / Summarize backend). */
+function looksLikeMarkdown(s: string): boolean {
+  return (
+    /\*\*[^*]|__[^_]|^#{1,6}\s|^>\s|^\s*[-*]\s|^```/m.test(s) || />\s*\n/.test(s)
+  );
+}
+
+function markdownToHtml(s: string): string {
+  return marked.parse(s) as string;
+}
+
 function toDocContent(content: string): JSONContent {
   const paragraph: JSONContent = content
     ? { type: "paragraph", content: [{ type: "text", text: content }] }
     : { type: "paragraph" };
   return { type: "doc", content: [paragraph] };
+}
+
+function contentToSet(content: string): string | JSONContent {
+  if (!content) return { type: "doc", content: [{ type: "paragraph" }] };
+  if (looksLikeMarkdown(content)) return markdownToHtml(content);
+  return toDocContent(content);
 }
 
 export interface TipTapEditorProps {
@@ -71,7 +89,7 @@ export function TipTapEditor({
         scheduleLintRef,
       }),
     ],
-    content: content === "" ? undefined : toDocContent(content),
+    content: content === "" ? undefined : contentToSet(content),
     editable,
     editorProps: {
       attributes: {
@@ -92,7 +110,8 @@ export function TipTapEditor({
     if (!editor) return;
     const current = editor.getText();
     if (current !== content) {
-      editor.commands.setContent(toDocContent(content), { emitUpdate: false });
+      const toSet = contentToSet(content);
+      editor.commands.setContent(toSet, { emitUpdate: false });
     }
   }, [content, editor]);
 

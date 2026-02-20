@@ -14,6 +14,7 @@ import { LintPopup } from "./components/LintPopup";
 import { TipTapEditor } from "./components/TipTapEditor";
 import { makeLintKey } from "./extensions/harperLint";
 import { applySuggestion } from "./utils/applySuggestion";
+import { callBackendPrompt } from "./backendPrompt";
 import "./EditorPage.css";
 
 interface Config {
@@ -104,6 +105,9 @@ export default function EditorPage() {
   const textRef = useRef(text);
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [transformTask, setTransformTask] = useState<"clear" | "summarize" | null>(
+    null,
+  );
   const hasHydratedUiPrefsRef = useRef(false);
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
@@ -220,6 +224,26 @@ export default function EditorPage() {
       alert(
         typeof e === "string" ? e : "Could not read aloud. Is Piper installed?",
       );
+    }
+  };
+
+  const runTransformTask = async (task: "clear" | "summarize") => {
+    const content = text.trim();
+    if (!content) return;
+    const apiTask = task === "clear" ? "TTS" : "SUMMARIZE";
+    setTransformTask(task);
+    try {
+      const response = await callBackendPrompt(apiTask, content);
+      setText(response);
+    } catch (e) {
+      console.warn(`[EditorPage] backend_prompt ${task} failed:`, e);
+      alert(
+        typeof e === "string"
+          ? e
+          : `Backend ${task} failed. Is the ReadingService running on port 8080?`,
+      );
+    } finally {
+      setTransformTask(null);
     }
   };
 
@@ -413,6 +437,25 @@ export default function EditorPage() {
           className="editor-toolbar-read"
         >
           Read
+        </button>
+        <button
+          type="button"
+          onClick={() => runTransformTask("clear")}
+          disabled={!text.trim() || transformTask != null}
+          aria-label="Clear text"
+          title="Clean content for text-to-speech (remove UI clutter, format for narration)"
+          className="editor-toolbar-two-lines"
+        >
+          {transformTask === "clear" ? "…" : <>Clear<br />text</>}
+        </button>
+        <button
+          type="button"
+          onClick={() => runTransformTask("summarize")}
+          disabled={!text.trim() || transformTask != null}
+          aria-label="Summarize"
+          title="Replace content with a concise summary"
+        >
+          {transformTask === "summarize" ? "…" : "Summarize"}
         </button>
       </div>
       <div
