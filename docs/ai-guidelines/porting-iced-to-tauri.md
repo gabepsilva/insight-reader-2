@@ -8,7 +8,7 @@ Reference for porting Insight Reader from Iced to Tauri 2. Informational only: c
 
 ## Scope
 
-- **In scope:** UI and app shell; business logic; TTS (Piper/Polly); config; system integration (clipboard, OCR, screenshot, tray, hotkeys, single-instance).
+- **In scope:** UI and app shell; business logic; TTS (Piper/Polly); config; system integration (clipboard, tray, hotkeys, single-instance).
 - **Omit:** pencil/pen window and all related code.
 - **Target:** Tauri 2.x. Frontend stack: unspecified.
 

@@ -1,5 +1,0 @@
-# Permission to invoke capture_screenshot_and_ocr (capture screenshot and perform OCR)
-[[permission]]
-identifier = "allow-capture-screenshot-and-ocr"
-description = "Allows invoking capture_screenshot_and_ocr to capture screenshot and extract text via OCR"
-commands.allow = ["capture_screenshot_and_ocr"]

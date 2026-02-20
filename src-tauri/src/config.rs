@@ -32,8 +32,6 @@ struct RawConfig {
     #[serde(default)]
     selected_microsoft_voice: Option<String>,
     #[serde(default)]
-    ocr_backend: Option<String>,
-    #[serde(default)]
     hotkey_enabled: Option<bool>,
     #[serde(default)]
     hotkey_modifiers: Option<String>,
@@ -56,7 +54,6 @@ pub struct FullConfig {
     pub selected_voice: Option<String>,
     pub selected_polly_voice: Option<String>,
     pub selected_microsoft_voice: Option<String>,
-    pub ocr_backend: Option<String>,
     pub hotkey_enabled: Option<bool>,
     pub hotkey_modifiers: Option<String>,
     pub hotkey_key: Option<String>,
@@ -74,7 +71,6 @@ impl From<RawConfig> for FullConfig {
             selected_voice: raw.selected_voice,
             selected_polly_voice: raw.selected_polly_voice,
             selected_microsoft_voice: raw.selected_microsoft_voice,
-            ocr_backend: raw.ocr_backend,
             hotkey_enabled: raw.hotkey_enabled,
             hotkey_modifiers: raw.hotkey_modifiers,
             hotkey_key: raw.hotkey_key,
@@ -94,7 +90,6 @@ impl From<FullConfig> for RawConfig {
             selected_voice: json.selected_voice,
             selected_polly_voice: json.selected_polly_voice,
             selected_microsoft_voice: json.selected_microsoft_voice,
-            ocr_backend: json.ocr_backend,
             hotkey_enabled: json.hotkey_enabled,
             hotkey_modifiers: json.hotkey_modifiers,
             hotkey_key: json.hotkey_key,

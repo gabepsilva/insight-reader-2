@@ -111,6 +111,7 @@ function App() {
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
+  const [platform, setPlatform] = useState<string | null>(null);
   const isSpeedControlEnabled = false;
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const previousVolumeRef = useRef(DEFAULT_VOLUME);
@@ -125,6 +126,12 @@ function App() {
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  useEffect(() => {
+    invoke<string>("get_platform")
+      .then(setPlatform)
+      .catch(() => setPlatform(null));
   }, []);
 
   const applyUiPrefsFromConfig = useCallback((cfg: Config) => {
@@ -334,7 +341,8 @@ function App() {
         const newPausedState = await invoke<boolean>("tts_toggle_pause");
         setIsPlaying(!newPausedState);
       } else {
-        const text = await invoke<string | null>("get_selected_text");
+        const cmd = platform === "macos" ? "get_clipboard_text" : "get_selected_text";
+        const text = await invoke<string | null>(cmd);
         if (text != null && text.length > 0) {
           await invoke("tts_speak", { text });
           setIsPlaying(true);
@@ -555,9 +563,18 @@ function App() {
               +5s
             </button>
 
-            <button className="control-btn play-btn" onClick={handlePlayPause} aria-label={isPlaying ? "Pause" : "Play"}>
-              {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-            </button>
+            <div className="play-btn-wrap">
+              <button
+                className="control-btn play-btn"
+                onClick={handlePlayPause}
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+              </button>
+              {platform === "macos" && !isPlaying && (
+                <span className="play-btn-hint">Read clipboard</span>
+              )}
+            </div>
 
             <button className="control-btn stop-btn" onClick={handleStop} aria-label="Stop">
               <StopIcon size={16} />

@@ -15,7 +15,7 @@ use std::{
 };
 use tauri::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
+    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tracing::{debug, error, info, warn};
@@ -28,17 +28,6 @@ use voices::download::{
 
 /// Managed state for initial text passed to the editor window.
 type EditorInitialText = Arc<Mutex<Option<String>>>;
-
-/// Data stored for each live text viewer window
-#[derive(Debug, Clone)]
-struct LiveTextData {
-    image_path: String,
-    ocr_result: Option<system::OcrResult>,
-}
-
-/// Managed state for live text data passed to live text viewer windows.
-/// Maps window label to live text data (image path and optional OCR result).
-type LiveTextWindows = Arc<Mutex<std::collections::HashMap<String, LiveTextData>>>;
 type GlobalHotkeyState = Arc<Mutex<HotkeyRuntime>>;
 
 #[derive(Debug, Clone)]
@@ -887,100 +876,6 @@ fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<
         .map_err(|e| e.to_string())
 }
 
-/// Opens a window to display an image with live text overlay.
-/// The image_path should be a valid file path to a PNG image.
-#[tauri::command]
-fn open_live_text_viewer(
-    app: tauri::AppHandle,
-    state: State<LiveTextWindows>,
-    image_path: String,
-    ocr_result: Option<system::OcrResult>,
-) -> Result<(), String> {
-    debug!(path = %image_path, "Opening live text viewer window");
-
-    // Check if file exists
-    let path = std::path::Path::new(&image_path);
-    if !path.exists() {
-        return Err(format!(
-            "Image file not found: {} (checked at: {})",
-            image_path,
-            path.display()
-        ));
-    }
-
-    // Generate a unique window label with timestamp to prevent collisions
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| format!("Failed to get timestamp: {}", e))?
-        .as_nanos();
-    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
-    let filename_without_ext = filename
-        .strip_suffix(".png")
-        .or_else(|| filename.strip_suffix(".PNG"))
-        .unwrap_or(filename);
-    let window_label = format!("live-text-{}-{}", timestamp, filename_without_ext);
-
-    let url = build_webview_url(&app, "live-text.html")?;
-
-    // Create window first, only insert into state after successful creation
-    WebviewWindowBuilder::new(&app, &window_label, url)
-        .title("Live Text")
-        .inner_size(800.0, 600.0)
-        .min_inner_size(400.0, 300.0)
-        .resizable(true)
-        .decorations(true)
-        .center()
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    // Store the live text data in state only after window creation succeeds
-    {
-        let mut guard = state
-            .inner()
-            .lock()
-            .map_err(|e| format!("live text state lock: {}", e))?;
-        guard.insert(
-            window_label,
-            LiveTextData {
-                image_path,
-                ocr_result,
-            },
-        );
-    }
-
-    Ok(())
-}
-
-/// Returns the image path for the current live text viewer window.
-#[tauri::command]
-fn take_live_text_image_path(
-    window: Window,
-    state: State<LiveTextWindows>,
-) -> Result<Option<String>, String> {
-    let window_label = window.label();
-    let guard = state
-        .inner()
-        .lock()
-        .map_err(|e| format!("live text state lock: {}", e))?;
-    Ok(guard.get(window_label).map(|data| data.image_path.clone()))
-}
-
-/// Returns the live text (OCR) data for the current window.
-#[tauri::command]
-fn take_live_text_data(
-    window: Window,
-    state: State<LiveTextWindows>,
-) -> Result<Option<system::OcrResult>, String> {
-    let window_label = window.label();
-    let guard = state
-        .inner()
-        .lock()
-        .map_err(|e| format!("live text state lock: {}", e))?;
-    Ok(guard
-        .get(window_label)
-        .and_then(|data| data.ocr_result.clone()))
-}
-
 /// Returns the current platform (e.g., "macos", "windows", "linux").
 #[tauri::command]
 fn get_platform() -> &'static str {
@@ -1122,67 +1017,6 @@ fn check_polly_credentials() -> Result<bool, String> {
     }
 }
 
-/// Unified error type for screenshot and OCR operations
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "type", content = "message")]
-pub enum CaptureOcrError {
-    #[serde(rename = "cancelled")]
-    Cancelled,
-    #[serde(rename = "screenshot")]
-    Screenshot(String),
-    #[serde(rename = "ocr")]
-    Ocr(String),
-}
-
-impl From<system::ScreenshotError> for CaptureOcrError {
-    fn from(err: system::ScreenshotError) -> Self {
-        match err {
-            system::ScreenshotError::Cancelled => CaptureOcrError::Cancelled,
-            e => CaptureOcrError::Screenshot(e.to_string()),
-        }
-    }
-}
-
-impl From<system::OcrError> for CaptureOcrError {
-    fn from(err: system::OcrError) -> Self {
-        CaptureOcrError::Ocr(err.to_string())
-    }
-}
-
-/// Captures a screenshot and performs OCR to extract text with bounding box positions.
-/// Returns the OCR result with text items and their positions, and the screenshot file path.
-/// If the user cancels the screenshot selection, returns a Cancelled error.
-/// The screenshot file should be deleted after the viewer window is closed.
-#[tauri::command]
-fn capture_screenshot_and_ocr() -> Result<(system::OcrResult, String), CaptureOcrError> {
-    debug!("Starting screenshot capture and OCR");
-
-    // Capture screenshot (returns bytes and path)
-    let (screenshot_bytes, screenshot_path) =
-        system::capture_screenshot().map_err(CaptureOcrError::from)?;
-
-    debug!(
-        bytes = screenshot_bytes.len(),
-        path = %screenshot_path.display(),
-        "Screenshot captured, starting OCR"
-    );
-
-    // Perform OCR with positions
-    let ocr_result =
-        system::extract_text_with_positions(&screenshot_bytes).map_err(CaptureOcrError::from)?;
-
-    // Log OCR results for debugging
-    debug!(
-        items = ocr_result.items.len(),
-        text = %ocr_result.full_text,
-        "OCR completed successfully"
-    );
-    debug!("OCR items: {:?}", ocr_result.items);
-
-    // Return OCR result and screenshot path (as string for serialization)
-    Ok((ocr_result, screenshot_path.to_string_lossy().to_string()))
-}
-
 fn log_selected_text(result: &Option<String>) {
     match result {
         Some(text) => info!(len = text.len(), "Selected text"),
@@ -1233,7 +1067,6 @@ pub fn run() {
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
-    let live_text_windows: LiveTextWindows = Arc::new(Mutex::new(std::collections::HashMap::new()));
     let tts_state = tts::create_tts_state();
     let hotkey_state: GlobalHotkeyState = Arc::new(Mutex::new(HotkeyRuntime::default()));
 
@@ -1255,7 +1088,6 @@ pub fn run() {
                 .build(),
         )
         .manage(editor_initial)
-        .manage(live_text_windows)
         .manage(tts_state)
         .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
@@ -1272,10 +1104,6 @@ pub fn run() {
             tts_get_position,
             tts_set_volume,
             tts_switch_provider,
-            capture_screenshot_and_ocr,
-            open_live_text_viewer,
-            take_live_text_image_path,
-            take_live_text_data,
             get_platform,
             get_config,
             get_hotkey_status,
@@ -1300,41 +1128,6 @@ pub fn run() {
                     // Stop TTS worker thread when main window closes
                     if let Some(state) = window.app_handle().try_state::<tts::TtsState>() {
                         let _ = state.inner().send(tts::TtsRequest::Shutdown);
-                    }
-                    // Clean up all image files on app exit
-                    if let Some(state) = window.app_handle().try_state::<LiveTextWindows>() {
-                        let paths: Vec<String> = {
-                            let guard = state.inner().lock().ok();
-                            guard
-                                .map(|g| g.values().map(|data| data.image_path.clone()).collect())
-                                .unwrap_or_default()
-                        };
-                        for path in paths {
-                            if let Err(e) = std::fs::remove_file(&path) {
-                                warn!(error = %e, path = %path, "Failed to delete image file on app exit");
-                            } else {
-                                debug!(path = %path, "Deleted image file on app exit");
-                            }
-                        }
-                    }
-                } else if label.starts_with("live-text-") {
-                    // Delete image file when live text viewer window closes
-                    if let Some(state) = window.app_handle().try_state::<LiveTextWindows>() {
-                        let image_path = {
-                            let guard = state.inner().lock().ok();
-                            guard.and_then(|g| g.get(label).map(|data| data.image_path.clone()))
-                        };
-                        if let Some(path) = image_path {
-                            if let Err(e) = std::fs::remove_file(&path) {
-                                warn!(error = %e, path = %path, "Failed to delete image file on window close");
-                            } else {
-                                debug!(path = %path, "Deleted image file on window close");
-                            }
-                            // Remove from state
-                            if let Ok(mut guard) = state.inner().lock() {
-                                guard.remove(label);
-                            }
-                        }
                     }
                 }
             }

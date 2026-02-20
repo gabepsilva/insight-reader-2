@@ -324,6 +324,28 @@ body,
   cursor: not-allowed;
 }
 
+.play-btn-wrap {
+  position: relative;
+}
+
+.play-btn-wrap .play-btn-hint {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 200;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.play-btn-wrap:hover .play-btn-hint {
+  opacity: 1;
+}
+
 .play-btn {
   width: 48px;
   height: 48px;

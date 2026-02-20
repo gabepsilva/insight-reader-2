@@ -6,7 +6,7 @@ Reference for Rust style, Tauri patterns, and platform notes. See [AGENTS.md](..
 
 ## Project overview
 
-**Insight Reader** is a cross-platform text-to-speech application that reads text from clipboard, images, or screenshots. It supports offline voices via Piper and cloud voices via Microsoft Edge TTS.
+**Insight Reader** is a cross-platform text-to-speech application that reads text from clipboard selections. It supports offline voices via Piper and cloud voices via Microsoft Edge TTS.
 
 ### Tech stack
 
@@ -19,7 +19,6 @@ Reference for Rust style, Tauri patterns, and platform notes. See [AGENTS.md](..
 | Audio | rodio |
 | Local TTS | Piper |
 | Cloud TTS | Microsoft Edge TTS (via `msedge-tts`), AWS Polly (planned/optional) |
-| OCR | Windows Media OCR / macOS Vision / EasyOCR (Linux) |
 | Errors | thiserror (typed errors); keep error chains user-actionable at command boundaries |
 | Logging | tracing |
 | Config | serde, serde_json |
@@ -29,22 +28,21 @@ Reference for Rust style, Tauri patterns, and platform notes. See [AGENTS.md](..
 The codebase is evolving. Create new files and folders when it improves clarity.
 
 **Splitting code:**
-- One module per major concern (TTS, system integration, OCR, window orchestration, config)
+- One module per major concern (TTS, system integration, window orchestration, config)
 - Split files when they exceed ~300–400 lines
 - Group related types: `mod.rs` + submodules (e.g. `tts/piper.rs`, `tts/microsoft.rs`)
 - Platform-specific code in dedicated modules with `#[cfg(target_os)]`
 
 **When to create new modules:**
 - New TTS provider → new file in `src-tauri/src/tts/`
-- New system integration (clipboard, selection, screenshot) → new module under `src-tauri/src/system/`
-- New OCR backend → under `src-tauri/src/system/` (or `src-tauri/src/ocr/` if it grows)
+- New system integration (clipboard, selection) → new module under `src-tauri/src/system/`
 - Frontend UI growing complex → split into `src/components/`, `src/pages/`, `src/hooks/`
 
 **Key directories:**
 - `src-tauri/` — Tauri backend, capabilities, permissions, config
 - `src-tauri/src/` — Rust modules (`lib.rs`, `tts/`, `system/`, `paths.rs`)
 - `src/` — React/TypeScript frontend
-- `src/components/` — React components (e.g. `LiveTextViewer`)
+- `src/components/` — React components
 - `src-tauri/capabilities/` — Tauri 2 capability definitions
 - `src-tauri/permissions/` — Permission definitions for custom commands
 - `install/` — Platform installers (modify carefully)

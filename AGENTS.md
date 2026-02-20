@@ -1,6 +1,6 @@
 # Agent guidance for Insight Reader
 
-**Insight Reader** is a cross-platform text-to-speech app (Tauri 2 + React/Vite). It reads from clipboard, images, and screenshots; offline voices via Piper, cloud via Microsoft Edge TTS.
+**Insight Reader** is a cross-platform text-to-speech app (Tauri 2 + React/Vite). It reads from clipboard selections; offline voices via Piper, cloud via Microsoft Edge TTS.
 
 ---
 

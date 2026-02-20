@@ -203,58 +203,6 @@ check_and_install_dependencies() {
     log_success "Dependencies installed successfully"
 }
 
-# Install Swift OCR script
-install_ocr_script() {
-    log_info "Installing OCR script..."
-    
-    # Script location in installation directory (not in bin subfolder anymore)
-    # The script is kept in the install directory for reference, but the app will find it
-    # via the find_swift_script() function which checks multiple locations
-    SCRIPT_DIR="$INSTALL_DIR"
-    SCRIPT_FILE="$SCRIPT_DIR/extract_text_from_image.swift"
-    SCRIPT_NAME="extract_text_from_image.swift"
-    mkdir -p "$SCRIPT_DIR"
-    
-    # Helper function to download and install script
-    install_from_url() {
-        local url="$1"
-        local temp_script
-        temp_script=$(mktemp)
-        if download_file "$url" "$temp_script"; then
-            cp "$temp_script" "$SCRIPT_FILE"
-            chmod +x "$SCRIPT_FILE"
-            rm -f "$temp_script" 2>/dev/null || true
-            log_success "OCR script downloaded and installed to $SCRIPT_FILE"
-            return 0
-        else
-            log_warn "Failed to download $SCRIPT_NAME from GitHub"
-            log_warn "OCR functionality may not work if script is not found at runtime"
-            rm -f "$temp_script" 2>/dev/null || true
-            return 1
-        fi
-    }
-    
-    # Skip local checks if script is being piped (curl | bash)
-    if is_piped; then
-        log_info "Script is being piped, downloading from GitHub..."
-        install_from_url "https://raw.githubusercontent.com/$GITHUB_REPO/master/install/$SCRIPT_NAME"
-        return $?
-    fi
-    
-    # Try to copy from local directory first (project root)
-    if [ -f "install/$SCRIPT_NAME" ]; then
-        log_info "Copying $SCRIPT_NAME from local directory to $SCRIPT_FILE"
-        cp "install/$SCRIPT_NAME" "$SCRIPT_FILE"
-        chmod +x "$SCRIPT_FILE"
-        log_success "OCR script installed to $SCRIPT_FILE"
-        return 0
-    fi
-    
-    # If not found locally, download from GitHub
-    log_info "$SCRIPT_NAME not found in current directory, downloading from GitHub..."
-    install_from_url "https://raw.githubusercontent.com/$GITHUB_REPO/master/install/$SCRIPT_NAME"
-}
-
 # Create macOS app bundle and install to Applications
 create_app_bundle() {
     log_info "Creating macOS app bundle..."
@@ -389,28 +337,6 @@ create_app_bundle() {
         rm -f "$temp_logo" 2>/dev/null || true
     fi
     
-    # Copy Swift OCR script to app bundle Resources
-    log_info "Copying OCR script to app bundle Resources..."
-    local script_source="$INSTALL_DIR/extract_text_from_image.swift"
-    if [ -f "$script_source" ]; then
-        cp "$script_source" "$APP_RESOURCES/extract_text_from_image.swift"
-        chmod +x "$APP_RESOURCES/extract_text_from_image.swift"
-        log_success "OCR script copied to app bundle Resources"
-    elif [ -f "install/extract_text_from_image.swift" ]; then
-        # Fallback: copy from local directory if available (when running from repo root)
-        cp "install/extract_text_from_image.swift" "$APP_RESOURCES/extract_text_from_image.swift"
-        chmod +x "$APP_RESOURCES/extract_text_from_image.swift"
-        log_success "OCR script copied to app bundle Resources (from local directory)"
-    elif [ -f "$SCRIPT_DIR/extract_text_from_image.swift" ]; then
-        # Another fallback: if we're in the install/ folder
-        cp "$SCRIPT_DIR/extract_text_from_image.swift" "$APP_RESOURCES/extract_text_from_image.swift"
-        chmod +x "$APP_RESOURCES/extract_text_from_image.swift"
-        log_success "OCR script copied to app bundle Resources (from install directory)"
-    else
-        log_warn "OCR script not found at $script_source, install/extract_text_from_image.swift, or $SCRIPT_DIR/extract_text_from_image.swift"
-        log_warn "OCR functionality may not work in app bundle"
-    fi
-    
     # Create Info.plist
     log_info "Creating Info.plist..."
     cat > "$APP_CONTENTS/Info.plist" <<EOF
@@ -444,10 +370,6 @@ create_app_bundle() {
     <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>Insight Reader needs screen recording permission to capture screenshots for text extraction using OCR.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Insight Reader does not use the microphone. This permission may be requested by the audio playback framework but is not required for text-to-speech functionality.</string>
 </dict>
 </plist>
 EOF
@@ -468,10 +390,6 @@ main() {
     install_binary
     create_venv
     install_piper
-    
-    # Install OCR script
-    echo ""
-    install_ocr_script
     
     # Download model if not present (download_model checks if it exists first)
     echo ""

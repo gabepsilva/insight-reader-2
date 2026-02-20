@@ -1,5 +1,0 @@
-# Permission to invoke take_live_text_data (get the live text data for the current window)
-[[permission]]
-identifier = "allow-take-live-text-data"
-description = "Allows invoking take_live_text_data to get the live text (OCR) data for the current window"
-commands.allow = ["take_live_text_data"]

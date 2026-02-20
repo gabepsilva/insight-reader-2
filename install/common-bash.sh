@@ -180,54 +180,6 @@ install_piper() {
         exit 1
     fi
     
-    # Install EasyOCR in the same venv for OCR functionality (CPU-only)
-    # Only install on Linux - macOS uses Vision OCR (Swift script)
-    local os
-    os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    if [ "$os" = "linux" ]; then
-        log_info "Installing EasyOCR in virtual environment for OCR functionality (CPU-only)..."
-        if python -c "import easyocr" 2>/dev/null; then
-            log_success "EasyOCR is already installed in venv"
-        else
-            # Upgrade pip, setuptools, and wheel to ensure we get pre-built wheels when available
-            log_info "Upgrading pip, setuptools, and wheel for better package compatibility..."
-            pip install --quiet --upgrade pip setuptools wheel
-            
-            # Install NumPy separately first (preferring pre-built wheels)
-            # This helps avoid build issues if NumPy needs to be compiled
-            log_info "Installing NumPy (required dependency, preferring pre-built wheels)..."
-            if pip install --quiet --upgrade numpy; then
-                log_success "NumPy installed successfully"
-            else
-                log_warn "NumPy installation failed, but continuing with EasyOCR install..."
-                log_warn "This may cause EasyOCR installation to fail if build dependencies are missing"
-            fi
-            
-            log_info "Installing CPU-only PyTorch (required for EasyOCR CPU mode)..."
-            if pip install --quiet torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; then
-                log_success "CPU-only PyTorch installed"
-            else
-                log_warn "PyTorch installation may have failed, but continuing with EasyOCR install..."
-            fi
-            
-            log_info "Installing EasyOCR (this may take a while, models will download on first use)..."
-            if pip install --quiet easyocr; then
-                log_success "EasyOCR installed successfully in venv"
-                # Verify installation
-                if python -c "import easyocr" 2>/dev/null; then
-                    log_success "EasyOCR installation verified"
-                else
-                    log_warn "EasyOCR installed but cannot be imported"
-                fi
-            else
-                log_warn "EasyOCR installation may have failed. OCR functionality may not work."
-                log_warn "If this failed due to missing build tools, ensure gcc and python3-devel are installed"
-            fi
-        fi
-    else
-        log_info "Skipping EasyOCR installation (not needed on $os - using platform-specific OCR)"
-    fi
-    
     deactivate
 }
 

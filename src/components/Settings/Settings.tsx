@@ -38,7 +38,6 @@ interface Config {
   selected_voice: string | null;
   selected_polly_voice: string | null;
   selected_microsoft_voice: string | null;
-  ocr_backend: string | null;
   hotkey_enabled: boolean | null;
   hotkey_modifiers: string | null;
   hotkey_key: string | null;
@@ -296,24 +295,6 @@ function GeneralTab({
         </select>
       </div>
 
-      <div className="setting-group">
-        <div className="setting-label-with-info">
-          <label>OCR Backend</label>
-          <span className="setting-info-icon" aria-label="Future feature">
-            i
-            <span className="setting-info-tooltip">Future feature</span>
-          </span>
-        </div>
-        <select 
-          value={config.ocr_backend || 'default'}
-          onChange={(e) => onChange({ ocr_backend: e.target.value })}
-          disabled
-        >
-          <option value="default">Default</option>
-          <option value="better_ocr">Better OCR</option>
-        </select>
-        <p className="setting-help">Read and copy text directly from images.</p>
-      </div>
     </div>
   );
 }
@@ -897,7 +878,6 @@ function AboutTab() {
           <li>Piper - Offline neural text-to-speech</li>
           <li>AWS Polly - Cloud neural TTS</li>
           <li>Microsoft Edge TTS - Cloud neural TTS</li>
-          <li>Screenshot OCR - Extract text from images</li>
           <li>Grammar checking with Harper</li>
         </ul>
       </div>
