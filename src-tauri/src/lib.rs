@@ -1057,7 +1057,9 @@ fn backend_prompt(task: String, content: String) -> Result<String, String> {
         })?;
 
     let status = resp.status();
-    let body = resp.text().map_err(|e| format!("Failed to read response: {}", e))?;
+    let body = resp
+        .text()
+        .map_err(|e| format!("Failed to read response: {}", e))?;
 
     if status.is_success() {
         let parsed: SuccessResponse =
@@ -1094,8 +1096,13 @@ fn build_tray_menu<R: tauri::Runtime>(
 ) -> Result<Menu<R>, tauri::Error> {
     let read_selected =
         MenuItem::with_id(app, "read_selected", "Read Selected", true, None::<&str>)?;
-    let summarize_selected =
-        MenuItem::with_id(app, "summarize_selected", "Summarize Selected", true, None::<&str>)?;
+    let summarize_selected = MenuItem::with_id(
+        app,
+        "summarize_selected",
+        "Summarize Selected",
+        true,
+        None::<&str>,
+    )?;
     let insight_editor =
         MenuItem::with_id(app, "insight_editor", "Insight Editor", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
@@ -1135,12 +1142,22 @@ pub fn run() {
     let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
     let tts_state = tts::create_tts_state();
     let hotkey_state: GlobalHotkeyState = Arc::new(Mutex::new(HotkeyRuntime::default()));
+    #[cfg(target_os = "linux")]
+    let window_state_plugin = tauri_plugin_window_state::Builder::default()
+        // On Linux, restoring/saving SIZE can cause gradual shrink for this window setup.
+        .with_state_flags(
+            tauri_plugin_window_state::StateFlags::all()
+                .difference(tauri_plugin_window_state::StateFlags::SIZE),
+        )
+        .build();
+    #[cfg(not(target_os = "linux"))]
+    let window_state_plugin = tauri_plugin_window_state::Builder::default().build();
 
     let hotkey_state_for_handler = hotkey_state.clone();
 
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(window_state_plugin)
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
