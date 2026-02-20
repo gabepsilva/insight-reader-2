@@ -13,7 +13,7 @@
     "allow-get-selected-text",
     "allow-get-clipboard-text",
     "allow-get-text-or-clipboard",
-    "allow-open-editor-window",
+    "allow-backend-prompt","allow-open-editor-window",
     "allow-tts-speak",
     "allow-tts-stop",
     "allow-tts-pause",

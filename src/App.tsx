@@ -13,6 +13,7 @@ import {
   StopIcon,
   SummaryIcon,
 } from "./components/icons";
+import { callBackendPrompt } from "./backendPrompt";
 import "./App.css";
 
 const DEFAULT_VOLUME = 80;
@@ -107,6 +108,7 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const isSpeedControlEnabled = false;
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const previousVolumeRef = useRef(DEFAULT_VOLUME);
@@ -631,12 +633,32 @@ function App() {
               <span>Edit</span>
             </button>
 
-            <div className="disabled-action-wrap" data-tooltip="Coming soon">
-              <button className="action-btn" aria-label="Open summary" disabled>
-                <SummaryIcon size={15} />
-                <span>Summary</span>
-              </button>
-            </div>
+            <button
+              className="action-btn"
+              aria-label="Open summary"
+              disabled={isSummarizing}
+              onClick={async () => {
+                setIsSummarizing(true);
+                try {
+                  const text = await invoke<string>("get_text_or_clipboard");
+                  const trimmed = text?.trim() ?? "";
+                  if (!trimmed) {
+                    setErrors((prev) => [...prev.slice(-4), "Summary: no text (copy or select text first)."]);
+                    return;
+                  }
+                  const textToShow = await callBackendPrompt("SUMMARIZE", trimmed);
+                  await invoke("open_editor_window", { initialText: textToShow });
+                } catch (e) {
+                  const msg = e instanceof Error ? e.message : "Summary request failed.";
+                  setErrors((prev) => [...prev.slice(-4), msg]);
+                } finally {
+                  setIsSummarizing(false);
+                }
+              }}
+            >
+              <SummaryIcon size={15} />
+              <span>{isSummarizing ? "…" : "Summary"}</span>
+            </button>
 
             <div className="disabled-action-wrap" data-tooltip="Coming soon">
               <button className="action-btn quick-replay-btn" aria-label="Quick replay" disabled>
