@@ -17,8 +17,9 @@
   --text-muted: #94a3b8;
   --text-subtle: #64748b;
   --window-btn-hover-bg: rgba(71, 85, 105, 0.35);
-  --window-btn-close-hover-bg: rgba(220, 38, 38, 0.3);
-  --window-btn-close-hover-color: #fecaca;
+  --window-btn-close-hover-bg: #E81123;
+  --window-btn-close-hover-color: #fff;
+  --window-btn-close-active-bg: #C50F1F;
   --error-tooltip-bg: #111827;
   --error-tooltip-border: rgba(71, 85, 105, 0.7);
   --copy-btn-border: rgba(71, 85, 105, 0.8);
@@ -63,8 +64,9 @@
   --text-muted: #475569;
   --text-subtle: #64748b;
   --window-btn-hover-bg: rgba(148, 163, 184, 0.35);
-  --window-btn-close-hover-bg: rgba(239, 68, 68, 0.22);
-  --window-btn-close-hover-color: #991b1b;
+  --window-btn-close-hover-bg: #E81123;
+  --window-btn-close-hover-color: #fff;
+  --window-btn-close-active-bg: #C50F1F;
   --error-tooltip-bg: #f8fafc;
   --error-tooltip-border: rgba(148, 163, 184, 0.8);
   --copy-btn-border: rgba(148, 163, 184, 0.9);
@@ -193,8 +195,18 @@ body,
   background: var(--window-btn-hover-bg);
 }
 
+.window-btn.minimize,
+.window-btn.close {
+  border-radius: 5px;
+}
+
 .window-btn.close:hover {
   background: var(--window-btn-close-hover-bg);
+  color: var(--window-btn-close-hover-color);
+}
+
+.window-btn.close:active {
+  background: var(--window-btn-close-active-bg);
   color: var(--window-btn-close-hover-color);
 }
 
@@ -595,6 +607,45 @@ body,
   padding: 0 10px;
   border-top: 1px solid var(--header-border);
   background: var(--status-bar-bg);
+}
+
+.resize-grip {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 2px 4px 2px 6px;
+  color: var(--text-subtle);
+  cursor: nwse-resize;
+  pointer-events: auto;
+}
+
+.resize-grip-dimensions {
+  position: absolute;
+  right: 100%;
+  bottom: 0;
+  margin-right: 2px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.resize-grip:hover .resize-grip-dimensions {
+  opacity: 1;
+}
+
+.resize-grip svg {
+  flex-shrink: 0;
+}
+
+.resize-grip:hover {
+  color: var(--text-muted);
 }
 
 .status-item {

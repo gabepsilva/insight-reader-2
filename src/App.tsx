@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -20,6 +20,11 @@ const DEFAULT_VOLUME = 80;
 
 type ThemeMode = "dark" | "light";
 
+const WINDOW_SIZE_MIN_WIDTH = 280;
+const WINDOW_SIZE_MAX_WIDTH = 2000;
+const WINDOW_SIZE_MIN_HEIGHT = 200;
+const WINDOW_SIZE_MAX_HEIGHT = 1500;
+
 interface Config {
   voice_provider: string | null;
   selected_voice: string | null;
@@ -28,6 +33,8 @@ interface Config {
   ui_volume?: number | null;
   ui_muted?: boolean | null;
   ui_theme?: string | null;
+  ui_window_width?: number | null;
+  ui_window_height?: number | null;
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -109,6 +116,7 @@ function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const isSpeedControlEnabled = false;
   const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const previousVolumeRef = useRef(DEFAULT_VOLUME);
@@ -116,6 +124,14 @@ function App() {
   const hasPendingUiPrefChangeRef = useRef(false);
 
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const updateSize = () =>
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   const applyUiPrefsFromConfig = useCallback((cfg: Config) => {
     const configVolume = parseConfigVolume(cfg.ui_volume);
@@ -207,6 +223,23 @@ function App() {
         };
 
         setConfig(normalizedConfig);
+
+        const w = normalizedConfig.ui_window_width;
+        const h = normalizedConfig.ui_window_height;
+        if (
+          w != null &&
+          h != null &&
+          w >= WINDOW_SIZE_MIN_WIDTH &&
+          w <= WINDOW_SIZE_MAX_WIDTH &&
+          h >= WINDOW_SIZE_MIN_HEIGHT &&
+          h <= WINDOW_SIZE_MAX_HEIGHT
+        ) {
+          try {
+            await getCurrentWindow().setSize(new LogicalSize(w, h));
+          } catch (e) {
+            console.warn("[App] restore window size failed:", e);
+          }
+        }
 
         const shouldBackfillUiPrefs =
           cfg.ui_volume == null ||
@@ -449,6 +482,26 @@ function App() {
     void invoke("open_settings_window");
   };
 
+  const handleResizeGripLeave = useCallback(async () => {
+    if (windowSize.width <= 0 || windowSize.height <= 0) return;
+    try {
+      const latest = await invoke<Config>("get_config");
+      const w = Math.max(
+        WINDOW_SIZE_MIN_WIDTH,
+        Math.min(WINDOW_SIZE_MAX_WIDTH, Math.round(windowSize.width)),
+      );
+      const h = Math.max(
+        WINDOW_SIZE_MIN_HEIGHT,
+        Math.min(WINDOW_SIZE_MAX_HEIGHT, Math.round(windowSize.height)),
+      );
+      await invoke("save_config", {
+        configJson: JSON.stringify({ ...latest, ui_window_width: w, ui_window_height: h }),
+      });
+    } catch (e) {
+      console.warn("[App] save window size failed:", e);
+    }
+  }, [windowSize.width, windowSize.height]);
+
   const handleThemeToggle = () => {
     hasPendingUiPrefChangeRef.current = true;
     setThemeMode((current) => (current === "dark" ? "light" : "dark"));
@@ -496,7 +549,7 @@ function App() {
             <button className="window-btn" onClick={handleOpenSettings} aria-label="Open settings">
               <SettingsIcon size={14} />
             </button>
-            <button className="window-btn" onClick={handleMinimize} aria-label="Minimize window">
+            <button className="window-btn minimize" onClick={handleMinimize} aria-label="Minimize window">
               <MinimizeIcon size={14} />
             </button>
             <button className="window-btn close" onClick={handleClose} aria-label="Close window">
@@ -686,6 +739,24 @@ function App() {
             <span className="status-value">{config ? getVoiceLabel(config) : "Loading..."}</span>
           </span>
         </footer>
+
+        <div
+          className="resize-grip"
+          data-no-drag="true"
+          aria-hidden="true"
+          onMouseLeave={() => void handleResizeGripLeave()}
+        >
+          {windowSize.width > 0 && windowSize.height > 0 && (
+            <span className="resize-grip-dimensions">
+              {windowSize.width} × {windowSize.height}
+            </span>
+          )}
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+            <path d="M12 9 L9 12" />
+            <path d="M12 6 L6 12" />
+            <path d="M12 3 L3 12" />
+          </svg>
+        </div>
       </section>
     </main>
   );
