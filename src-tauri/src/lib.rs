@@ -1241,6 +1241,7 @@ pub fn run() {
 
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
@@ -1431,8 +1432,6 @@ pub fn run() {
                         .color(tauri::window::Color(0, 0, 0, 0))
                         .build(),
                 );
-                // Set window size after instantiation
-                let _ = win.set_size(tauri::LogicalSize::new(487.0, 85.0));
             }
 
             let app_handle = app.handle().clone();

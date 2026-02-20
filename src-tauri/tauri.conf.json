@@ -14,8 +14,8 @@
       {
         "label": "main",
         "title": "Insight Reader",
-        "width": 350,
-        "height": 300,
+        "width": 380,
+        "height": 315,
         "resizable": true,
         "decorations": false,
         "transparent": true,

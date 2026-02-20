@@ -24,6 +24,7 @@
     "allow-get-platform",
     "allow-open-settings-window",
     "allow-get-config",
-    "allow-save-config"
-  ]
+"allow-save-config",
+    "window-state:default"
+]
 }

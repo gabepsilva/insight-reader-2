@@ -47,10 +47,6 @@ struct RawConfig {
     ui_theme: Option<String>,
     #[serde(default)]
     editor_dark_mode: Option<bool>,
-    #[serde(default)]
-    ui_window_width: Option<u32>,
-    #[serde(default)]
-    ui_window_height: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -68,8 +64,6 @@ pub struct FullConfig {
     pub ui_muted: Option<bool>,
     pub ui_theme: Option<String>,
     pub editor_dark_mode: Option<bool>,
-    pub ui_window_width: Option<u32>,
-    pub ui_window_height: Option<u32>,
 }
 
 impl From<RawConfig> for FullConfig {
@@ -88,8 +82,6 @@ impl From<RawConfig> for FullConfig {
             ui_muted: raw.ui_muted,
             ui_theme: raw.ui_theme,
             editor_dark_mode: raw.editor_dark_mode,
-            ui_window_width: raw.ui_window_width,
-            ui_window_height: raw.ui_window_height,
         }
     }
 }
@@ -110,8 +102,6 @@ impl From<FullConfig> for RawConfig {
             ui_muted: json.ui_muted,
             ui_theme: json.ui_theme,
             editor_dark_mode: json.editor_dark_mode,
-            ui_window_width: json.ui_window_width,
-            ui_window_height: json.ui_window_height,
         }
     }
 }
