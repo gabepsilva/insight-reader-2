@@ -45,7 +45,7 @@
   height: 12px;
   border-radius: 50%;
   border: none;
-  background: #f8fafc;
+  background: var(--bright-accent);
   box-shadow: 0 2px 7px rgba(2, 6, 23, 0.55);
 }
 
@@ -54,7 +54,7 @@
   height: 12px;
   border-radius: 50%;
   border: none;
-  background: #f8fafc;
+  background: var(--bright-accent);
   box-shadow: 0 2px 7px rgba(2, 6, 23, 0.55);
 }
 

@@ -1,4 +1,4 @@
-/* Popup: position fixed, near cursor. Dark mode in parent .editor-page--dark */
+/* Popup: position fixed, near cursor. Uses main-shell theme variables. */
 .editor-lint-popup {
   z-index: 2;
   min-width: 240px;
@@ -7,9 +7,9 @@
   font-family: var(--editor-font);
   font-size: 14px;
   line-height: 1.5;
-  color: #1a1a1a;
-  background: #fff;
-  border: 1px solid #d0d0d0;
+  color: var(--text-primary);
+  background: var(--status-bar-bg);
+  border: 1px solid var(--header-border);
   border-radius: 10px;
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.12),
@@ -23,28 +23,28 @@
 }
 /* Category color matches the lint highlight / legend swatch for that type */
 .editor-lint-popup__category--spelling {
-  color: #c62828;
+  color: #f07178;
 }
 .editor-lint-popup__category--grammar {
-  color: #00838f;
+  color: #80cbc4;
 }
 .editor-lint-popup__category--punctuation {
-  color: #00acc1;
+  color: #4dd0e1;
 }
 .editor-lint-popup__category--capitalization {
-  color: #ef6c00;
+  color: #ffd54f;
 }
 .editor-lint-popup__category--style {
-  color: #1976d2;
+  color: #82aaff;
 }
 .editor-lint-popup__category--misc {
-  color: #7b1fa2;
+  color: #ce93d8;
 }
 .editor-lint-popup__message {
   margin: 0 0 12px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 .editor-lint-popup__suggestions {
@@ -67,14 +67,14 @@
   font-family: inherit;
   text-align: left;
   background: transparent;
-  border: 1px solid #b3d4fe;
+  border: 1px solid var(--card-border);
   border-radius: 6px;
-  color: #0066cc;
+  color: #82aaff;
   cursor: pointer;
   transition: border-color 0.15s;
 }
 .editor-lint-popup__apply:hover {
-  border-color: #80b8ff;
+  border-color: var(--action-hover-bg);
 }
 .editor-lint-popup__ignore {
   display: flex;
@@ -90,10 +90,10 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
   transition: color 0.15s;
 }
 .editor-lint-popup__ignore:hover {
-  color: #8f0101;
+  color: var(--text-primary);
 }

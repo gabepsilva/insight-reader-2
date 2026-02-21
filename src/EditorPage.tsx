@@ -16,6 +16,7 @@ import { TipTapEditor } from "./components/TipTapEditor";
 import { makeLintKey } from "./extensions/harperLint";
 import { applySuggestion } from "./utils/applySuggestion";
 import { callBackendPrompt } from "./backendPrompt";
+import "./App.css";
 import "./EditorPage.css";
 
 interface Config {
@@ -382,12 +383,15 @@ export default function EditorPage() {
   }, []);
 
   return (
-    <div className={`editor-page ${darkMode ? "editor-page--dark" : ""}`}>
-      <header
-        className="editor-titlebar"
-        onMouseDown={handleTitleBarMouseDown}
-        role="banner"
-      >
+    <main
+      className={`main-shell main-shell--${darkMode ? "dark" : "light"} editor-page`}
+    >
+      <section className="player-card editor-card">
+        <header
+          className="editor-titlebar"
+          onMouseDown={handleTitleBarMouseDown}
+          role="banner"
+        >
         <span className="editor-titlebar-drag" aria-hidden>
           Grammar
         </span>
@@ -546,6 +550,7 @@ export default function EditorPage() {
           </span>
         </div>
       )}
-    </div>
+      </section>
+    </main>
   );
 }

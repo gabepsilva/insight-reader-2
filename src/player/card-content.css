@@ -101,6 +101,6 @@
 }
 
 .stop-btn:hover:not(:disabled) {
-  background: rgba(127, 29, 29, 0.75);
-  color: #fecaca;
+  background: var(--stop-close-red-bg);
+  color: var(--stop-close-red-color);
 }

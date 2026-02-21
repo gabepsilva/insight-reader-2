@@ -9,17 +9,20 @@
 :root {
   --window-radius: 0px;
   --card-border: rgba(71, 85, 105, 0.8);
-  --card-bg: linear-gradient(160deg, #1f2937 0%, #0b1220 75%);
-  --card-shadow: 0 22px 44px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(148, 163, 184, 0.18);
+  --card-bg: #0f172a;
+  --card-shadow: 0 22px 44px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(148, 163, 184, 0.1);
   --header-border: rgba(71, 85, 105, 0.45);
-  --text-primary: #f8fafc;
+  --text-primary: #e2e8f0;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-subtle: #64748b;
   --window-btn-hover-bg: rgba(71, 85, 105, 0.35);
-  --window-btn-close-hover-bg: #E81123;
-  --window-btn-close-hover-color: #fff;
-  --window-btn-close-active-bg: #C50F1F;
+  --stop-close-red-bg: rgba(127, 29, 29, 0.75);
+  --stop-close-red-bg-active: rgba(127, 29, 29, 0.9);
+  --stop-close-red-color: #fecaca;
+  --window-btn-close-hover-bg: var(--stop-close-red-bg);
+  --window-btn-close-hover-color: var(--stop-close-red-color);
+  --window-btn-close-active-bg: var(--stop-close-red-bg-active);
   --error-tooltip-bg: #111827;
   --error-tooltip-border: rgba(71, 85, 105, 0.7);
   --copy-btn-border: rgba(71, 85, 105, 0.8);
@@ -27,8 +30,8 @@
   --copy-btn-hover-bg: rgba(71, 85, 105, 0.75);
   --control-bg: rgba(51, 65, 85, 0.65);
   --control-hover-bg: rgba(71, 85, 105, 0.95);
-  --play-btn-bg: #f8fafc;
-  --play-btn-hover-bg: #f1f5f9;
+  --play-btn-bg: #cbd5e1;
+  --play-btn-hover-bg: #e2e8f0;
   --play-btn-text: #0f172a;
   --play-btn-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18), 0 8px 18px rgba(2, 6, 23, 0.4);
   --volume-fill-color: #3b82f6;
@@ -36,12 +39,13 @@
   --action-bg: rgba(51, 65, 85, 0.55);
   --action-hover-bg: rgba(71, 85, 105, 0.9);
   --disabled-action-bg: rgba(51, 65, 85, 0.35);
-  --status-bar-bg: rgba(15, 23, 42, 0.55);
+  --status-bar-bg: #1f2937;
   --status-separator: rgba(71, 85, 105, 0.75);
+  --bright-accent: #cbd5e1;
   font-family: "Open Sans", "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.4;
-  color: #f3f4f6;
+  color: #e2e8f0;
   background: transparent;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -51,7 +55,7 @@
 
 .main-shell--light {
   --card-border: rgba(148, 163, 184, 0.55);
-  --card-bg: linear-gradient(160deg, #f8fafc 0%, #e2e8f0 85%);
+  --card-bg: #f1f5f9;
   --card-shadow: 0 20px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --header-border: rgba(148, 163, 184, 0.45);
   --text-primary: #0f172a;
@@ -59,9 +63,12 @@
   --text-muted: #475569;
   --text-subtle: #64748b;
   --window-btn-hover-bg: rgba(148, 163, 184, 0.35);
-  --window-btn-close-hover-bg: #E81123;
-  --window-btn-close-hover-color: #fff;
-  --window-btn-close-active-bg: #C50F1F;
+  --stop-close-red-bg: rgba(127, 29, 29, 0.75);
+  --stop-close-red-bg-active: rgba(127, 29, 29, 0.9);
+  --stop-close-red-color: #fecaca;
+  --window-btn-close-hover-bg: var(--stop-close-red-bg);
+  --window-btn-close-hover-color: var(--stop-close-red-color);
+  --window-btn-close-active-bg: var(--stop-close-red-bg-active);
   --error-tooltip-bg: #f8fafc;
   --error-tooltip-border: rgba(148, 163, 184, 0.8);
   --copy-btn-border: rgba(148, 163, 184, 0.9);
@@ -78,6 +85,7 @@
   --action-bg: rgba(148, 163, 184, 0.3);
   --action-hover-bg: rgba(148, 163, 184, 0.55);
   --disabled-action-bg: rgba(148, 163, 184, 0.22);
-  --status-bar-bg: rgba(241, 245, 249, 0.8);
+  --status-bar-bg: #f8fafc;
   --status-separator: rgba(148, 163, 184, 0.8);
+  --bright-accent: #f8fafc;
 }

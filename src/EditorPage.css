@@ -6,22 +6,10 @@
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--editor-font);
-}
-
-#root {
-  min-height: 100vh;
-}
-
-.editor-page {
-  height: 100vh;
+/* Editor uses main-shell + player-card from App.css; these styles extend them. */
+.editor-page .player-card.editor-card {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .editor-titlebar {
@@ -29,8 +17,7 @@ body {
   align-items: center;
   padding: 0 8px;
   min-height: 32px;
-  border-bottom: 1px solid #ddd;
-  background: #ebebeb;
+  border-bottom: 1px solid var(--header-border);
   flex-shrink: 0;
 }
 
@@ -40,7 +27,7 @@ body {
   user-select: none;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .editor-titlebar-close {
@@ -52,15 +39,21 @@ body {
   padding: 0;
   margin: 0 -4px 0 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   background: transparent;
-  color: #555;
+  color: var(--text-muted);
   cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
 }
 
 .editor-titlebar-close:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #222;
+  background: var(--window-btn-close-hover-bg);
+  color: var(--window-btn-close-hover-color);
+}
+
+.editor-titlebar-close:active {
+  background: var(--window-btn-close-active-bg);
+  color: var(--window-btn-close-hover-color);
 }
 
 .editor-toolbar {
@@ -68,8 +61,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-bottom: 1px solid #ddd;
-  background: #f5f5f5;
+  border-bottom: 1px solid var(--header-border);
   flex-shrink: 0;
 }
 
@@ -77,20 +69,22 @@ body {
   padding: 4px 10px;
   font-size: 14px;
   font-family: var(--editor-font);
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  color: #000;
+  background: var(--action-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .editor-toolbar button:hover:not(:disabled) {
-  background: #eee;
-  border-color: #999;
+  background: var(--action-hover-bg);
+  color: var(--text-primary);
 }
 
 .editor-toolbar button:disabled {
-  opacity: 0.5;
+  background: var(--disabled-action-bg);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -136,6 +130,26 @@ body {
   background: rgba(123, 31, 162, 0.5);
 }
 
+/* Dark theme: lighter lint hues for contrast on dark background */
+.main-shell:not(.main-shell--light) .lint--spelling {
+  background: rgba(240, 113, 120, 0.5);
+}
+.main-shell:not(.main-shell--light) .lint--grammar {
+  background: rgba(128, 203, 196, 0.5);
+}
+.main-shell:not(.main-shell--light) .lint--punctuation {
+  background: rgba(77, 208, 225, 0.5);
+}
+.main-shell:not(.main-shell--light) .lint--capitalization {
+  background: rgba(255, 213, 79, 0.5);
+}
+.main-shell:not(.main-shell--light) .lint--style {
+  background: rgba(130, 170, 255, 0.45);
+}
+.main-shell:not(.main-shell--light) .lint--misc {
+  background: rgba(206, 147, 216, 0.5);
+}
+
 .editor-legend {
   display: flex;
   flex-wrap: wrap;
@@ -144,9 +158,9 @@ body {
   padding: 6px 12px;
   font-family: var(--editor-font);
   font-size: 12px;
-  color: #666;
-  border-top: 1px solid #ddd;
-  background: #f9f9f9;
+  color: var(--text-muted);
+  border-top: 1px solid var(--header-border);
+  background: var(--status-bar-bg);
   flex-shrink: 0;
 }
 .editor-legend-count {
@@ -160,9 +174,9 @@ body {
   padding: 4px 12px;
   font-family: var(--editor-font);
   font-size: 11px;
-  color: #888;
-  background: #f9f9f9;
-  border-top: 1px solid #ddd;
+  color: var(--text-muted);
+  background: var(--status-bar-bg);
+  border-top: 1px solid var(--header-border);
   flex-shrink: 0;
 }
 
@@ -173,147 +187,16 @@ body {
 }
 
 .editor-status-label {
-  color: #666;
+  color: var(--text-subtle);
 }
 
 .editor-status-value {
-  color: #444;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
-/* ----- Dark mode ----- */
-.editor-page--dark {
-  background: #1e1e1e;
-}
-
-body:has(.editor-page--dark),
-.editor-page--dark .editor-area {
-  background: #1e1e1e;
-}
-
-.editor-page--dark .editor-titlebar {
-  background: #252525;
-  border-bottom-color: #3d3d3d;
-}
-
-.editor-page--dark .editor-titlebar-drag {
-  color: #e0e0e0;
-}
-
-.editor-page--dark .editor-titlebar-close {
-  color: #aaa;
-}
-
-.editor-page--dark .editor-titlebar-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.editor-page--dark .editor-toolbar {
-  background: #2d2d2d;
-  border-bottom-color: #2d2d2d;
-}
-
-.editor-page--dark .editor-legend {
-  background: #2d2d2d;
-  border-top-color: #444;
-  color: #aaa;
-}
-
-.editor-page--dark .editor-status-bar {
-  background: #2d2d2d;
-  border-top-color: #444;
-  color: #888;
-}
-
-.editor-page--dark .editor-status-label {
-  color: #777;
-}
-
-.editor-page--dark .editor-status-value {
-  color: #aaa;
-}
-
-.editor-page--dark .editor-toolbar button {
-  background: #3d3d3d;
-  border-color: #555;
-  color: #e0e0e0;
-}
-
-.editor-page--dark .editor-toolbar button:hover:not(:disabled) {
-  background: #4d4d4d;
-  border-color: #666;
-}
-
-/* TipTap in dark mode: inherit from editor-area; set explicit color for readability */
-.editor-page--dark .editor-area .tiptap {
-  color: #e0e0e0;
-  caret-color: #e0e0e0;
-}
-
-/* Dark mode: palette tuned for #1e1e1e — softer, distinct, easy on the eyes. */
-.editor-page--dark .lint--spelling {
-  background: rgba(240, 113, 120, 0.5);
-}
-.editor-page--dark .lint--grammar {
-  background: rgba(128, 203, 196, 0.5);
-}
-.editor-page--dark .lint--punctuation {
-  background: rgba(77, 208, 225, 0.5);
-}
-.editor-page--dark .lint--capitalization {
-  background: rgba(255, 213, 79, 0.5);
-}
-.editor-page--dark .lint--style {
-  background: rgba(130, 170, 255, 0.45);
-}
-.editor-page--dark .lint--misc {
-  background: rgba(206, 147, 216, 0.5);
-}
-
-.editor-page--dark .editor-lint-popup {
-  color: #e0e0e0;
-  background: #2d2d2d;
-  border-color: #444;
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.4),
-    0 2px 6px rgba(0, 0, 0, 0.3);
-}
-.editor-page--dark .editor-lint-popup__category--spelling {
-  color: #f07178;
-}
-.editor-page--dark .editor-lint-popup__category--grammar {
-  color: #80cbc4;
-}
-.editor-page--dark .editor-lint-popup__category--punctuation {
-  color: #4dd0e1;
-}
-.editor-page--dark .editor-lint-popup__category--capitalization {
-  color: #ffd54f;
-}
-.editor-page--dark .editor-lint-popup__category--style {
-  color: #82aaff;
-}
-.editor-page--dark .editor-lint-popup__category--misc {
-  color: #ce93d8;
-}
-.editor-page--dark .editor-lint-popup__message {
-  color: #d0d0d0;
-}
-.editor-page--dark .editor-lint-popup__apply {
-  background: transparent;
-  border-color: #2a4a6f;
-  color: #82aaff;
-}
-.editor-page--dark .editor-lint-popup__apply:hover {
-  border-color: #3a5a7f;
-}
-.editor-page--dark .editor-lint-popup__ignore {
-  background: transparent;
-  border-color: #555;
-  color: #888;
-}
-.editor-page--dark .editor-lint-popup__ignore:hover {
-  border-color: #666;
-  color: #bbb;
+/* TipTap editor inherits theme colors from main-shell */
+.editor-area .tiptap {
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
 }
