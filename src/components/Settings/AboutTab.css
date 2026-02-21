@@ -1,0 +1,24 @@
+.about-section {
+  margin-bottom: 24px;
+}
+
+.about-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.about-section li {
+  padding: 4px 0;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+
+.about-section a {
+  color: #fafafa;
+  text-decoration: none;
+}
+
+.about-section a:hover {
+  text-decoration: underline;
+}

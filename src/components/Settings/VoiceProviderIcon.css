@@ -1,0 +1,15 @@
+.provider-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.provider-icon.aws-icon {
+  width: 28px;
+  height: 20px;
+}
+
+.provider-icon.microsoft-icon {
+  width: 20px;
+  height: 20px;
+}
