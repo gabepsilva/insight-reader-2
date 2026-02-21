@@ -1,0 +1,128 @@
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--header-border);
+  position: relative;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #3b82f6, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.title-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.app-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.window-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.window-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.window-btn:hover {
+  color: var(--text-primary);
+  background: var(--window-btn-hover-bg);
+}
+
+.window-btn.minimize,
+.window-btn.close {
+  border-radius: 5px;
+}
+
+.window-btn.close:hover {
+  background: var(--window-btn-close-hover-bg);
+  color: var(--window-btn-close-hover-color);
+}
+
+.window-btn.close:active {
+  background: var(--window-btn-close-active-bg);
+  color: var(--window-btn-close-hover-color);
+}
+
+.error-indicator {
+  width: 19px;
+  height: 19px;
+  color: #f59e0b;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.error-indicator svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.error-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 10px;
+  background: var(--error-tooltip-bg);
+  border: 1px solid var(--error-tooltip-border);
+  border-radius: 10px;
+  box-shadow: 0 16px 30px rgba(2, 6, 23, 0.55);
+  z-index: 40;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.copy-errors-btn {
+  border: 1px solid var(--copy-btn-border);
+  border-radius: 6px;
+  background: var(--copy-btn-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.copy-errors-btn:hover {
+  background: var(--copy-btn-hover-bg);
+}

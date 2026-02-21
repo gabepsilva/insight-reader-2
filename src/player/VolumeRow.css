@@ -1,0 +1,67 @@
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-toggle {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.volume-toggle:hover {
+  color: var(--text-primary);
+  background: var(--window-btn-hover-bg);
+}
+
+.volume-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.volume-track {
+  flex: 1;
+}
+
+.volume-track input[type="range"] {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.volume-track input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: #f8fafc;
+  box-shadow: 0 2px 7px rgba(2, 6, 23, 0.55);
+}
+
+.volume-track input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: #f8fafc;
+  box-shadow: 0 2px 7px rgba(2, 6, 23, 0.55);
+}
+
+.volume-value {
+  width: 28px;
+  text-align: right;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+}

@@ -1,0 +1,106 @@
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+}
+
+.time-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.current-time {
+  font-size: 38px;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.total-time {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.control-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.control-btn:hover:not(:disabled) {
+  transform: scale(1.04);
+  background: var(--control-hover-bg);
+}
+
+.control-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.control-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.play-btn-wrap {
+  position: relative;
+}
+
+.play-btn-wrap .play-btn-hint {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 200;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.play-btn-wrap:hover .play-btn-hint {
+  opacity: 1;
+}
+
+.play-btn {
+  width: 48px;
+  height: 48px;
+  color: var(--play-btn-text);
+  background: var(--play-btn-bg);
+  box-shadow: var(--play-btn-shadow);
+}
+
+.play-btn:hover:not(:disabled) {
+  background: var(--play-btn-hover-bg);
+}
+
+.stop-btn:hover:not(:disabled) {
+  background: rgba(127, 29, 29, 0.75);
+  color: #fecaca;
+}

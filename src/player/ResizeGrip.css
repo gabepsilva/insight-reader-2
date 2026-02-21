@@ -1,0 +1,38 @@
+.resize-grip {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 2px 4px 2px 6px;
+  color: var(--text-subtle);
+  cursor: nwse-resize;
+  pointer-events: auto;
+}
+
+.resize-grip-dimensions {
+  position: absolute;
+  right: 100%;
+  bottom: 0;
+  margin-right: 2px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.resize-grip:hover .resize-grip-dimensions {
+  opacity: 1;
+}
+
+.resize-grip svg {
+  flex-shrink: 0;
+}
+
+.resize-grip:hover {
+  color: var(--text-muted);
+}
