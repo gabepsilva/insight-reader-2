@@ -16,9 +16,10 @@
         "title": "Insight Reader",
         "width": 380,
         "height": 315,
+        "minWidth": 340,
+        "minHeight": 300,
         "resizable": true,
         "decorations": false,
-        "transparent": true,
         "shadow": true,
         "alwaysOnTop": true,
         "acceptFirstMouse": true

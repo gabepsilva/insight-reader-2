@@ -490,18 +490,6 @@ pub fn run() {
                 }
             }
 
-            // Square window corners; Popover keeps translucency without rounding
-            if let Some(win) = app.get_webview_window("main") {
-                let _ = win.set_effects(
-                    tauri::window::EffectsBuilder::new()
-                        .effect(tauri::window::Effect::Popover)
-                        .state(tauri::window::EffectState::Active)
-                        .radius(0.0)
-                        .color(tauri::window::Color(0, 0, 0, 0))
-                        .build(),
-                );
-            }
-
             let app_handle = app.handle().clone();
 
             if let Some(state) = app.try_state::<hotkeys::GlobalHotkeyState>() {
