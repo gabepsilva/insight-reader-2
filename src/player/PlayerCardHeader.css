@@ -14,19 +14,17 @@
 }
 
 .title-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(160deg, #3b82f6, #2563eb);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--bright-accent);
 }
 
-.title-icon svg {
-  width: 14px;
-  height: 14px;
+.title-icon svg,
+.title-icon-img {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .app-name {

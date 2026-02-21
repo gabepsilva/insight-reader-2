@@ -46,10 +46,7 @@ export function PlayerCardHeader({
     <header className="card-header">
       <div className="title-wrap">
         <div className="title-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            <path d="M8 10h.01M12 10h.01M16 10h.01" />
-          </svg>
+          <img src="/logo.svg" alt="" className="title-icon-img" />
         </div>
         <h1 className="app-name">Insight Reader</h1>
       </div>

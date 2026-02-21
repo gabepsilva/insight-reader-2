@@ -12,48 +12,12 @@
   flex-direction: column;
 }
 
-.editor-titlebar {
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  min-height: 32px;
-  border-bottom: 1px solid var(--header-border);
-  flex-shrink: 0;
-}
-
-.editor-titlebar-drag {
+/* Reuse card-header from PlayerCardHeader.css; title-wrap--drag extends for editor drag region */
+.editor-page .card-header .title-wrap--drag {
   flex: 1;
+  min-width: 0;
   cursor: grab;
   user-select: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.editor-titlebar-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 28px;
-  padding: 0;
-  margin: 0 -4px 0 0;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.18s ease, background-color 0.18s ease;
-}
-
-.editor-titlebar-close:hover {
-  background: var(--window-btn-close-hover-bg);
-  color: var(--window-btn-close-hover-color);
-}
-
-.editor-titlebar-close:active {
-  background: var(--window-btn-close-active-bg);
-  color: var(--window-btn-close-hover-color);
 }
 
 .editor-toolbar {

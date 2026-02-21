@@ -11,6 +11,7 @@ import {
   type Suggestion,
 } from "harper.js";
 import type { Editor } from "@tiptap/core";
+import { CloseIcon } from "./components/icons";
 import { LintPopup } from "./components/LintPopup";
 import { TipTapEditor } from "./components/TipTapEditor";
 import { makeLintKey } from "./extensions/harperLint";
@@ -388,25 +389,28 @@ export default function EditorPage() {
     >
       <section className="player-card editor-card">
         <header
-          className="editor-titlebar"
+          className="card-header"
           onMouseDown={handleTitleBarMouseDown}
           role="banner"
         >
-        <span className="editor-titlebar-drag" aria-hidden>
-          Grammar
-        </span>
-        <button
-          type="button"
-          className="editor-titlebar-close"
-          onClick={handleClose}
-          aria-label="Close"
-          title="Close"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </header>
+          <div className="title-wrap title-wrap--drag">
+            <div className="title-icon" aria-hidden="true">
+              <img src="/logo.svg" alt="" className="title-icon-img" />
+            </div>
+            <h1 className="app-name">Insight Editor</h1>
+          </div>
+          <div className="header-actions">
+            <button
+              type="button"
+              className="window-btn close"
+              onClick={handleClose}
+              aria-label="Close"
+              title="Close"
+            >
+              <CloseIcon size={14} />
+            </button>
+          </div>
+        </header>
       <div className="editor-toolbar">
         <button
           type="button"

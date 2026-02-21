@@ -31,7 +31,7 @@ export function ActionRow({
           const text = await getInitialText();
           void invoke("open_editor_window", { initialText: text });
         }}
-        aria-label="Open grammar editor"
+        aria-label="Open Insight Editor"
       >
         <PencilIcon size={15} />
         <span>Edit</span>
