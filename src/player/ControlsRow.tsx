@@ -3,6 +3,8 @@ import { PlayIcon, PauseIcon, StopIcon } from "../components/icons";
 interface ControlsRowProps {
   isPlaying: boolean;
   isPaused: boolean;
+  /** True while TTS synthesis is starting (request in progress). */
+  isPreparing: boolean;
   currentTimeMs: number;
   atEnd: boolean;
   platform: string | null;
@@ -15,6 +17,7 @@ interface ControlsRowProps {
 export function ControlsRow({
   isPlaying,
   isPaused,
+  isPreparing,
   currentTimeMs,
   atEnd,
   platform,
@@ -43,11 +46,20 @@ export function ControlsRow({
         <button
           className="control-btn play-btn"
           onClick={onPlayPause}
-          aria-label={isPlaying ? "Pause" : "Play"}
+          disabled={isPreparing}
+          aria-label={
+            isPreparing ? "Preparing…" : isPlaying ? "Pause" : "Play"
+          }
         >
-          {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+          {isPreparing ? (
+            <span className="play-btn-preparing">Preparing…</span>
+          ) : isPlaying ? (
+            <PauseIcon size={18} />
+          ) : (
+            <PlayIcon size={18} />
+          )}
         </button>
-        {platform === "macos" && !isPlaying && (
+        {platform === "macos" && !isPlaying && !isPreparing && (
           <span className="play-btn-hint">Read clipboard</span>
         )}
       </div>

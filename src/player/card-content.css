@@ -96,6 +96,11 @@
   box-shadow: var(--play-btn-shadow);
 }
 
+.play-btn .play-btn-preparing {
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .play-btn:hover:not(:disabled) {
   background: var(--play-btn-hover-bg);
 }

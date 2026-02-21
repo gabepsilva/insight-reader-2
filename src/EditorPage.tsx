@@ -111,6 +111,8 @@ export default function EditorPage() {
   const [transformTask, setTransformTask] = useState<"clear" | "summarize" | null>(
     null,
   );
+  /** True while Read aloud is starting (TTS request in progress). */
+  const [readPreparing, setReadPreparing] = useState(false);
   const hasHydratedUiPrefsRef = useRef(false);
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
@@ -220,6 +222,7 @@ export default function EditorPage() {
   const handleRead = async () => {
     const t = text.trim();
     if (!t) return;
+    setReadPreparing(true);
     try {
       await invoke("tts_speak", { text: t });
     } catch (e) {
@@ -227,6 +230,8 @@ export default function EditorPage() {
       alert(
         typeof e === "string" ? e : "Could not read aloud. Is Piper installed?",
       );
+    } finally {
+      setReadPreparing(false);
     }
   };
 
@@ -458,12 +463,12 @@ export default function EditorPage() {
         <button
           type="button"
           onClick={handleRead}
-          disabled={!text.trim()}
-          aria-label="Read aloud"
+          disabled={!text.trim() || readPreparing}
+          aria-label={readPreparing ? "Preparing…" : "Read aloud"}
           title="Read aloud (stop from main window)"
           className="editor-toolbar-read"
         >
-          Read
+          {readPreparing ? "Preparing…" : "Read"}
         </button>
         <button
           type="button"
