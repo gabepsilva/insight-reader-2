@@ -24,6 +24,45 @@ body {
   overflow: hidden;
 }
 
+.editor-titlebar {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  min-height: 32px;
+  border-bottom: 1px solid #ddd;
+  background: #ebebeb;
+  flex-shrink: 0;
+}
+
+.editor-titlebar-drag {
+  flex: 1;
+  cursor: grab;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.editor-titlebar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  margin: 0 -4px 0 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+}
+
+.editor-titlebar-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #222;
+}
+
 .editor-toolbar {
   display: flex;
   align-items: center;
@@ -150,6 +189,24 @@ body {
 body:has(.editor-page--dark),
 .editor-page--dark .editor-area {
   background: #1e1e1e;
+}
+
+.editor-page--dark .editor-titlebar {
+  background: #252525;
+  border-bottom-color: #3d3d3d;
+}
+
+.editor-page--dark .editor-titlebar-drag {
+  color: #e0e0e0;
+}
+
+.editor-page--dark .editor-titlebar-close {
+  color: #aaa;
+}
+
+.editor-page--dark .editor-titlebar-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .editor-page--dark .editor-toolbar {

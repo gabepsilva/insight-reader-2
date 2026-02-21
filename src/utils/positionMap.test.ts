@@ -47,8 +47,8 @@ describe("extractTextWithMap", () => {
     expect(text).toBe("hello\nworld");
 
     expect(map.textToDoc(0)).toBe(1);
-    expect(map.textToDoc(5)).toBe(7); // after "hello" (end of first block's segment)
-    expect(map.textToDoc(6)).toBe(9); // after \n, at start of "world" (para nodeSize 7)
+    expect(map.textToDoc(5)).toBe(8); // boundary at newline before second paragraph
+    expect(map.textToDoc(6)).toBe(8); // at second paragraph start
     expect(map.textToDoc(7)).toBe(9); // after 'w' in "world"
     expect(map.textToDoc(12)).toBe(14); // after "world"
 
@@ -70,8 +70,8 @@ describe("extractTextWithMap", () => {
     const { text, map } = extractTextWithMap(doc);
     expect(text).toBe("hello\n\nworld");
 
-    expect(map.textToDoc(6)).toBe(9);
-    expect(map.textToDoc(7)).toBe(11); // after first \n, before "w"
+    expect(map.textToDoc(6)).toBe(10);
+    expect(map.textToDoc(7)).toBe(10); // at third paragraph start
     expect(map.docToText(11)).toBe(7);
   });
 

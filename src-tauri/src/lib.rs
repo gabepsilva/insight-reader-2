@@ -722,11 +722,14 @@ fn open_or_focus_editor_with_text<R: tauri::Runtime>(
     let url = build_webview_url(app, "editor.html")?;
 
     WebviewWindowBuilder::new(app, "editor", url)
-        .title("Insight — Grammar")
+        .title("Insight Editor")
         .inner_size(500.0, 400.0)
         .min_inner_size(400.0, 300.0)
         .resizable(true)
-        .decorations(true)
+        .decorations(false)
+        .always_on_top(true)
+        .accept_first_mouse(true)
+        .shadow(true)
         .center()
         .build()
         .map_err(|e| e.to_string())?;

@@ -44,9 +44,13 @@ function createMap(segments: Segment[], text: string): PositionMap {
         const s = segments[segments.length - 1];
         return s.docTo;
       }
+      // Prefer the segment that starts at this offset (if any). This avoids
+      // mapping paragraph-start offsets to the previous newline segment.
       for (const s of segments) {
         if (offset >= s.textFrom && offset < s.textTo)
           return s.docFrom + (offset - s.textFrom);
+      }
+      for (const s of segments) {
         if (offset === s.textTo) return s.docTo;
       }
       return segments.length > 0 ? segments[segments.length - 1].docTo : 1;

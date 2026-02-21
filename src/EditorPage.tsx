@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   binaryInlined,
   Dialect,
@@ -369,8 +370,39 @@ export default function EditorPage() {
   const handlePopupMouseEnter = cancelPopupClose;
   const handlePopupMouseLeave = schedulePopupClose;
 
+  const handleTitleBarMouseDown = useCallback(async (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    const appWindow = getCurrentWindow();
+    await appWindow.startDragging();
+  }, []);
+
+  const handleClose = useCallback(async () => {
+    const appWindow = getCurrentWindow();
+    await appWindow.close();
+  }, []);
+
   return (
     <div className={`editor-page ${darkMode ? "editor-page--dark" : ""}`}>
+      <header
+        className="editor-titlebar"
+        onMouseDown={handleTitleBarMouseDown}
+        role="banner"
+      >
+        <span className="editor-titlebar-drag" aria-hidden>
+          Grammar
+        </span>
+        <button
+          type="button"
+          className="editor-titlebar-close"
+          onClick={handleClose}
+          aria-label="Close"
+          title="Close"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </header>
       <div className="editor-toolbar">
         <button
           type="button"
