@@ -80,6 +80,7 @@ export function PlayerCard() {
         <ControlsRow
           isPlaying={ttsState.isPlaying}
           isPaused={ttsState.isPaused}
+          isPreparing={ttsState.isPreparing}
           currentTimeMs={ttsState.currentTimeMs}
           atEnd={ttsState.atEnd}
           platform={windowChrome.platform}

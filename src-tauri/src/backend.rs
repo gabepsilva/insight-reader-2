@@ -11,8 +11,9 @@ use crate::config;
 const BACKEND_BASE_URL: &str = "http://grars-backend.i.psilva.org:8080";
 
 /// Calls the ReadingService backend POST /api/prompt. Returns the response string on success.
+/// Async so the command does not block the app; long-running HTTP runs on the async runtime.
 #[tauri::command]
-pub fn backend_prompt(task: String, content: String) -> Result<String, String> {
+pub async fn backend_prompt(task: String, content: String) -> Result<String, String> {
     let base = config::load_full_config()
         .ok()
         .and_then(|c| c.backend_url)
@@ -35,7 +36,7 @@ pub fn backend_prompt(task: String, content: String) -> Result<String, String> {
         error: Option<String>,
     }
 
-    let client = reqwest::blocking::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| format!("HTTP client: {}", e))?;
@@ -44,6 +45,7 @@ pub fn backend_prompt(task: String, content: String) -> Result<String, String> {
         .post(&url)
         .json(&Request { task, content })
         .send()
+        .await
         .map_err(|e| {
             format!(
                 "Could not reach the backend at {}. Check Settings → General → Backend URL. \
@@ -55,6 +57,7 @@ pub fn backend_prompt(task: String, content: String) -> Result<String, String> {
     let status = resp.status();
     let body = resp
         .text()
+        .await
         .map_err(|e| format!("Failed to read response: {}", e))?;
 
     if status.is_success() {

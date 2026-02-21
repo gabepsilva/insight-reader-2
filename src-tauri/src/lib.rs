@@ -42,18 +42,22 @@ pub type EditorInitialText = Arc<Mutex<Option<String>>>;
 
 // --- TTS and voice commands (thin wrappers around tts / voices) ---
 
-/// Speaks the given text with Piper TTS. Fails if TTS is unavailable or text is empty.
+/// Speaks the given text (Piper, Microsoft, or Polly). Fails if TTS is unavailable or text is empty.
+/// Runs send+recv in spawn_blocking so the command thread does not block while synthesis runs.
 #[tauri::command]
-fn tts_speak(state: State<tts::TtsState>, text: String) -> Result<(), String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::Speak(text, resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())?
-        .map_err(|e| e.to_string())
+async fn tts_speak(state: State<'_, tts::TtsState>, text: String) -> Result<(), String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::Speak(text, resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 /// Stops any ongoing TTS playback. No-op if TTS is unavailable.
@@ -68,77 +72,98 @@ fn tts_stop(state: State<tts::TtsState>) -> Result<(), String> {
 
 /// Toggles pause state of TTS playback. Returns true if paused, false if playing.
 #[tauri::command]
-fn tts_toggle_pause(state: State<tts::TtsState>) -> Result<bool, String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::TogglePause(resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())?
-        .map_err(|e| e.to_string())
+async fn tts_toggle_pause(state: State<'_, tts::TtsState>) -> Result<bool, String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::TogglePause(resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 /// Gets the current TTS playback status. Returns (is_playing, is_paused).
 #[tauri::command]
-fn tts_get_status(state: State<tts::TtsState>) -> Result<(bool, bool), String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::GetStatus(resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())
+async fn tts_get_status(state: State<'_, tts::TtsState>) -> Result<(bool, bool), String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::GetStatus(resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 /// Seeks TTS playback by the given offset in milliseconds.
 /// Returns (success, at_start, at_end). Fails if paused or seeking is not supported.
 #[tauri::command]
-fn tts_seek(state: State<tts::TtsState>, offset_ms: i64) -> Result<(bool, bool, bool), String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::Seek(offset_ms, resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())?
-        .map_err(|e| e.to_string())
+async fn tts_seek(
+    state: State<'_, tts::TtsState>,
+    offset_ms: i64,
+) -> Result<(bool, bool, bool), String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::Seek(offset_ms, resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 /// Gets the current playback position and total duration in milliseconds.
 /// Returns (current_ms, total_ms).
 #[tauri::command]
-fn tts_get_position(state: State<tts::TtsState>) -> Result<(u64, u64), String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::GetPosition(resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())
+async fn tts_get_position(state: State<'_, tts::TtsState>) -> Result<(u64, u64), String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::GetPosition(resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 /// Sets TTS playback volume as percentage from 0 to 100.
 #[tauri::command]
-fn tts_set_volume(state: State<tts::TtsState>, volume_percent: u8) -> Result<(), String> {
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::SetVolume(volume_percent, resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())?
-        .map_err(|e| e.to_string())
+async fn tts_set_volume(state: State<'_, tts::TtsState>, volume_percent: u8) -> Result<(), String> {
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::SetVolume(volume_percent, resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
-/// Switches the TTS provider. provider should be "piper" or "microsoft".
+/// Switches the TTS provider. provider should be "piper", "microsoft", or "polly".
 #[tauri::command]
-fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<(), String> {
+async fn tts_switch_provider(
+    state: State<'_, tts::TtsState>,
+    provider: String,
+) -> Result<(), String> {
     let provider = match provider.to_lowercase().as_str() {
         "piper" => tts::TtsProvider::Piper,
         "microsoft" => tts::TtsProvider::Microsoft,
@@ -150,15 +175,18 @@ fn tts_switch_provider(state: State<tts::TtsState>, provider: String) -> Result<
             ))
         }
     };
-    let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
-    state
-        .inner()
-        .send(tts::TtsRequest::SwitchProvider(provider, resp_tx))
-        .map_err(|e| format!("TTS channel: {e}"))?;
-    resp_rx
-        .recv()
-        .map_err(|_| "TTS worker disconnected".to_string())?
-        .map_err(|e| e.to_string())
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::SwitchProvider(provider, resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
 // --- Config, platform, and misc commands ---
@@ -404,7 +432,13 @@ pub fn run() {
                                     warn!("Summarize Selected: no text available");
                                     return;
                                 }
-                                match backend::backend_prompt("SUMMARIZE".to_string(), text) {
+                                // backend_prompt is async; run it in a dedicated runtime so this thread can block until done.
+                                let rt = tokio::runtime::Runtime::new().expect("tokio runtime for tray summarize");
+                                let result = rt.block_on(backend::backend_prompt(
+                                    "SUMMARIZE".to_string(),
+                                    text,
+                                ));
+                                match result {
                                     Ok(summary) => {
                                         if let Some(state) = app.try_state::<EditorInitialText>() {
                                             if let Err(e) =

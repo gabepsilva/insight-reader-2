@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
+/** True while TTS synthesis is starting (any provider); UI can show "Preparing…". */
 export function useTtsPlayback(platform: string | null) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [totalTimeMs, setTotalTimeMs] = useState(0);
   const [atEnd, setAtEnd] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -49,12 +51,18 @@ export function useTtsPlayback(platform: string | null) {
         const cmd = platform === "macos" ? "get_clipboard_text" : "get_selected_text";
         const text = await invoke<string | null>(cmd);
         if (text != null && text.length > 0) {
-          await invoke("tts_speak", { text });
-          setIsPlaying(true);
+          setIsPreparing(true);
+          try {
+            await invoke("tts_speak", { text });
+            setIsPlaying(true);
+          } finally {
+            setIsPreparing(false);
+          }
         }
       }
     } catch (e) {
       console.error("handlePlayPause failed:", e);
+      setIsPreparing(false);
     }
   };
 
@@ -89,6 +97,7 @@ export function useTtsPlayback(platform: string | null) {
   return {
     isPlaying,
     isPaused,
+    isPreparing,
     currentTimeMs,
     totalTimeMs,
     atEnd,
