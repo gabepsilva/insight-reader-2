@@ -387,12 +387,7 @@ pub fn run() {
                         true
                     }
                 };
-                let toggle_label = if is_visible {
-                    "Hide Window"
-                } else {
-                    "Show Window"
-                };
-                let menu = tray::build_tray_menu(app, toggle_label)?;
+                let menu = tray::build_tray_menu(app, is_visible)?;
                 tray.set_menu(Some(menu))?;
 
                 tray.on_menu_event(move |app, event: MenuEvent| {
@@ -450,22 +445,24 @@ pub fn run() {
                                 }
                             }
                         }
-                        "toggle_visibility" => {
+                        "hide_window" => {
                             if let Some(win) = app.get_webview_window("main") {
-                                let was_visible = win.is_visible().unwrap_or_else(|e| {
-                                    warn!(error = %e, "is_visible failed in toggle, assuming hidden");
-                                    false
-                                });
-                                let new_label = if was_visible {
-                                    let _ = win.hide();
-                                    "Show Window"
-                                } else {
-                                    let _ = win.show();
-                                    let _ = win.set_focus();
-                                    "Hide Window"
-                                };
+                                let _ = win.hide();
                                 if let Some(t) = app.tray_by_id("main") {
-                                    if let Err(e) = tray::build_tray_menu(app, new_label)
+                                    if let Err(e) = tray::build_tray_menu(app, false)
+                                        .and_then(|m| t.set_menu(Some(m)))
+                                    {
+                                        warn!(error = %e, "Failed to update tray menu");
+                                    }
+                                }
+                            }
+                        }
+                        "show_window" => {
+                            if let Some(win) = app.get_webview_window("main") {
+                                let _ = win.show();
+                                let _ = win.set_focus();
+                                if let Some(t) = app.tray_by_id("main") {
+                                    if let Err(e) = tray::build_tray_menu(app, true)
                                         .and_then(|m| t.set_menu(Some(m)))
                                     {
                                         warn!(error = %e, "Failed to update tray menu");

@@ -1,19 +1,20 @@
 //! System tray icon and menu.
 //!
-//! Builds the tray menu (Read Selected, Summarize Selected, Insight Editor, Show/Hide, Quit)
-//! and provides the app logo for the tray icon. The menu event handler lives in lib's setup and
-//! dispatches to actions, windows, and backend. Show/Hide toggles main window visibility; Quit
-//! stops the TTS worker and exits.
+//! Builds the tray menu (Read Selected, Summarize Selected, Insight Editor, Hide Window,
+//! Show Window, Quit) and provides the app logo for the tray icon. The menu event handler
+//! lives in lib's setup and dispatches to actions, windows, and backend. Hide/Show control
+//! main window visibility; Quit stops the TTS worker and exits.
 
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 
 /// Tray icon: app logo at 32x32 (icons/logo.png).
 pub const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/logo.png");
 
-/// Builds the tray menu with Read Selected, Summarize Selected, Insight Editor, Show/Hide, and Quit.
+/// Builds the tray menu with Read Selected, Summarize Selected, Insight Editor, Hide Window,
+/// Show Window, and Quit. Hide is enabled when the main window is visible; Show when hidden.
 pub fn build_tray_menu<R: tauri::Runtime>(
     app: &impl tauri::Manager<R>,
-    toggle_label: &str,
+    is_main_visible: bool,
 ) -> Result<Menu<R>, tauri::Error> {
     let read_selected =
         MenuItem::with_id(app, "read_selected", "Read Selected", true, None::<&str>)?;
@@ -27,7 +28,20 @@ pub fn build_tray_menu<R: tauri::Runtime>(
     let insight_editor =
         MenuItem::with_id(app, "insight_editor", "Insight Editor", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    let toggle = MenuItem::with_id(app, "toggle_visibility", toggle_label, true, None::<&str>)?;
+    let hide_window = MenuItem::with_id(
+        app,
+        "hide_window",
+        "Hide Window",
+        is_main_visible,
+        None::<&str>,
+    )?;
+    let show_window = MenuItem::with_id(
+        app,
+        "show_window",
+        "Show Window",
+        !is_main_visible,
+        None::<&str>,
+    )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     Menu::with_items(
@@ -37,7 +51,8 @@ pub fn build_tray_menu<R: tauri::Runtime>(
             &summarize_selected,
             &insight_editor,
             &sep1,
-            &toggle,
+            &hide_window,
+            &show_window,
             &sep2,
             &quit,
         ],
