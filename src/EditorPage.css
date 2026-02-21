@@ -52,10 +52,6 @@
   cursor: not-allowed;
 }
 
-.editor-toolbar-theme {
-  padding: 4px 8px;
-}
-
 .editor-toolbar-two-lines {
   line-height: 1.2;
   text-align: center;

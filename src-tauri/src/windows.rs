@@ -62,7 +62,7 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
 
     let url = build_webview_url(app, "editor.html")?;
 
-    WebviewWindowBuilder::new(app, "editor", url)
+    let window = WebviewWindowBuilder::new(app, "editor", url)
         .title("Insight Editor")
         .inner_size(500.0, 400.0)
         .min_inner_size(400.0, 300.0)
@@ -74,6 +74,12 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
         .center()
         .build()
         .map_err(|e| e.to_string())?;
+
+    // Ensure decorations stay off on macOS (builder can be inconsistent for secondary windows)
+    #[cfg(target_os = "macos")]
+    {
+        let _ = window.set_decorations(false);
+    }
 
     Ok(())
 }
