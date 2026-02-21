@@ -5,6 +5,8 @@
   "windows": ["settings"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
     "allow-get-config",
     "allow-get-hotkey-status",
     "allow-save-config",

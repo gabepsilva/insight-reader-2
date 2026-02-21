@@ -289,15 +289,22 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 
     let url = windows::build_webview_url(&app, "settings.html")?;
 
-    WebviewWindowBuilder::new(&app, "settings", url)
+    let window = WebviewWindowBuilder::new(&app, "settings", url)
         .title("Settings - Insight Reader")
         .inner_size(600.0, 600.0)
         .min_inner_size(500.0, 500.0)
         .resizable(true)
-        .decorations(true)
+        .decorations(false)
+        .shadow(true)
+        .accept_first_mouse(true)
         .center()
         .build()
         .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = window.set_decorations(false);
+    }
 
     Ok(())
 }

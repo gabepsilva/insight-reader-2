@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -6,6 +6,11 @@ import type { Config, HotkeyStatus, Tab } from './Settings.types';
 import { GeneralTab } from './GeneralTab';
 import { AboutTab } from './AboutTab';
 import { VoicesTab } from './VoicesTab';
+import { CloseIcon } from '../icons';
+import { ResizeGrip } from '../../player/ResizeGrip';
+import { parseThemeMode } from '../../player/utils';
+import { useWindowSize } from '../../player/hooks/useWindowSize';
+import '../../App.css';
 import './Settings.css';
 
 function Settings() {
@@ -16,6 +21,8 @@ function Settings() {
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const windowSize = useWindowSize();
+  const [resizeGripHovered, setResizeGripHovered] = useState(false);
 
   const handleTooltipLeave = () => {
     tooltipTimeoutRef.current = setTimeout(() => {
@@ -56,24 +63,12 @@ function Settings() {
   }, []);
 
   useEffect(() => {
-    loadConfig();
-    
-    const unlisten = listen('open-settings', () => {
-      // Already open
-    });
-
-    return () => {
-      unlisten.then(fn => fn());
-    };
-  }, []);
-
-  useEffect(() => {
+    void loadConfig();
     const unlisten = listen('config-changed', () => {
-      loadConfig();
+      void loadConfig();
     });
-
     return () => {
-      unlisten.then(fn => fn());
+      unlisten.then((fn) => fn());
     };
   }, []);
 
@@ -109,77 +104,129 @@ function Settings() {
     saveConfig({ ...config, ...updates });
   };
 
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     const appWindow = getCurrentWindow();
     await appWindow.close();
-  };
+  }, []);
+
+  const handleTitleBarMouseDown = useCallback(async (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    const appWindow = getCurrentWindow();
+    await appWindow.startDragging();
+  }, []);
+
+  const themeMode = parseThemeMode(config?.ui_theme) ?? 'dark';
 
   if (!config) {
-    return <div className="settings-loading">Loading...</div>;
+    return (
+      <main className={`main-shell main-shell--${themeMode} settings-page`}>
+        <section className="player-card settings-card">
+          <div className="settings-loading">Loading...</div>
+          <ResizeGrip
+            windowSize={windowSize}
+            hovered={resizeGripHovered}
+            onMouseEnter={() => setResizeGripHovered(true)}
+            onMouseLeave={() => setResizeGripHovered(false)}
+          />
+        </section>
+      </main>
+    );
   }
 
   return (
-    <div className="settings-container">
-      <div className="settings-header">
-        <h1>Settings</h1>
-        {errors.length > 0 && (
-          <div 
-            className="settings-error-indicator"
-            onMouseEnter={handleTooltipEnter}
-            onMouseLeave={handleTooltipLeave}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-            </svg>
-            {showTooltip && (
-              <div className="error-tooltip">
-                <button 
-                  className="copy-errors-btn"
-                  onClick={() => navigator.clipboard.writeText(errors.join('\n'))}
-                >
-                  Copy
-                </button>
-                {errors.map((err, i) => <div key={i}>{err}</div>)}
+    <main className={`main-shell main-shell--${themeMode} settings-page`}>
+      <section className="player-card settings-card">
+        <header
+          className="card-header"
+          role="banner"
+          onMouseDown={handleTitleBarMouseDown}
+        >
+          <div className="title-wrap title-wrap--drag">
+            <div className="title-icon" aria-hidden="true">
+              <img src="/logo.svg" alt="" className="title-icon-img" />
+            </div>
+            <h1 className="app-name">Settings</h1>
+          </div>
+          <div className="header-actions">
+            {errors.length > 0 && (
+              <div
+                className="error-indicator"
+                onMouseEnter={handleTooltipEnter}
+                onMouseLeave={handleTooltipLeave}
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                </svg>
+                {showTooltip && (
+                  <div className="error-tooltip">
+                    <button
+                      className="copy-errors-btn"
+                      onClick={() => navigator.clipboard.writeText(errors.join('\n'))}
+                    >
+                      Copy
+                    </button>
+                    {errors.map((err, i) => (
+                      <div key={i}>{err}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+            <button
+              type="button"
+              className="window-btn close"
+              onClick={handleClose}
+              aria-label="Close"
+              title="Close"
+            >
+              <CloseIcon size={14} />
+            </button>
           </div>
-        )}
-        <button className="close-button" onClick={handleClose}>×</button>
-      </div>
+        </header>
 
-      <div className="settings-tabs">
-        <button 
-          className={`tab ${activeTab === 'voices' ? 'active' : ''}`}
-          onClick={() => setActiveTab('voices')}
-        >
-          Voices
-        </button>
-        <button 
-          className={`tab ${activeTab === 'general' ? 'active' : ''}`}
-          onClick={() => setActiveTab('general')}
-        >
-          General
-        </button>
-        <button 
-          className={`tab ${activeTab === 'about' ? 'active' : ''}`}
-          onClick={() => setActiveTab('about')}
-        >
-          About
-        </button>
-      </div>
+        <div className="settings-tabs">
+          <button
+            type="button"
+            className={`settings-tab ${activeTab === 'voices' ? 'active' : ''}`}
+            onClick={() => setActiveTab('voices')}
+          >
+            Voices
+          </button>
+          <button
+            type="button"
+            className={`settings-tab ${activeTab === 'general' ? 'active' : ''}`}
+            onClick={() => setActiveTab('general')}
+          >
+            General
+          </button>
+          <button
+            type="button"
+            className={`settings-tab ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => setActiveTab('about')}
+          >
+            About
+          </button>
+        </div>
 
-      <div className="settings-content">
-        {activeTab === 'general' && (
-          <GeneralTab config={config} onChange={updateConfig} hotkeyStatus={hotkeyStatus} />
-        )}
-        {activeTab === 'voices' && (
-          <VoicesTab config={config} onChange={updateConfig} />
-        )}
-        {activeTab === 'about' && <AboutTab />}
-      </div>
+        <div className="settings-content">
+          {activeTab === 'general' && (
+            <GeneralTab config={config} onChange={updateConfig} hotkeyStatus={hotkeyStatus} />
+          )}
+          {activeTab === 'voices' && (
+            <VoicesTab config={config} onChange={updateConfig} />
+          )}
+          {activeTab === 'about' && <AboutTab />}
+        </div>
 
-      {message && <div className="settings-message">{message}</div>}
-    </div>
+        {message && <div className="settings-message">{message}</div>}
+        <ResizeGrip
+          windowSize={windowSize}
+          hovered={resizeGripHovered}
+          onMouseEnter={() => setResizeGripHovered(true)}
+          onMouseLeave={() => setResizeGripHovered(false)}
+        />
+      </section>
+    </main>
   );
 }
 

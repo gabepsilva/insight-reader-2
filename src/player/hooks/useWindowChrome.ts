@@ -2,20 +2,13 @@ import { useEffect, useState, type MouseEvent, type MutableRefObject } from "rea
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import type { ThemeMode } from "../types";
+import { useWindowSize } from "./useWindowSize";
 
 export function useWindowChrome(hasPendingUiPrefChangeRef: MutableRefObject<boolean>) {
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const windowSize = useWindowSize();
   const [platform, setPlatform] = useState<string | null>(null);
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
-
-  useEffect(() => {
-    const updateSize = () =>
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
 
   useEffect(() => {
     invoke<string>("get_platform")

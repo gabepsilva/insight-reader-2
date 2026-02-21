@@ -12,11 +12,14 @@ import {
 } from "harper.js";
 import type { Editor } from "@tiptap/core";
 import { CloseIcon } from "./components/icons";
+import { ResizeGrip } from "./player/ResizeGrip";
 import { LintPopup } from "./components/LintPopup";
 import { TipTapEditor } from "./components/TipTapEditor";
 import { makeLintKey } from "./extensions/harperLint";
 import { applySuggestion } from "./utils/applySuggestion";
 import { callBackendPrompt } from "./backendPrompt";
+import { parseThemeMode } from "./player/utils";
+import { useWindowSize } from "./player/hooks/useWindowSize";
 import "./App.css";
 import "./EditorPage.css";
 
@@ -25,7 +28,7 @@ interface Config {
   selected_voice: string | null;
   selected_polly_voice: string | null;
   selected_microsoft_voice: string | null;
-  editor_dark_mode?: boolean | null;
+  ui_theme?: string | null;
 }
 
 const FONT_SIZE_MIN = 10;
@@ -102,25 +105,23 @@ export default function EditorPage() {
   const dismissedLintKeysRef = useRef<Set<string>>(new Set());
   const scheduleLintRef = useRef<((immediate?: boolean) => void) | null>(null);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
-  const [darkMode, setDarkMode] = useState(false);
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
   const textRef = useRef(text);
   const [config, setConfig] = useState<Config | null>(null);
-  const [configLoaded, setConfigLoaded] = useState(false);
   const [transformTask, setTransformTask] = useState<"clear" | "summarize" | null>(
     null,
   );
   /** True while Read aloud is starting (TTS request in progress). */
   const [readPreparing, setReadPreparing] = useState(false);
-  const hasHydratedUiPrefsRef = useRef(false);
+  const windowSize = useWindowSize();
+  const [resizeGripHovered, setResizeGripHovered] = useState(false);
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
     setConfig(cfg);
-    if (cfg.editor_dark_mode != null) {
-      setDarkMode(cfg.editor_dark_mode);
-    }
   }, []);
+
+  const themeMode = config ? (parseThemeMode(config.ui_theme) ?? "dark") : "dark";
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -140,8 +141,6 @@ export default function EditorPage() {
         applyConfigToUiState(cfg);
       } catch (e) {
         console.warn("[EditorPage] get_config failed:", e);
-      } finally {
-        setConfigLoaded(true);
       }
     })();
   }, [applyConfigToUiState]);
@@ -162,41 +161,6 @@ export default function EditorPage() {
       );
     };
   }, [applyConfigToUiState]);
-
-  useEffect(() => {
-    if (!configLoaded) return;
-
-    if (!hasHydratedUiPrefsRef.current) {
-      hasHydratedUiPrefsRef.current = true;
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const latestConfig = await invoke<Config>("get_config");
-        if (cancelled) {
-          return;
-        }
-
-        if ((latestConfig.editor_dark_mode ?? false) === darkMode) {
-          return;
-        }
-
-        const nextConfig: Config = { ...latestConfig, editor_dark_mode: darkMode };
-        setConfig(nextConfig);
-        await invoke("save_config", { configJson: JSON.stringify(nextConfig) });
-      } catch (e) {
-        if (!cancelled) {
-          console.warn("[EditorPage] save_config failed:", e);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configLoaded, darkMode]);
 
   useEffect(
     () => () => {
@@ -390,7 +354,7 @@ export default function EditorPage() {
 
   return (
     <main
-      className={`main-shell main-shell--${darkMode ? "dark" : "light"} editor-page`}
+      className={`main-shell main-shell--${themeMode} editor-page`}
     >
       <section className="player-card editor-card">
         <header
@@ -405,31 +369,6 @@ export default function EditorPage() {
             <h1 className="app-name">Insight Editor</h1>
           </div>
           <div className="header-actions">
-            <button
-              type="button"
-              className="window-btn"
-              onClick={() => setDarkMode((d) => !d)}
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {darkMode ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2" />
-                  <path d="M12 20v2" />
-                  <path d="m4.93 4.93 1.41 1.41" />
-                  <path d="m17.66 17.66 1.41 1.41" />
-                  <path d="M2 12h2" />
-                  <path d="M20 12h2" />
-                  <path d="m6.34 17.66-1.41 1.41" />
-                  <path d="m19.07 4.93-1.41 1.41" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3a7 7 0 1 0 9 9 9 9 0 1 1-9-9z" />
-                </svg>
-              )}
-            </button>
             <button
               type="button"
               className="window-btn close"
@@ -546,6 +485,12 @@ export default function EditorPage() {
           </span>
         </div>
       )}
+        <ResizeGrip
+          windowSize={windowSize}
+          hovered={resizeGripHovered}
+          onMouseEnter={() => setResizeGripHovered(true)}
+          onMouseLeave={() => setResizeGripHovered(false)}
+        />
       </section>
     </main>
   );

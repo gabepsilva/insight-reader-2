@@ -11,11 +11,11 @@
 .about-section li {
   padding: 4px 0;
   font-size: 14px;
-  color: #a1a1aa;
+  color: var(--text-muted);
 }
 
 .about-section a {
-  color: #fafafa;
+  color: var(--text-primary);
   text-decoration: none;
 }
 
