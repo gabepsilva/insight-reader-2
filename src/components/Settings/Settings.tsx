@@ -148,39 +148,49 @@ function Settings() {
     >
       <section className="player-card settings-card">
         <header
-          className={`card-header ${isMacos ? 'card-header--macos' : ''}`}
+          className={`card-header card-header--with-tabs ${isMacos ? 'card-header--macos' : ''}`}
           role="banner"
           onMouseDown={handleTitleBarMouseDown}
         >
-          {isMacos ? (
-            <div className="traffic-lights">
-              <button
-                type="button"
-                className="traffic-btn traffic-btn--close"
-                onClick={handleClose}
-                aria-label="Close"
-              >
-                <span className="traffic-btn-icon">
-                  <CloseIcon size={10} />
-                </span>
-              </button>
-            </div>
-          ) : null}
-          {!isMacos ? (
-            <div className="title-wrap title-wrap--drag">
-              <div className="title-icon" aria-hidden="true">
-                <img src="/logo.svg" alt="" className="title-icon-img" />
+          <div className="card-header__left">
+            {isMacos ? (
+              <div className="traffic-lights">
+                <button
+                  type="button"
+                  className="traffic-btn traffic-btn--close"
+                  onClick={handleClose}
+                  aria-label="Close"
+                >
+                  <span className="traffic-btn-icon">
+                    <CloseIcon size={10} />
+                  </span>
+                </button>
               </div>
-              <h1 className="app-name">Settings</h1>
-            </div>
-          ) : (
-            <div className="title-wrap title-wrap--spacer title-wrap--drag">
-              <div className="title-icon" aria-hidden="true">
-                <img src="/logo.svg" alt="" className="title-icon-img" />
-              </div>
-              <span className="app-name app-name--center">Insight Reader 2</span>
-            </div>
-          )}
+            ) : null}
+          </div>
+          <div className="settings-tabs">
+            <button
+              type="button"
+              className={`settings-tab ${activeTab === 'voices' ? 'active' : ''}`}
+              onClick={() => setActiveTab('voices')}
+            >
+              Voices
+            </button>
+            <button
+              type="button"
+              className={`settings-tab ${activeTab === 'general' ? 'active' : ''}`}
+              onClick={() => setActiveTab('general')}
+            >
+              General
+            </button>
+            <button
+              type="button"
+              className={`settings-tab ${activeTab === 'about' ? 'active' : ''}`}
+              onClick={() => setActiveTab('about')}
+            >
+              About
+            </button>
+          </div>
           <div className="header-actions">
             {errors.length > 0 && (
               <div
@@ -219,30 +229,6 @@ function Settings() {
             )}
           </div>
         </header>
-
-        <div className="settings-tabs">
-          <button
-            type="button"
-            className={`settings-tab ${activeTab === 'voices' ? 'active' : ''}`}
-            onClick={() => setActiveTab('voices')}
-          >
-            Voices
-          </button>
-          <button
-            type="button"
-            className={`settings-tab ${activeTab === 'general' ? 'active' : ''}`}
-            onClick={() => setActiveTab('general')}
-          >
-            General
-          </button>
-          <button
-            type="button"
-            className={`settings-tab ${activeTab === 'about' ? 'active' : ''}`}
-            onClick={() => setActiveTab('about')}
-          >
-            About
-          </button>
-        </div>
 
         <div className="settings-content">
           {activeTab === 'general' && (

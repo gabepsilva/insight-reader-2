@@ -9,15 +9,41 @@
   flex-direction: column;
 }
 
-.settings-page .card-header .title-wrap--drag {
+/* Header with tabs: single row, tabs centered, actions right */
+.settings-page .card-header--with-tabs {
+  flex-direction: row;
+  align-items: stretch;
+  padding: 0;
+}
+
+.settings-page .card-header--with-tabs .card-header__left {
+  display: flex;
+  align-items: center;
   flex: 1;
   min-width: 0;
-  cursor: grab;
-  user-select: none;
+  padding: 10px 12px;
+}
+
+.settings-page .card-header--with-tabs .settings-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 0 12px;
+  flex-shrink: 0;
+  border-bottom: none; /* header provides it */
+}
+
+.settings-page .card-header--with-tabs .header-actions {
+  flex: 1;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  min-width: 0;
 }
 
 .settings-tabs {
   display: flex;
+  justify-content: center;
   padding: 0 12px;
   border-bottom: 1px solid var(--header-border);
   flex-shrink: 0;
