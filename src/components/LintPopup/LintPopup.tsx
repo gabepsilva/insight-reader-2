@@ -28,8 +28,11 @@ function getCategoryLabel(lint: Lint): string {
 export interface LintPopupProps {
   lint: Lint;
   style: CSSProperties;
+  /** The span text (for "Add to dictionary" on spelling lints). */
+  word?: string;
   onApply: (suggestion: Suggestion) => void;
   onDismiss: () => void;
+  onAddToDictionary?: (word: string) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
@@ -37,11 +40,18 @@ export interface LintPopupProps {
 export function LintPopup({
   lint,
   style,
+  word,
   onApply,
   onDismiss,
+  onAddToDictionary,
   onMouseEnter,
   onMouseLeave,
 }: LintPopupProps) {
+  const suggestions = lint.suggestions();
+  const kindClass = toLintClass(lint.lint_kind());
+  const isSpelling = kindClass === "spelling";
+  const canAddToDictionary = isSpelling && word != null && word.trim() !== "" && onAddToDictionary != null;
+
   return (
     <div
       className="editor-lint-popup"
@@ -51,14 +61,14 @@ export function LintPopup({
       role="tooltip"
     >
       <p
-        className={`editor-lint-popup__category editor-lint-popup__category--${toLintClass(lint.lint_kind())}`}
+        className={`editor-lint-popup__category editor-lint-popup__category--${kindClass}`}
       >
         {getCategoryLabel(lint)}
       </p>
       <p className="editor-lint-popup__message">{lint.message()}</p>
-      {lint.suggestions().length > 0 && (
+      {suggestions.length > 0 && (
         <ul className="editor-lint-popup__suggestions" role="list">
-          {lint.suggestions().map((s, i) => (
+          {suggestions.map((s, i) => (
             <li key={i} className="editor-lint-popup__item">
               <button
                 type="button"
@@ -70,6 +80,16 @@ export function LintPopup({
             </li>
           ))}
         </ul>
+      )}
+      {canAddToDictionary && (
+        <button
+          type="button"
+          className="editor-lint-popup__add-dict"
+          onClick={() => onAddToDictionary(word.trim())}
+          aria-label="Add to dictionary"
+        >
+          Add to dictionary
+        </button>
       )}
       <button
         type="button"

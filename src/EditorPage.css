@@ -16,45 +16,57 @@
 .editor-page .card-header .title-wrap--drag {
   flex: 1;
   min-width: 0;
+  margin-right: 10px;
   cursor: grab;
   user-select: none;
 }
 
-.editor-toolbar {
+/* Single top bar: title | centered toolbar | close (reduced height) */
+.editor-page .card-header {
+  padding: 7px 12px;
+  gap: 9px;
+  flex-wrap: nowrap;
+}
+
+.editor-page .card-header .header-actions {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.editor-page .editor-header__toolbar {
+  flex: 0 0 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.editor-page .editor-header__toolbar .editor-toolbar {
+  border-bottom: none;
+  padding: 0;
   gap: 6px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--header-border);
-  flex-shrink: 0;
 }
 
-.editor-toolbar button {
-  padding: 4px 10px;
-  font-size: 14px;
-  font-family: var(--editor-font);
-  background: var(--action-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+.editor-page .editor-header__toolbar .editor-toolbar button {
+  font-size: 16px;
+  padding: 5px 11px;
 }
 
-.editor-toolbar button:hover:not(:disabled) {
-  background: var(--action-hover-bg);
-  color: var(--text-primary);
+/* Icon-only on narrow windows; show labels when there’s room */
+.editor-page .editor-header__toolbar .editor-toolbar .editor-toolbar__label {
+  display: none;
 }
 
-.editor-toolbar button:disabled {
-  background: var(--disabled-action-bg);
-  color: var(--text-muted);
-  cursor: not-allowed;
+@media (min-width: 560px) {
+  .editor-page .editor-header__toolbar .editor-toolbar .editor-toolbar__label {
+    display: inline-flex;
+  }
 }
 
-.editor-toolbar-two-lines {
-  line-height: 1.2;
-  text-align: center;
+.editor-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
 }
 
 .editor-area {
@@ -63,96 +75,6 @@
   position: relative;
   display: flex;
   flex-direction: column;
-}
-
-/* Lint overlay marks: distinct hues per category for high contrast. */
-.lint {
-  padding: 0;
-  display: inline;
-  border-radius: 2px;
-}
-.lint--spelling {
-  background: rgba(198, 40, 40, 0.5);
-}
-.lint--grammar {
-  background: rgba(0, 131, 143, 0.5);
-}
-.lint--punctuation {
-  background: rgba(0, 172, 193, 0.5);
-}
-.lint--capitalization {
-  background: rgba(245, 124, 0, 0.55);
-}
-.lint--style {
-  background: rgba(25, 118, 210, 0.5);
-}
-.lint--misc {
-  background: rgba(123, 31, 162, 0.5);
-}
-
-/* Dark theme: lighter lint hues for contrast on dark background */
-.main-shell:not(.main-shell--light) .lint--spelling {
-  background: rgba(240, 113, 120, 0.5);
-}
-.main-shell:not(.main-shell--light) .lint--grammar {
-  background: rgba(128, 203, 196, 0.5);
-}
-.main-shell:not(.main-shell--light) .lint--punctuation {
-  background: rgba(77, 208, 225, 0.5);
-}
-.main-shell:not(.main-shell--light) .lint--capitalization {
-  background: rgba(255, 213, 79, 0.5);
-}
-.main-shell:not(.main-shell--light) .lint--style {
-  background: rgba(130, 170, 255, 0.45);
-}
-.main-shell:not(.main-shell--light) .lint--misc {
-  background: rgba(206, 147, 216, 0.5);
-}
-
-.editor-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  padding: 6px 12px;
-  font-family: var(--editor-font);
-  font-size: 12px;
-  color: var(--text-muted);
-  border-top: 1px solid var(--header-border);
-  background: var(--status-bar-bg);
-  flex-shrink: 0;
-}
-.editor-legend-count {
-  font-weight: 400;
-}
-
-.editor-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 4px 12px;
-  font-family: var(--editor-font);
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--status-bar-bg);
-  border-top: 1px solid var(--header-border);
-  flex-shrink: 0;
-}
-
-.editor-status-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.editor-status-label {
-  color: var(--text-subtle);
-}
-
-.editor-status-value {
-  color: var(--text-secondary);
-  font-weight: 500;
 }
 
 /* TipTap editor inherits theme colors from main-shell */

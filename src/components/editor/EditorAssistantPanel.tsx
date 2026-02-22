@@ -1,0 +1,218 @@
+import {
+  ASSISTANT_TABS,
+  FORMAT_OPTIONS,
+  QUICK_EDIT_OPTIONS,
+  TONE_OPTIONS,
+  type AssistantTabId,
+} from "./editorData";
+import "./EditorAssistantPanel.css";
+
+interface EditorAssistantPanelProps {
+  activeTone: string;
+  activeFormat: string;
+  activeSubOption: string;
+  activeTab: AssistantTabId;
+  customPrompt: string;
+  promptHistory: string[];
+  hasText: boolean;
+  backendHealthy: boolean;
+  isRunningTransform: boolean;
+  onActiveToneChange: (value: string) => void;
+  onActiveFormatChange: (value: string, subOption: string) => void;
+  onActiveSubOptionChange: (value: string) => void;
+  onActiveTabChange: (value: AssistantTabId) => void;
+  onCustomPromptChange: (value: string) => void;
+  onApplyPrompt: () => void;
+  onUseHistoryPrompt: (value: string) => void;
+  onApplyRewrite: () => void;
+}
+
+export function EditorAssistantPanel({
+  activeTone,
+  activeFormat,
+  activeSubOption,
+  activeTab,
+  customPrompt,
+  promptHistory,
+  hasText,
+  backendHealthy,
+  isRunningTransform,
+  onActiveToneChange,
+  onActiveFormatChange,
+  onActiveSubOptionChange,
+  onActiveTabChange,
+  onCustomPromptChange,
+  onApplyPrompt,
+  onUseHistoryPrompt,
+  onApplyRewrite,
+}: EditorAssistantPanelProps) {
+  const currentFormat = FORMAT_OPTIONS.find((item) => item.id === activeFormat);
+  const rewriteDisabled = !hasText || !backendHealthy || isRunningTransform;
+
+  return (
+    <aside className="editor-assistant" aria-label="Quick adjustment">
+      <h2 className="editor-assistant__title">Quick adjustment</h2>
+      <div className="editor-assistant__tabs">
+        {ASSISTANT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`editor-assistant__tab${activeTab === tab.id ? " editor-assistant__tab--active" : ""}`}
+            onClick={() => onActiveTabChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="editor-assistant__body">
+        {activeTab === "tone" && (
+          <>
+            <p className="editor-assistant__section-label">Writing tone</p>
+            <div className="editor-assistant__tone-grid">
+              {TONE_OPTIONS.map((tone) => (
+                <button
+                  key={tone.id}
+                  type="button"
+                  className={`editor-assistant__tile editor-assistant__tile--tone${activeTone === tone.id ? " editor-assistant__tile--active" : ""}`}
+                  onClick={() => onActiveToneChange(tone.id)}
+                >
+                  <span className="editor-assistant__tile-icon">{tone.icon}</span>
+                  <span className="editor-assistant__tile-title">{tone.label}</span>
+                  <span className="editor-assistant__tile-description">
+                    {tone.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {activeTab === "format" && (
+          <>
+            <p className="editor-assistant__section-label">Content type</p>
+            <div className="editor-assistant__format-grid">
+              {FORMAT_OPTIONS.map((format) => (
+                <button
+                  key={format.id}
+                  type="button"
+                  className={`editor-assistant__tile editor-assistant__tile--format${activeFormat === format.id ? " editor-assistant__tile--active" : ""}`}
+                  onClick={() =>
+                    onActiveFormatChange(format.id, format.subOptions[0] ?? "")
+                  }
+                >
+                  <span className="editor-assistant__tile-icon">{format.icon}</span>
+                  <span className="editor-assistant__tile-title">{format.label}</span>
+                </button>
+              ))}
+            </div>
+            {currentFormat ? (
+              <>
+                <p className="editor-assistant__section-label">Subtype</p>
+                <div className="editor-assistant__chip-wrap">
+                  {currentFormat.subOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`editor-assistant__chip${activeSubOption === option ? " editor-assistant__chip--active" : ""}`}
+                      onClick={() => onActiveSubOptionChange(option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </>
+        )}
+
+        {activeTab === "quick" && (
+          <>
+            <p className="editor-assistant__section-label">Quick edits</p>
+            <div className="editor-assistant__quick-list">
+              {QUICK_EDIT_OPTIONS.map((quickEdit) => (
+                <button
+                  key={quickEdit.label}
+                  type="button"
+                  className="editor-assistant__quick-button"
+                  onClick={onApplyRewrite}
+                  disabled={rewriteDisabled}
+                >
+                  <span className="editor-assistant__quick-icon">{quickEdit.icon}</span>
+                  {quickEdit.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {activeTab === "prompt" && (
+          <div className="editor-assistant__prompt">
+            <p className="editor-assistant__section-label">Custom instruction</p>
+            <textarea
+              className="editor-assistant__textarea"
+              placeholder="e.g. your instruction"
+              value={customPrompt}
+              onChange={(event) => onCustomPromptChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && customPrompt.trim()) {
+                  event.preventDefault();
+                  onApplyPrompt();
+                }
+              }}
+            />
+
+            {promptHistory.length > 0 ? (
+              <>
+                <p className="editor-assistant__section-label">Recent</p>
+                <div className="editor-assistant__prompt-history">
+                  {promptHistory.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className="editor-assistant__history-item"
+                      onClick={() => onUseHistoryPrompt(item)}
+                    >
+                      <span className="editor-assistant__history-label">{item}</span>
+                      <span className="editor-assistant__history-action">use</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <div className="editor-assistant__footer">
+        {activeTab === "prompt" ? (
+          <button
+            type="button"
+            className="editor-assistant__apply editor-assistant__apply--prompt"
+            disabled={!customPrompt.trim()}
+            onClick={onApplyPrompt}
+          >
+            <span aria-hidden="true">↵</span>
+            <span>Apply instruction</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="editor-assistant__apply"
+            disabled={rewriteDisabled}
+            onClick={onApplyRewrite}
+          >
+            {isRunningTransform ? (
+              "Rewriting..."
+            ) : (
+              <>
+                <span aria-hidden="true">✦</span>
+                <span>Rewrite text</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}

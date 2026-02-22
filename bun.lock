@@ -11,7 +11,7 @@
         "@tiptap/pm": "^3.16.0",
         "@tiptap/react": "^3.16.0",
         "@tiptap/starter-kit": "^3.16.0",
-        "harper.js": "^1.4.0",
+        "harper.js": "^1.7.0",
         "marked": "^17.0.3",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
@@ -358,11 +358,13 @@
 
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
+    "fflate": ["fflate@0.8.2", "", {}, "sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A=="],
+
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
 
     "gensync": ["gensync@1.0.0-beta.2", "", {}, "sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg=="],
 
-    "harper.js": ["harper.js@1.4.0", "", {}, "sha512-xdH64m3o9FVKlUZCKmvBa8zE5wJPEVqbql4Hi0Br2kEl/CbaBkVsroFtAnnLf07t+nX+xQZ2YDlbWBTtmHJQZQ=="],
+    "harper.js": ["harper.js@1.7.0", "", { "dependencies": { "fflate": "^0.8.2" } }, "sha512-TimKG35PXdGlg69SN0UGq4oePplDdOmRY5mKRgcEOdd/5u0y+aVCl/jaVwIsZRoH9KZikoz+G8vx7g/S6mrrvA=="],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 

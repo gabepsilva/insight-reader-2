@@ -1,0 +1,42 @@
+.editor-legend {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-top: 1px solid var(--header-border);
+  background: var(--status-bar-bg);
+  font-family: var(--editor-font);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.main-shell--dark .editor-legend {
+  color: #fff;
+}
+
+.main-shell--light .editor-legend {
+  color: #000;
+}
+
+.editor-legend__count {
+  color: inherit;
+}
+
+.editor-legend__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.editor-legend__toggle:hover {
+  color: inherit;
+  opacity: 0.9;
+}
+
+.editor-legend__hint {
+  opacity: 0.85;
+}

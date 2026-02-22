@@ -7,15 +7,18 @@ import {
   binaryInlined,
   Dialect,
   type Lint,
-  WorkerLinter,
   type Suggestion,
+  WorkerLinter,
 } from "harper.js";
 import type { Editor } from "@tiptap/core";
 import { CloseIcon } from "./components/icons";
 import { ResizeGrip } from "./player/ResizeGrip";
 import { LintPopup } from "./components/LintPopup";
 import { TipTapEditor } from "./components/TipTapEditor";
-import { makeLintKey } from "./extensions/harperLint";
+import { EditorToolbar } from "./components/editor/EditorToolbar";
+import { EditorAssistantPanel } from "./components/editor/EditorAssistantPanel";
+import { EditorLegend } from "./components/editor/EditorLegend";
+import { FORMAT_OPTIONS, type AssistantTabId } from "./components/editor/editorData";
 import { applySuggestion } from "./utils/applySuggestion";
 import { callBackendPrompt } from "./backendPrompt";
 import { parseThemeMode } from "./player/utils";
@@ -23,7 +26,6 @@ import { useWindowSize } from "./player/hooks/useWindowSize";
 import { usePlatform } from "./player/hooks/usePlatform";
 import { useWindowRadius } from "./player/hooks/useWindowRadius";
 import { useBackendHealth } from "./player/hooks/useBackendHealth";
-import { getProviderLabel, getVoiceLabel } from "./player/types";
 import type { Config } from "./player/types";
 import "./App.css";
 import "./EditorPage.css";
@@ -31,12 +33,24 @@ import "./EditorPage.css";
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
 const FONT_SIZE_STEP = 2;
-const FONT_SIZE_DEFAULT = 14;
+const FONT_SIZE_DEFAULT = 15;
 const POPUP_CORNER_OFFSET = 3;
 const POPUP_EDGE_MARGIN = 12;
 const POPUP_MAX_WIDTH = 360;
 const POPUP_HEIGHT_ESTIMATE = 120;
 const POPUP_HIDE_DELAY_MS = 60;
+const HARPER_IGNORED_LINTS_KEY = "insight-reader-harper-ignored-lints";
+const HARPER_DICTIONARY_KEY = "insight-reader-harper-dictionary";
+
+/** Type guard: linter has a dispose method (Harper WorkerLinter). */
+function hasDispose(
+  l: WorkerLinter | null,
+): l is WorkerLinter & { dispose: () => Promise<void> } {
+  return (
+    l != null &&
+    typeof (l as { dispose?: () => Promise<void> }).dispose === "function"
+  );
+}
 
 /**
  * Computes fixed positioning for the lint popup so it stays on-screen.
@@ -78,16 +92,27 @@ export default function EditorPage() {
   } | null>(null);
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHoveredIndexRef = useRef<number | null>(null);
-  const dismissedLintKeysRef = useRef<Set<string>>(new Set());
   const scheduleLintRef = useRef<((immediate?: boolean) => void) | null>(null);
   const [fontSize, setFontSize] = useState(FONT_SIZE_DEFAULT);
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
   const textRef = useRef(text);
   const [config, setConfig] = useState<Config | null>(null);
-  const [transformTask, setTransformTask] = useState<"clear" | "summarize" | null>(
-    null,
+  const [transformTask, setTransformTask] = useState<
+    "TTS" | "SUMMARIZE" | "EXPLAIN1" | null
+  >(null);
+  const [activeTone, setActiveTone] = useState("professional");
+  const [activeFormat, setActiveFormat] = useState(FORMAT_OPTIONS[0]?.id ?? "email");
+  const [activeSubOption, setActiveSubOption] = useState(
+    FORMAT_OPTIONS[0]?.subOptions[0] ?? "",
   );
+  const [activeTab, setActiveTab] = useState<AssistantTabId>("tone");
+  const [grammarVerificationEnabled, setGrammarVerificationEnabled] = useState(true);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [promptHistory, setPromptHistory] = useState<string[]>([
+    "10% more humor",
+    "Remove all emojis",
+  ]);
   /** True while Read aloud is starting (TTS request in progress). */
   const [readPreparing, setReadPreparing] = useState(false);
   const windowSize = useWindowSize();
@@ -106,8 +131,33 @@ export default function EditorPage() {
       dialect: Dialect.American,
     });
     await l.setup();
+    try {
+      const ignoredJson = localStorage.getItem(HARPER_IGNORED_LINTS_KEY);
+      if (ignoredJson) await l.importIgnoredLints(ignoredJson);
+      const wordsJson = localStorage.getItem(HARPER_DICTIONARY_KEY);
+      if (wordsJson) {
+        const words = JSON.parse(wordsJson) as string[];
+        if (Array.isArray(words) && words.length > 0) await l.importWords(words);
+      }
+      const config = await l.getDefaultLintConfig();
+      const enabledAll: Record<string, boolean> = {};
+      for (const key of Object.keys(config)) {
+        enabledAll[key] = config[key] !== false;
+      }
+      await l.setLintConfig(enabledAll);
+    } catch (e) {
+      console.warn("[EditorPage] Harper init (ignored/dictionary/rules) failed:", e);
+    }
     linterRef.current = l;
     return l;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const l = linterRef.current;
+      if (hasDispose(l)) void l.dispose();
+      linterRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -175,13 +225,15 @@ export default function EditorPage() {
     }
   };
 
-  const runTransformTask = async (task: "clear" | "summarize") => {
+  const runTransformTask = async (
+    task: "TTS" | "SUMMARIZE" | "EXPLAIN1",
+  ) => {
     const content = text.trim();
     if (!content) return;
-    const apiTask = task === "clear" ? "TTS" : "SUMMARIZE";
+    if (!backendHealthy) return;
     setTransformTask(task);
     try {
-      const response = await callBackendPrompt(apiTask, content);
+      const response = await callBackendPrompt(task, content);
       setText(response);
     } catch (e) {
       console.warn(`[EditorPage] backend_prompt ${task} failed:`, e);
@@ -200,14 +252,14 @@ export default function EditorPage() {
     (async () => {
       try {
         const initial =
-          (await invoke<string | null>("take_editor_initial_text")) ?? "";
+          (await invoke<string | null>("get_editor_initial_text")) ?? "";
         // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
         if (isMounted && initial.length > 0) {
           setText(initial);
         }
       } catch (e) {
         if (isMounted)
-          console.warn("[EditorPage] take_editor_initial_text failed:", e);
+          console.warn("[EditorPage] get_editor_initial_text failed:", e);
       }
     })();
     return () => {
@@ -265,6 +317,12 @@ export default function EditorPage() {
     [getOrCreateLinter],
   );
 
+  // When grammar verification is toggled, re-run lint so the plugin uses the updated lint ref.
+  useEffect(() => {
+    const tid = setTimeout(() => scheduleLintRef.current?.(true), 0);
+    return () => clearTimeout(tid);
+  }, [grammarVerificationEnabled]);
+
   const hoveredLint =
     hoveredLintIndex != null ? lints[hoveredLintIndex] ?? null : null;
 
@@ -304,11 +362,38 @@ export default function EditorPage() {
     }, POPUP_HIDE_DELAY_MS);
   }, [cancelPopupClose, clearHovered]);
 
-  const handleIgnoreLint = (lint: Lint) => {
-    dismissedLintKeysRef.current.add(makeLintKey(lint));
-    scheduleLintRef.current?.(true);
-    clearHovered();
-  };
+  const handleIgnoreLint = useCallback(
+    async (lint: Lint) => {
+      try {
+        const linter = await getOrCreateLinter();
+        await linter.ignoreLint(text, lint);
+        const json = await linter.exportIgnoredLints();
+        localStorage.setItem(HARPER_IGNORED_LINTS_KEY, json);
+      } catch (e) {
+        console.warn("[EditorPage] ignoreLint failed:", e);
+      }
+      scheduleLintRef.current?.(true);
+      clearHovered();
+    },
+    [text, getOrCreateLinter, clearHovered],
+  );
+
+  const handleAddToDictionary = useCallback(
+    async (word: string) => {
+      if (!word.trim()) return;
+      try {
+        const linter = await getOrCreateLinter();
+        await linter.importWords([word]);
+        const words = await linter.exportWords();
+        localStorage.setItem(HARPER_DICTIONARY_KEY, JSON.stringify(words));
+      } catch (e) {
+        console.warn("[EditorPage] importWords failed:", e);
+      }
+      scheduleLintRef.current?.(true);
+      clearHovered();
+    },
+    [getOrCreateLinter, clearHovered],
+  );
 
   const handleEditorAreaMouseLeave = schedulePopupClose;
   const handlePopupMouseEnter = cancelPopupClose;
@@ -324,6 +409,19 @@ export default function EditorPage() {
     const appWindow = getCurrentWindow();
     await appWindow.close();
   }, []);
+
+  const handleApplyPrompt = () => {
+    const next = customPrompt.trim();
+    if (!next) return;
+    setPromptHistory((current) => [next, ...current.filter((item) => item !== next)].slice(0, 8));
+    setCustomPrompt("");
+  };
+
+  const handleAssistantRewrite = () => {
+    void runTransformTask("SUMMARIZE");
+  };
+
+  const hasText = text.trim().length > 0;
 
   return (
     <main
@@ -365,6 +463,23 @@ export default function EditorPage() {
               <span className="app-name app-name--center">Insight Reader 2</span>
             </div>
           )}
+          <div className="editor-header__toolbar">
+            <EditorToolbar
+              fontSize={fontSize}
+              minFontSize={FONT_SIZE_MIN}
+              maxFontSize={FONT_SIZE_MAX}
+              readPreparing={readPreparing}
+              transformTask={transformTask}
+              hasText={hasText}
+              backendHealthy={backendHealthy}
+              onDecreaseFontSize={decreaseFontSize}
+              onIncreaseFontSize={increaseFontSize}
+              onRead={() => void handleRead()}
+              onClear={() => void runTransformTask("TTS")}
+              onSummarize={() => void runTransformTask("SUMMARIZE")}
+              onExplain={() => void runTransformTask("EXPLAIN1")}
+            />
+          </div>
           <div className="header-actions">
             {!isMacos && (
               <button
@@ -379,127 +494,82 @@ export default function EditorPage() {
             )}
           </div>
         </header>
-      <div className="editor-toolbar">
-        <button
-          type="button"
-          onClick={decreaseFontSize}
-          disabled={fontSize <= FONT_SIZE_MIN}
-          aria-label="Decrease font size"
-          title="Decrease font size"
+      <div className="editor-content">
+        <div
+          className="editor-area"
+          style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}
+          onMouseLeave={handleEditorAreaMouseLeave}
         >
-          A−
-        </button>
-        <button
-          type="button"
-          onClick={increaseFontSize}
-          disabled={fontSize >= FONT_SIZE_MAX}
-          aria-label="Increase font size"
-          title="Increase font size"
-        >
-          A+
-        </button>
-        <button
-          type="button"
-          onClick={handleRead}
-          disabled={!text.trim() || readPreparing}
-          aria-label={readPreparing ? "Preparing…" : "Read aloud"}
-          title="Read aloud (stop from main window)"
-          className="editor-toolbar-read"
-        >
-          {readPreparing ? "Preparing…" : "Read"}
-        </button>
-        <button
-          type="button"
-          onClick={() => runTransformTask("clear")}
-          disabled={!text.trim() || transformTask != null}
-          aria-label="Clear text"
-          title="Clean content for text-to-speech (remove UI clutter, format for narration)"
-          className="editor-toolbar-two-lines"
-        >
-          {transformTask === "clear" ? "…" : <>Clear<br />text</>}
-        </button>
-        <button
-          type="button"
-          onClick={() => runTransformTask("summarize")}
-          disabled={!text.trim() || transformTask != null}
-          aria-label="Summarize"
-          title="Replace content with a concise summary"
-        >
-          {transformTask === "summarize" ? "…" : "Summarize"}
-        </button>
-      </div>
-      <div
-        className="editor-area"
-        style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}
-        onMouseLeave={handleEditorAreaMouseLeave}
-      >
-        <TipTapEditor
-          content={text}
-          onUpdate={setText}
-          editorRef={(e) => {
-            editorInstanceRef.current = e;
-          }}
-          placeholder="Paste or type text to check…"
-          lint={lintFn}
-          onLintsChange={setLints}
-          onHover={(index, pos) => {
-            cancelPopupClose();
-            if (index !== lastHoveredIndexRef.current) {
-              lastHoveredIndexRef.current = index;
-              setHoveredLintMouse(pos);
-            }
-            setHoveredLintIndex(index);
-          }}
-          onHoverEnd={schedulePopupClose}
-          getDismissedKeys={() => dismissedLintKeysRef.current}
-          scheduleLintRef={scheduleLintRef}
-        />
-        {hoveredLint != null && popupStyle != null && (
-          <LintPopup
-            lint={hoveredLint}
-            style={popupStyle}
-            onApply={(s) => handleApplySuggestion(hoveredLint, s)}
-            onDismiss={() => hoveredLint && handleIgnoreLint(hoveredLint)}
-            onMouseEnter={handlePopupMouseEnter}
-            onMouseLeave={handlePopupMouseLeave}
+          <TipTapEditor
+            content={text}
+            onUpdate={setText}
+            editorRef={(e) => {
+              editorInstanceRef.current = e;
+            }}
+            placeholder="Paste or type text to check..."
+            lint={grammarVerificationEnabled ? lintFn : undefined}
+            onLintsChange={setLints}
+            onHover={(index, pos) => {
+              cancelPopupClose();
+              if (index !== lastHoveredIndexRef.current) {
+                lastHoveredIndexRef.current = index;
+                setHoveredLintMouse(pos);
+              }
+              setHoveredLintIndex(index);
+            }}
+            onHoverEnd={schedulePopupClose}
+            scheduleLintRef={scheduleLintRef}
           />
-        )}
-      </div>
-      <div className="editor-legend" aria-label="Lint count">
-        <span className="editor-legend-count">
-          {lints.length} issue{lints.length === 1 ? "" : "s"}
-        </span>
-      </div>
-      {config && (
-        <div className="editor-status-bar">
-          <span className="editor-status-item">
-            <span className="editor-status-label">Backend:</span>
-            <span className="editor-status-value editor-status-value--backend">
-              <span
-                className={`status-backend-dot ${backendHealthy ? "status-backend-dot--healthy" : ""}`}
-                title={backendHealthy ? "Backend reachable" : "Backend unreachable"}
-                aria-label={backendHealthy ? "Backend reachable" : "Backend unreachable"}
-              />
-            </span>
-          </span>
-          <span className="editor-status-item">
-            <span className="editor-status-label">Provider:</span>
-            <span className="editor-status-value">
-              {getProviderLabel(config.voice_provider)}
-            </span>
-          </span>
-          <span className="editor-status-item">
-            <span className="editor-status-label">Voice:</span>
-            <span className="editor-status-value">{getVoiceLabel(config)}</span>
-          </span>
+          {hoveredLint != null && popupStyle != null && (
+            <LintPopup
+              lint={hoveredLint}
+              style={popupStyle}
+              word={text.slice(hoveredLint.span().start, hoveredLint.span().end)}
+              onApply={(s) => handleApplySuggestion(hoveredLint, s)}
+              onDismiss={() => void handleIgnoreLint(hoveredLint)}
+              onAddToDictionary={handleAddToDictionary}
+              onMouseEnter={handlePopupMouseEnter}
+              onMouseLeave={handlePopupMouseLeave}
+            />
+          )}
         </div>
-      )}
+        <EditorAssistantPanel
+          activeTone={activeTone}
+          activeFormat={activeFormat}
+          activeSubOption={activeSubOption}
+          activeTab={activeTab}
+          customPrompt={customPrompt}
+          promptHistory={promptHistory}
+          hasText={hasText}
+          backendHealthy={backendHealthy}
+          isRunningTransform={transformTask != null}
+          onActiveToneChange={setActiveTone}
+          onActiveFormatChange={(format, subOption) => {
+            setActiveFormat(format);
+            setActiveSubOption(subOption);
+          }}
+          onActiveSubOptionChange={setActiveSubOption}
+          onActiveTabChange={setActiveTab}
+          onCustomPromptChange={setCustomPrompt}
+          onApplyPrompt={handleApplyPrompt}
+          onUseHistoryPrompt={setCustomPrompt}
+          onApplyRewrite={handleAssistantRewrite}
+        />
+      </div>
+      <EditorLegend
+        issueCount={lints.length}
+        grammarEnabled={grammarVerificationEnabled}
+        onToggleGrammar={() =>
+          setGrammarVerificationEnabled((v) => !v)
+        }
+      >
         <ResizeGrip
           windowSize={windowSize}
           hovered={resizeGripHovered}
           onMouseEnter={() => setResizeGripHovered(true)}
           onMouseLeave={() => setResizeGripHovered(false)}
         />
+      </EditorLegend>
       </section>
     </main>
   );

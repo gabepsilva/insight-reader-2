@@ -70,7 +70,7 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
 
     let builder = WebviewWindowBuilder::new(app, "editor", url)
         .title("Insight Editor")
-        .inner_size(500.0, 400.0)
+        .inner_size(1000.0, 600.0)
         .min_inner_size(400.0, 300.0)
         .resizable(true)
         .decorations(false)
@@ -109,10 +109,10 @@ pub fn open_editor_window(
     open_or_focus_editor_with_text(&app, &state, initial_text)
 }
 
-/// Returns the stored initial text for the editor. Does not consume so that
-/// React StrictMode double-mount or HMR remounts can still receive the value.
+/// Returns the stored initial text for the editor (does not consume, so
+/// React StrictMode double-mount or HMR remounts can still receive the value).
 #[tauri::command]
-pub fn take_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
+pub fn get_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
     let guard = state
         .inner()
         .lock()

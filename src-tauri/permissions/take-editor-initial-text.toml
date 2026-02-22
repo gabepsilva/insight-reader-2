@@ -1,5 +1,0 @@
-# Permission to invoke take_editor_initial_text (used by the editor page on mount)
-[[permission]]
-identifier = "allow-take-editor-initial-text"
-description = "Allows the editor window to take the initial text passed when opening"
-commands.allow = ["take_editor_initial_text"]

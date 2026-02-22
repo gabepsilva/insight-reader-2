@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { marked } from "marked";
 import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor, JSONContent } from "@tiptap/core";
@@ -53,8 +53,6 @@ export interface TipTapEditorProps {
   onHover?: (index: number, mouse: { x: number; y: number }) => void;
   /** Called when pointer leaves a lint. */
   onHoverEnd?: () => void;
-  /** Returns keys of dismissed lints; HarperLint excludes them from decorations and onLintsChange. */
-  getDismissedKeys?: () => Set<string>;
   /** Ref to the plugin's schedule(immediate?) so the host can trigger re-lint (e.g. after dismiss). */
   scheduleLintRef?: { current: ((immediate?: boolean) => void) | null };
 }
@@ -73,19 +71,20 @@ export function TipTapEditor({
   onLintsChange,
   onHover,
   onHoverEnd,
-  getDismissedKeys,
   scheduleLintRef,
 }: TipTapEditorProps) {
+  const lintRef = useRef<(text: string) => Promise<Lint[]>>(lint ?? noopLint);
+  lintRef.current = lint ?? noopLint;
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
       HarperLint.configure({
-        lint: lint ?? noopLint,
+        lintRef,
         onLintsChange,
         onHover,
         onHoverEnd,
-        getDismissedKeys,
         scheduleLintRef,
       }),
     ],

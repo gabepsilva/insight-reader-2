@@ -463,7 +463,7 @@ pub fn run() {
             text_capture::get_clipboard_text,
             text_capture::get_text_or_clipboard,
             windows::open_editor_window,
-            windows::take_editor_initial_text,
+            windows::get_editor_initial_text,
             tts_speak,
             tts_stop,
             tts_toggle_pause,

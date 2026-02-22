@@ -20,27 +20,25 @@ export function toLintClass(kind: string): string {
   return KINDS.includes(k as (typeof KINDS)[number]) ? k : "misc";
 }
 
-/** Stable key for a lint so we can remember dismissed ones across re-runs. */
-export function makeLintKey(l: Lint): string {
-  const s = l.span();
-  return `${s.start}-${s.end}-${l.message()}`;
-}
-
 export interface HarperLintScheduleRef {
   current: ((immediate?: boolean) => void) | null;
 }
 
+export interface HarperLintLintRef {
+  current: (text: string) => Promise<Lint[]>;
+}
+
 export interface HarperLintOptions {
-  /** Run Harper on plain text and return lints. Called with text from the document. */
-  lint: (text: string) => Promise<Lint[]>;
+  /** Run Harper on plain text and return lints. Ignored when lintRef is provided. */
+  lint?: (text: string) => Promise<Lint[]>;
+  /** When set, used for each run so the host can enable/disable Harper without re-mounting. */
+  lintRef?: HarperLintLintRef;
   /** Called when lints change (e.g. for legend count). */
   onLintsChange?: (lints: Lint[]) => void;
   /** Called when the pointer is over a lint decoration. index is into the lints array. */
   onHover?: (index: number, mouse: { x: number; y: number }) => void;
   /** Called when the pointer is not over any lint (e.g. clear popup). */
   onHoverEnd?: () => void;
-  /** Returns keys of lints the user dismissed; those are excluded from decorations and onLintsChange. */
-  getDismissedKeys?: () => Set<string>;
   /** Ref to the plugin's schedule function; set so the host can trigger a re-lint (e.g. after dismiss). */
   scheduleLintRef?: HarperLintScheduleRef;
 }
@@ -52,11 +50,11 @@ export const HarperLint = Extension.create<HarperLintOptions>({
 
   addOptions() {
     return {
-      lint: async () => [],
+      lint: undefined,
+      lintRef: undefined,
       onLintsChange: undefined,
       onHover: undefined,
       onHoverEnd: undefined,
-      getDismissedKeys: undefined,
       scheduleLintRef: undefined,
     };
   },
@@ -64,12 +62,13 @@ export const HarperLint = Extension.create<HarperLintOptions>({
   addProseMirrorPlugins() {
     const {
       lint,
+      lintRef,
       onLintsChange,
       onHover,
       onHoverEnd,
-      getDismissedKeys,
       scheduleLintRef,
     } = this.options;
+    const noopLint = async (): Promise<Lint[]> => [];
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let lastLints: Lint[] = [];
 
@@ -84,13 +83,12 @@ export const HarperLint = Extension.create<HarperLintOptions>({
         );
         return;
       }
-      lint(text)
+      const lintFn = lintRef ? lintRef.current : lint ?? noopLint;
+      lintFn(text)
         .then((lints) => {
-          const dismissed = getDismissedKeys?.() ?? new Set<string>();
-          const filtered = lints.filter((l) => !dismissed.has(makeLintKey(l)));
-          lastLints = filtered;
-          onLintsChange?.(filtered);
-          const withIdx = filtered.map((l, i) => ({ l, i }));
+          lastLints = lints;
+          onLintsChange?.(lints);
+          const withIdx = lints.map((l, i) => ({ l, i }));
           withIdx.sort((a, b) => a.l.span().start - b.l.span().start);
           let lastEnd = 0;
           const decos: Decoration[] = [];
