@@ -204,9 +204,6 @@ export default function EditorPage() {
         // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
         if (isMounted && initial.length > 0) {
           setText(initial);
-          setTimeout(() => {
-            scheduleLintRef.current?.(true);
-          }, 2000);
         }
       } catch (e) {
         if (isMounted)

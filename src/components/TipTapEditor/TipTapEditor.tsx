@@ -112,6 +112,12 @@ export function TipTapEditor({
     if (current !== content) {
       const toSet = contentToSet(content);
       editor.commands.setContent(toSet, { emitUpdate: false });
+      // Ensure Harper runs on programmatic content (e.g. pre-filled or editor-set-text).
+      // Schedule after the next tick so the doc update and plugin view have been applied.
+      const tid = setTimeout(() => {
+        scheduleLintRef?.current?.(true);
+      }, 0);
+      return () => clearTimeout(tid);
     }
   }, [content, editor]);
 

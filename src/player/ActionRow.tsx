@@ -34,7 +34,7 @@ export function ActionRow({
         aria-label="Open Insight Editor"
       >
         <PencilIcon size={15} />
-        <span>Edit</span>
+        <span>Editor</span>
       </button>
 
       <button
