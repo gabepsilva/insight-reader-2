@@ -46,7 +46,14 @@ export function EditorAssistantPanel({
   onUseHistoryPrompt,
   onApplyRewrite,
 }: EditorAssistantPanelProps) {
+  const currentTone = TONE_OPTIONS.find((t) => t.id === activeTone);
   const currentFormat = FORMAT_OPTIONS.find((item) => item.id === activeFormat);
+  const toneLabel = currentTone?.label ?? activeTone;
+  const formatLabel = currentFormat
+    ? activeSubOption
+      ? `${currentFormat.label} (${activeSubOption})`
+      : currentFormat.label
+    : activeFormat;
   const rewriteDisabled = !hasText || !backendHealthy || isRunningTransform;
 
   return (
@@ -184,35 +191,42 @@ export function EditorAssistantPanel({
         )}
       </div>
 
-      <div className="editor-assistant__footer">
-        {activeTab === "prompt" ? (
-          <button
-            type="button"
-            className="editor-assistant__apply editor-assistant__apply--prompt"
-            disabled={!customPrompt.trim()}
-            onClick={onApplyPrompt}
-          >
-            <span aria-hidden="true">↵</span>
-            <span>Apply instruction</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="editor-assistant__apply"
-            disabled={rewriteDisabled}
-            onClick={onApplyRewrite}
-          >
-            {isRunningTransform ? (
-              "Rewriting..."
-            ) : (
-              <>
-                <span aria-hidden="true">✦</span>
-                <span>Rewrite text</span>
-              </>
-            )}
-          </button>
-        )}
-      </div>
+      {activeTab !== "quick" && (
+        <div className="editor-assistant__footer">
+          {activeTab === "prompt" ? (
+            <button
+              type="button"
+              className="editor-assistant__apply editor-assistant__apply--prompt"
+              disabled={!customPrompt.trim()}
+              onClick={onApplyPrompt}
+            >
+              <span aria-hidden="true">↵</span>
+              <span>Apply instruction</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="editor-assistant__apply"
+              disabled={rewriteDisabled}
+              onClick={onApplyRewrite}
+            >
+              {isRunningTransform ? (
+                "Rewriting..."
+              ) : (
+                <>
+                  <span aria-hidden="true">✦</span>
+                  <span>Rewrite </span>
+                  <span className="editor-assistant__rewrite-hint">
+                    {" "}
+                    with <span className="editor-assistant__rewrite-highlight">{toneLabel}</span> tone and{" "}
+                    <span className="editor-assistant__rewrite-highlight">{formatLabel}</span> format
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

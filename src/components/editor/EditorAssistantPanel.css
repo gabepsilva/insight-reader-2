@@ -292,6 +292,7 @@
 
 .editor-assistant__apply {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -316,4 +317,15 @@
   opacity: 0.45;
   cursor: not-allowed;
   filter: none;
+}
+
+.editor-assistant__rewrite-hint {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.editor-assistant__rewrite-highlight {
+  color: #86efac;
+  font-weight: 600;
 }
