@@ -1,0 +1,26 @@
+.assistant-resize-handle {
+  flex-shrink: 0;
+  width: 16px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  cursor: col-resize;
+  position: relative;
+  margin-left: -8px; /* overlap slightly with editor for easier grab */
+  z-index: 1;
+}
+
+.assistant-resize-handle:hover .assistant-resize-handle__track,
+.assistant-resize-handle:active .assistant-resize-handle__track {
+  background: var(--volume-fill-color);
+  opacity: 0.5;
+}
+
+.assistant-resize-handle__track {
+  width: 3px;
+  min-height: 100%;
+  background: var(--header-border);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}

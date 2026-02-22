@@ -8,6 +8,7 @@ import {
 import "./EditorAssistantPanel.css";
 
 interface EditorAssistantPanelProps {
+  width?: number;
   activeTone: string;
   activeFormat: string;
   activeSubOption: string;
@@ -28,6 +29,7 @@ interface EditorAssistantPanelProps {
 }
 
 export function EditorAssistantPanel({
+  width,
   activeTone,
   activeFormat,
   activeSubOption,
@@ -57,7 +59,11 @@ export function EditorAssistantPanel({
   const rewriteDisabled = !hasText || !backendHealthy || isRunningTransform;
 
   return (
-    <aside className="editor-assistant" aria-label="Quick adjustment">
+    <aside
+      className="editor-assistant"
+      aria-label="Quick adjustment"
+      style={width != null ? { width: `${width}px` } : undefined}
+    >
       <h2 className="editor-assistant__title">Quick adjustment</h2>
       <div className="editor-assistant__tabs">
         {ASSISTANT_TABS.map((tab) => (
@@ -84,8 +90,10 @@ export function EditorAssistantPanel({
                   className={`editor-assistant__tile editor-assistant__tile--tone${activeTone === tone.id ? " editor-assistant__tile--active" : ""}`}
                   onClick={() => onActiveToneChange(tone.id)}
                 >
-                  <span className="editor-assistant__tile-icon">{tone.icon}</span>
-                  <span className="editor-assistant__tile-title">{tone.label}</span>
+                  <div className="editor-assistant__tile-header">
+                    <span className="editor-assistant__tile-icon">{tone.icon}</span>
+                    <span className="editor-assistant__tile-title">{tone.label}</span>
+                  </div>
                   <span className="editor-assistant__tile-description">
                     {tone.description}
                   </span>

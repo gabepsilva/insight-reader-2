@@ -16,6 +16,10 @@ import { ResizeGrip } from "./player/ResizeGrip";
 import { LintPopup } from "./components/LintPopup";
 import { TipTapEditor } from "./components/TipTapEditor";
 import { EditorToolbar } from "./components/editor/EditorToolbar";
+import {
+  AssistantPanelResizeHandle,
+  loadStoredWidth,
+} from "./components/editor/AssistantPanelResizeHandle";
 import { EditorAssistantPanel } from "./components/editor/EditorAssistantPanel";
 import { EditorLegend } from "./components/editor/EditorLegend";
 import { FORMAT_OPTIONS, type AssistantTabId } from "./components/editor/editorData";
@@ -117,6 +121,7 @@ export default function EditorPage() {
   const [readPreparing, setReadPreparing] = useState(false);
   const windowSize = useWindowSize();
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
+  const [assistantPanelWidth, setAssistantPanelWidth] = useState(loadStoredWidth);
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
     setConfig(cfg);
@@ -528,7 +533,12 @@ export default function EditorPage() {
             />
           )}
         </div>
+        <AssistantPanelResizeHandle
+          width={assistantPanelWidth}
+          onWidthChange={setAssistantPanelWidth}
+        />
         <EditorAssistantPanel
+          width={assistantPanelWidth}
           activeTone={activeTone}
           activeFormat={activeFormat}
           activeSubOption={activeSubOption}

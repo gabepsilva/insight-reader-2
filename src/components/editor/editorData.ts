@@ -46,12 +46,6 @@ export const TONE_OPTIONS: ReadonlyArray<ToneOption> = [
     description: "Short and direct",
   },
   {
-    id: "formal",
-    label: "Formal",
-    icon: "🎩",
-    description: "Structured and precise",
-  },
-  {
     id: "casual",
     label: "Casual",
     icon: "✌️",
