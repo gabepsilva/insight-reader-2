@@ -55,7 +55,7 @@ jobs:
           apt-get update
           apt-get install -y curl unzip build-essential pkg-config libssl-dev \
             libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf libwebkit2gtk-4.1-dev \
-            libasound2-dev xdg-utils libfuse2t64 zsync file
+            libasound2-dev xdg-utils libfuse2t64 zsync file libclang-dev
 
       - name: Install Rust
         run: |

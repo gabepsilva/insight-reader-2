@@ -34,7 +34,7 @@ jobs:
 
           apt-get install -y curl unzip build-essential pkg-config libssl-dev \
             libgtk-3-dev "$APPINDICATOR_DEV_PACKAGE" librsvg2-dev patchelf "$WEBKIT_DEV_PACKAGE" \
-            libasound2-dev xdg-utils
+            libasound2-dev xdg-utils libclang-dev
 
       - name: Install Rust
         run: |
