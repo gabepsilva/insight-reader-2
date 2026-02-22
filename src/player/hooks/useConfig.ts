@@ -4,9 +4,11 @@ import { listen } from "@tauri-apps/api/event";
 import type { Config } from "../types";
 import type { ThemeMode } from "../types";
 import {
+  DEFAULT_PLAYBACK_SPEED,
   DEFAULT_VOLUME,
   clampVolume,
   hasMatchingUiPrefs,
+  parseConfigPlaybackSpeed,
   parseConfigVolume,
   parseThemeMode,
 } from "../utils";
@@ -15,9 +17,11 @@ export interface UseConfigInput {
   volume: number;
   isMuted: boolean;
   themeMode: ThemeMode;
+  playbackSpeed: number;
   setVolume: (v: number) => void;
   setIsMuted: (v: boolean) => void;
   setThemeMode: (v: ThemeMode | ((prev: ThemeMode) => ThemeMode)) => void;
+  setPlaybackSpeed: (v: number) => void;
   previousVolumeRef: MutableRefObject<number>;
   hasPendingUiPrefChangeRef: MutableRefObject<boolean>;
 }
@@ -27,9 +31,11 @@ export function useConfig(input: UseConfigInput) {
     volume,
     isMuted,
     themeMode,
+    playbackSpeed,
     setVolume,
     setIsMuted,
     setThemeMode,
+    setPlaybackSpeed,
     previousVolumeRef,
     hasPendingUiPrefChangeRef,
   } = input;
@@ -53,8 +59,12 @@ export function useConfig(input: UseConfigInput) {
     if (parsedTheme != null) {
       setThemeMode(parsedTheme);
     }
-    return { configVolume, parsedTheme };
-  }, [previousVolumeRef, setIsMuted, setThemeMode, setVolume]);
+    const parsedSpeed = parseConfigPlaybackSpeed(cfg.ui_playback_speed);
+    if (parsedSpeed != null) {
+      setPlaybackSpeed(parsedSpeed);
+    }
+    return { configVolume, parsedTheme, parsedSpeed };
+  }, [previousVolumeRef, setPlaybackSpeed, setIsMuted, setThemeMode, setVolume]);
 
   const applyCurrentUiPrefsToConfig = useCallback(
     (baseConfig: Config): Config => ({
@@ -62,24 +72,29 @@ export function useConfig(input: UseConfigInput) {
       ui_volume: clampVolume(volume),
       ui_muted: isMuted,
       ui_theme: themeMode,
+      ui_playback_speed: playbackSpeed,
     }),
-    [isMuted, themeMode, volume],
+    [isMuted, playbackSpeed, themeMode, volume],
   );
 
   useEffect(() => {
     void (async () => {
       try {
         const cfg = await invoke<Config>("get_config");
-        const { configVolume, parsedTheme } = applyUiPrefsFromConfig(cfg);
+        const { configVolume, parsedTheme, parsedSpeed } = applyUiPrefsFromConfig(cfg);
         const normalizedConfig: Config = {
           ...cfg,
           ui_volume: configVolume ?? DEFAULT_VOLUME,
           ui_muted: cfg.ui_muted ?? false,
           ui_theme: parsedTheme ?? "dark",
+          ui_playback_speed: parsedSpeed ?? DEFAULT_PLAYBACK_SPEED,
         };
         setConfig(normalizedConfig);
         const shouldBackfillUiPrefs =
-          cfg.ui_volume == null || cfg.ui_muted == null || parsedTheme == null;
+          cfg.ui_volume == null ||
+          cfg.ui_muted == null ||
+          parsedTheme == null ||
+          parsedSpeed == null;
         if (shouldBackfillUiPrefs) {
           await invoke("save_config", { configJson: JSON.stringify(normalizedConfig) });
         }

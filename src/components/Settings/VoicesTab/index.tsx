@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { Config } from '../Settings.types';
-import { getCountryFlag, formatLanguageCode } from '../voices/languageUtils';
+import { getCountryFlag, formatLanguageCode, sortLanguagesWithTopFirst, getMostUsedLanguagesForSection } from '../voices/languageUtils';
 import { VoiceProviderDropdown } from './VoiceProviderDropdown';
 import { PiperSection } from './PiperSection';
 import { PollySection } from './PollySection';
@@ -82,9 +82,8 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
         }
       });
       const langs = Array.from(langMap.entries())
-        .map(([code, { name, flag }]) => ({ code, name, flag }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      setPiperLanguages(langs);
+        .map(([code, { name, flag }]) => ({ code, name, flag }));
+      setPiperLanguages(sortLanguagesWithTopFirst(langs, (l) => l.code, (l) => l.name));
     }
   }, [piperVoices]);
 
@@ -97,9 +96,8 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
         }
       });
       const langs = Array.from(langMap.entries())
-        .map(([code, name]) => ({ code, name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      setMicrosoftLanguages(langs);
+        .map(([code, name]) => ({ code, name }));
+      setMicrosoftLanguages(sortLanguagesWithTopFirst(langs, (l) => l.code, (l) => l.name));
       if (!selectedMicrosoftLanguage && langs.length > 0) {
         setSelectedMicrosoftLanguage(langs[0].code);
       }
@@ -129,10 +127,37 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
   }, [pollyVoices]);
 
   const pollyLanguages = useMemo(() => {
-    return Array.from(pollyVoicesByLanguage.keys())
-      .map((code) => ({ code, name: formatLanguageCode(code) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const items = Array.from(pollyVoicesByLanguage.keys()).map((code) => ({
+      code,
+      name: formatLanguageCode(code),
+    }));
+    return sortLanguagesWithTopFirst(items, (l) => l.code, (l) => l.name);
   }, [pollyVoicesByLanguage]);
+
+  const piperMostUsed = useMemo(
+    () => getMostUsedLanguagesForSection(piperLanguages, (l) => l.code),
+    [piperLanguages]
+  );
+  const piperOther = useMemo(() => {
+    const mostUsedSet = new Set(piperMostUsed.map((l) => l.code));
+    return piperLanguages.filter((l) => !mostUsedSet.has(l.code));
+  }, [piperLanguages, piperMostUsed]);
+  const microsoftMostUsed = useMemo(
+    () => getMostUsedLanguagesForSection(microsoftLanguages, (l) => l.code),
+    [microsoftLanguages]
+  );
+  const microsoftOther = useMemo(() => {
+    const mostUsedSet = new Set(microsoftMostUsed.map((l) => l.code));
+    return microsoftLanguages.filter((l) => !mostUsedSet.has(l.code));
+  }, [microsoftLanguages, microsoftMostUsed]);
+  const pollyMostUsed = useMemo(
+    () => getMostUsedLanguagesForSection(pollyLanguages, (l) => l.code),
+    [pollyLanguages]
+  );
+  const pollyOther = useMemo(() => {
+    const mostUsedSet = new Set(pollyMostUsed.map((l) => l.code));
+    return pollyLanguages.filter((l) => !mostUsedSet.has(l.code));
+  }, [pollyLanguages, pollyMostUsed]);
 
   useEffect(() => {
     if (!pollyLanguages.length) {
@@ -169,6 +194,8 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
           onChange={onChange}
           piperVoices={piperVoices}
           piperLanguages={piperLanguages}
+          mostUsedLanguages={piperMostUsed}
+          otherLanguages={piperOther}
           selectedPiperLanguage={selectedPiperLanguage}
           piperModalLanguage={piperModalLanguage}
           onSelectLanguage={(code) => {
@@ -189,6 +216,8 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
           onChange={onChange}
           loadingPolly={loadingPolly}
           pollyLanguages={pollyLanguages}
+          mostUsedLanguages={pollyMostUsed}
+          otherLanguages={pollyOther}
           selectedPollyLanguage={selectedPollyLanguage}
           pollyModalLanguage={pollyModalLanguage}
           pollyVoicesByLanguage={pollyVoicesByLanguage}
@@ -207,6 +236,8 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
           loadingMicrosoft={loadingMicrosoft}
           microsoftVoices={microsoftVoices}
           microsoftLanguages={microsoftLanguages}
+          mostUsedLanguages={microsoftMostUsed}
+          otherLanguages={microsoftOther}
           selectedMicrosoftLanguage={selectedMicrosoftLanguage}
           microsoftModalLanguage={microsoftModalLanguage}
           onSelectLanguage={(code) => {

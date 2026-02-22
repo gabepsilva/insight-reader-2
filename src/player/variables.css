@@ -34,6 +34,11 @@
   --play-btn-hover-bg: #e2e8f0;
   --play-btn-text: #0f172a;
   --play-btn-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18), 0 8px 18px rgba(2, 6, 23, 0.4);
+  --speed-menu-border: rgba(71, 85, 105, 0.65);
+  --speed-menu-bg: #0f172a;
+  --speed-item-hover-bg: rgba(71, 85, 105, 0.5);
+  --speed-item-active-color: #93c5fd;
+  --speed-item-active-bg: rgba(30, 64, 175, 0.35);
   --volume-fill-color: #3b82f6;
   --volume-track-color: #374151;
   --action-bg: rgba(51, 65, 85, 0.55);
@@ -80,6 +85,11 @@
   --play-btn-hover-bg: #8594ab;
   --play-btn-text: #0f172a;
   --play-btn-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 10px 20px rgba(15, 23, 42, 0.2);
+  --speed-menu-border: rgba(148, 163, 184, 0.75);
+  --speed-menu-bg: #f8fafc;
+  --speed-item-hover-bg: rgba(148, 163, 184, 0.35);
+  --speed-item-active-color: #1d4ed8;
+  --speed-item-active-bg: rgba(147, 197, 253, 0.45);
   --volume-fill-color: #2563eb;
   --volume-track-color: #cbd5e1;
   --action-bg: rgba(148, 163, 184, 0.3);

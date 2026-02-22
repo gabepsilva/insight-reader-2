@@ -46,6 +46,8 @@ struct RawConfig {
     #[serde(default)]
     ui_theme: Option<String>,
     #[serde(default)]
+    ui_playback_speed: Option<f64>,
+    #[serde(default)]
     editor_dark_mode: Option<bool>,
 }
 
@@ -63,6 +65,7 @@ pub struct FullConfig {
     pub ui_volume: Option<u8>,
     pub ui_muted: Option<bool>,
     pub ui_theme: Option<String>,
+    pub ui_playback_speed: Option<f64>,
     pub editor_dark_mode: Option<bool>,
 }
 
@@ -81,6 +84,7 @@ impl From<RawConfig> for FullConfig {
             ui_volume: raw.ui_volume,
             ui_muted: raw.ui_muted,
             ui_theme: raw.ui_theme,
+            ui_playback_speed: raw.ui_playback_speed,
             editor_dark_mode: raw.editor_dark_mode,
         }
     }
@@ -101,6 +105,7 @@ impl From<FullConfig> for RawConfig {
             ui_volume: json.ui_volume,
             ui_muted: json.ui_muted,
             ui_theme: json.ui_theme,
+            ui_playback_speed: json.ui_playback_speed,
             editor_dark_mode: json.editor_dark_mode,
         }
     }

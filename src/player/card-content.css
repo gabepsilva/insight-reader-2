@@ -109,3 +109,68 @@
   background: var(--stop-close-red-bg);
   color: var(--stop-close-red-color);
 }
+
+.speed-wrap {
+  position: relative;
+}
+
+.speed-btn {
+  min-width: 54px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--control-bg);
+  cursor: pointer;
+}
+
+.speed-wrap:hover .speed-btn {
+  background: var(--control-hover-bg);
+}
+
+.speed-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--speed-menu-border);
+  background: var(--speed-menu-bg);
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 20;
+}
+
+.speed-wrap--open .speed-menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.speed-item {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.speed-item:hover {
+  background: var(--speed-item-hover-bg);
+}
+
+.speed-item.active {
+  color: var(--speed-item-active-color);
+  font-weight: 700;
+  background: var(--speed-item-active-bg);
+}

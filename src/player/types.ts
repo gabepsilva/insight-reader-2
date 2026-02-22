@@ -8,6 +8,7 @@ export interface Config {
   ui_volume?: number | null;
   ui_muted?: boolean | null;
   ui_theme?: string | null;
+  ui_playback_speed?: number | null;
 }
 
 export const PROVIDER_LABELS: Record<string, string> = {

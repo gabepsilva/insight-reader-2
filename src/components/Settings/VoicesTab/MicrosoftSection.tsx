@@ -19,6 +19,8 @@ export function MicrosoftSection({
   loadingMicrosoft,
   microsoftVoices,
   microsoftLanguages,
+  mostUsedLanguages,
+  otherLanguages,
   selectedMicrosoftLanguage,
   microsoftModalLanguage,
   onSelectLanguage,
@@ -29,6 +31,8 @@ export function MicrosoftSection({
   loadingMicrosoft: boolean;
   microsoftVoices: MicrosoftVoice[];
   microsoftLanguages: MicrosoftLanguage[];
+  mostUsedLanguages: MicrosoftLanguage[];
+  otherLanguages: MicrosoftLanguage[];
   selectedMicrosoftLanguage: string;
   microsoftModalLanguage: string | null;
   onSelectLanguage: (code: string) => void;
@@ -42,18 +46,42 @@ export function MicrosoftSection({
       ) : microsoftVoices.length === 0 ? (
         <p>No voices available.</p>
       ) : (
-        <div className="language-grid">
-          {microsoftLanguages.map((lang) => (
-            <div
-              key={lang.code}
-              className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
-              onClick={() => onSelectLanguage(lang.code)}
-            >
-              <span className="language-flag">{getCountryFlag(lang.code)}</span>
-              <span className="language-name">{lang.code}</span>
-            </div>
-          ))}
-        </div>
+        <>
+          {mostUsedLanguages.length > 0 && (
+            <section className="language-section">
+              <h4 className="language-section-label">Most used languages</h4>
+              <div className="language-grid">
+                {mostUsedLanguages.map((lang) => (
+                  <div
+                    key={lang.code}
+                    className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
+                    onClick={() => onSelectLanguage(lang.code)}
+                  >
+                    <span className="language-flag">{getCountryFlag(lang.code)}</span>
+                    <span className="language-name">{lang.code}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          {otherLanguages.length > 0 && (
+            <section className="language-section">
+              <h4 className="language-section-label">Other languages</h4>
+              <div className="language-grid">
+                {otherLanguages.map((lang) => (
+                  <div
+                    key={lang.code}
+                    className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
+                    onClick={() => onSelectLanguage(lang.code)}
+                  >
+                    <span className="language-flag">{getCountryFlag(lang.code)}</span>
+                    <span className="language-name">{lang.code}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {microsoftModalLanguage && (

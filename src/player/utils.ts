@@ -25,6 +25,20 @@ export function parseThemeMode(value: string | null | undefined): ThemeMode | nu
   return null;
 }
 
+export const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+function isValidPlaybackSpeed(value: number): boolean {
+  return (PLAYBACK_SPEEDS as readonly number[]).includes(value);
+}
+
+export function parseConfigPlaybackSpeed(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  const rounded = Math.round(value * 100) / 100;
+  return isValidPlaybackSpeed(rounded) ? rounded : null;
+}
+
+export const DEFAULT_PLAYBACK_SPEED = 1;
+
 export function getRestoredVolume(currentVolume: number, previousVolume: number): number {
   if (currentVolume > 0) return currentVolume;
   if (previousVolume > 0) return previousVolume;
@@ -35,6 +49,7 @@ export function hasMatchingUiPrefs(left: Config, right: Config): boolean {
   return (
     (left.ui_volume ?? null) === (right.ui_volume ?? null) &&
     (left.ui_muted ?? null) === (right.ui_muted ?? null) &&
-    (left.ui_theme ?? null) === (right.ui_theme ?? null)
+    (left.ui_theme ?? null) === (right.ui_theme ?? null) &&
+    (left.ui_playback_speed ?? null) === (right.ui_playback_speed ?? null)
   );
 }

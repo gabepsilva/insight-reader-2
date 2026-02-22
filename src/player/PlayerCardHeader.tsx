@@ -74,6 +74,9 @@ export function PlayerCardHeader({
 
       {!isMacos ? (
         <div className="title-wrap">
+          <div className="title-icon" aria-hidden="true">
+            <img src="/logo.svg" alt="" className="title-icon-img" />
+          </div>
           <h1 className="app-name">Insight Reader</h1>
         </div>
       ) : (

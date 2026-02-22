@@ -26,10 +26,12 @@ mod windows;
 pub use action_socket::send_action_to_running_instance;
 
 use std::sync::{Arc, Mutex};
+#[cfg(target_os = "macos")]
+use tauri::window::{Effect, EffectsBuilder};
+#[cfg(target_os = "macos")]
+use tauri::RunEvent;
 use tauri::{
-    menu::MenuEvent,
-    window::{Effect, EffectsBuilder},
-    Emitter, LogicalSize, Manager, RunEvent, State, WebviewWindowBuilder, WindowEvent,
+    menu::MenuEvent, Emitter, LogicalSize, Manager, State, WebviewWindowBuilder, WindowEvent,
 };
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
@@ -298,7 +300,7 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 
     let url = windows::build_webview_url(&app, "settings.html")?;
 
-    let mut builder = WebviewWindowBuilder::new(&app, "settings", url)
+    let builder = WebviewWindowBuilder::new(&app, "settings", url)
         .title("Settings - Insight Reader")
         .inner_size(600.0, 600.0)
         .min_inner_size(500.0, 500.0)
@@ -310,21 +312,17 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
         .center();
 
     #[cfg(target_os = "macos")]
-    {
-        builder = builder.transparent(true).effects(
-            EffectsBuilder::new()
-                .effect(Effect::HudWindow)
-                .radius(10.0)
-                .build(),
-        );
-    }
+    let builder = builder.transparent(true).effects(
+        EffectsBuilder::new()
+            .effect(Effect::HudWindow)
+            .radius(10.0)
+            .build(),
+    );
 
-    let window = builder.build().map_err(|e| e.to_string())?;
+    let _window = builder.build().map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "macos")]
-    {
-        let _ = window.set_decorations(false);
-    }
+    let _ = _window.set_decorations(false);
 
     Ok(())
 }
@@ -608,14 +606,14 @@ pub fn run() {
         }
     };
 
-    app.run(|app_handle, event| {
+    app.run(|_app_handle, _event| {
         #[cfg(target_os = "macos")]
         if let RunEvent::Reopen {
             has_visible_windows: false,
             ..
-        } = event
+        } = _event
         {
-            show_main_window_impl(app_handle);
+            show_main_window_impl(_app_handle);
         }
     });
 }

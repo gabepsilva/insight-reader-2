@@ -2,6 +2,9 @@
 
 **Insight Reader** is a cross-platform text-to-speech app (Tauri 2 + React/Vite). It reads from clipboard selections; offline voices via Piper, cloud via Microsoft Edge TTS.
 
+
+THIS IS A CROSS-PLATFORM DESKTOP APP, ALWAYS CHECK WITH THE USER WHEN CHANGES IMPACT THE UI OR EXPERIENCE OF OTHER OS
+
 ---
 
 ## Quick reference

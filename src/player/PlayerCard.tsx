@@ -4,6 +4,7 @@ import { useTtsPlayback } from "./hooks/useTtsPlayback";
 import { useWindowChrome } from "./hooks/useWindowChrome";
 import { useWindowRadius } from "./hooks/useWindowRadius";
 import { useVolume } from "./hooks/useVolume";
+import { DEFAULT_PLAYBACK_SPEED } from "./utils";
 import { PlayerCardHeader } from "./PlayerCardHeader";
 import { TimeDisplay } from "./TimeDisplay";
 import { ControlsRow } from "./ControlsRow";
@@ -16,6 +17,7 @@ export function PlayerCard() {
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(DEFAULT_PLAYBACK_SPEED);
 
   const volumeState = useVolume(hasPendingUiPrefChangeRef);
   const windowChrome = useWindowChrome(hasPendingUiPrefChangeRef);
@@ -24,9 +26,11 @@ export function PlayerCard() {
     volume: volumeState.volume,
     isMuted: volumeState.isMuted,
     themeMode: windowChrome.themeMode,
+    playbackSpeed,
     setVolume: volumeState.setVolume,
     setIsMuted: volumeState.setIsMuted,
     setThemeMode: windowChrome.setThemeMode,
+    setPlaybackSpeed,
     previousVolumeRef: volumeState.previousVolumeRef,
     hasPendingUiPrefChangeRef,
   });
@@ -87,6 +91,11 @@ export function PlayerCard() {
           currentTimeMs={ttsState.currentTimeMs}
           atEnd={ttsState.atEnd}
           platform={windowChrome.platform}
+          playbackSpeed={playbackSpeed}
+          onPlaybackSpeedChange={(speed) => {
+            hasPendingUiPrefChangeRef.current = true;
+            setPlaybackSpeed(speed);
+          }}
           onBackward={ttsState.handleBackward}
           onForward={ttsState.handleForward}
           onPlayPause={ttsState.handlePlayPause}
