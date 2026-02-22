@@ -10,8 +10,6 @@ export function PollySection({
   onChange,
   loadingPolly,
   pollyLanguages,
-  mostUsedLanguages,
-  otherLanguages,
   selectedPollyLanguage,
   pollyModalLanguage,
   pollyVoicesByLanguage,
@@ -22,8 +20,6 @@ export function PollySection({
   onChange: (updates: { selected_polly_voice?: string }) => void;
   loadingPolly: boolean;
   pollyLanguages: PollyLanguage[];
-  mostUsedLanguages: PollyLanguage[];
-  otherLanguages: PollyLanguage[];
   selectedPollyLanguage: string;
   pollyModalLanguage: string | null;
   pollyVoicesByLanguage: Map<string, { id: string; name: string; gender: string; engine: string }[]>;
@@ -68,42 +64,18 @@ aws_secret_access_key = your-secret-key`}
       ) : pollyLanguages.length === 0 ? (
         <p className="voice-error">No voices available. Check AWS credentials.</p>
       ) : (
-        <>
-          {mostUsedLanguages.length > 0 && (
-            <section className="language-section">
-              <h4 className="language-section-label">Most used languages</h4>
-              <div className="language-grid">
-                {mostUsedLanguages.map((lang) => (
-                  <div
-                    key={lang.code}
-                    className={`language-item ${selectedPollyLanguage === lang.code ? 'selected' : ''}`}
-                    onClick={() => onSelectLanguage(lang.code)}
-                  >
-                    <span className="language-flag">{getCountryFlag(lang.code)}</span>
-                    <span className="language-name">{lang.name}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {otherLanguages.length > 0 && (
-            <section className="language-section">
-              <h4 className="language-section-label">Other languages</h4>
-              <div className="language-grid">
-                {otherLanguages.map((lang) => (
-                  <div
-                    key={lang.code}
-                    className={`language-item ${selectedPollyLanguage === lang.code ? 'selected' : ''}`}
-                    onClick={() => onSelectLanguage(lang.code)}
-                  >
-                    <span className="language-flag">{getCountryFlag(lang.code)}</span>
-                    <span className="language-name">{lang.name}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+        <div className="language-grid">
+          {pollyLanguages.map((lang) => (
+            <div
+              key={lang.code}
+              className={`language-item ${selectedPollyLanguage === lang.code ? 'selected' : ''}`}
+              onClick={() => onSelectLanguage(lang.code)}
+            >
+              <span className="language-flag">{getCountryFlag(lang.code)}</span>
+              <span className="language-name">{lang.name}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {pollyModalLanguage && (

@@ -1,0 +1,6 @@
+# Permission to invoke tts_set_speed (adjust TTS playback speed live)
+
+[[permission]]
+identifier = "allow-tts-set-speed"
+description = "Allows windows to set TTS playback speed"
+commands.allow = ["tts_set_speed"]

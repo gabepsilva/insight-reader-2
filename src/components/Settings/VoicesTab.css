@@ -101,23 +101,6 @@
   font-size: 14px;
 }
 
-.language-section {
-  margin-bottom: 16px;
-}
-
-.language-section:last-child {
-  margin-bottom: 0;
-}
-
-.language-section-label {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .language-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));

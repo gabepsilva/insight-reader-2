@@ -134,6 +134,10 @@ impl PiperTTSProvider {
         self.player.set_volume_percent(volume_percent);
     }
 
+    pub fn set_speed(&mut self, speed: f32) {
+        self.player.set_speed(speed);
+    }
+
     #[cfg(target_os = "windows")]
     fn run_piper_windows(&self, text: &str, model_arg: &str) -> Result<Vec<f32>, TTSError> {
         use std::fs;

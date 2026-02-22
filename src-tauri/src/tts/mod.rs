@@ -42,6 +42,7 @@ pub enum TtsRequest {
     Seek(i64, mpsc::SyncSender<Result<(bool, bool, bool), TTSError>>),
     GetPosition(mpsc::SyncSender<(u64, u64)>),
     SetVolume(u8, mpsc::SyncSender<Result<(), TTSError>>),
+    SetSpeed(f32, mpsc::SyncSender<Result<(), TTSError>>),
     SwitchProvider(TtsProvider, mpsc::SyncSender<Result<(), TTSError>>),
     Shutdown,
 }
@@ -180,6 +181,14 @@ impl TtsProviderImpl {
             Self::Polly(p) => p.set_volume(volume_percent),
         }
     }
+
+    fn set_speed(&mut self, speed: f32) {
+        match self {
+            Self::Piper(p) => p.set_speed(speed),
+            Self::Microsoft(p) => p.set_speed(speed),
+            Self::Polly(p) => p.set_speed(speed),
+        }
+    }
 }
 
 /// Spawn the TTS worker and return the channel sender to manage.
@@ -223,6 +232,11 @@ pub fn create_tts_state() -> TtsState {
                             let _ = resp.send((0, 0));
                         }
                         Ok(TtsRequest::SetVolume(_, resp)) => {
+                            let _ = resp.send(Err(TTSError::ProcessError(
+                                "TTS not available: provider could not be initialized.".into(),
+                            )));
+                        }
+                        Ok(TtsRequest::SetSpeed(_, resp)) => {
                             let _ = resp.send(Err(TTSError::ProcessError(
                                 "TTS not available: provider could not be initialized.".into(),
                             )));
@@ -307,6 +321,10 @@ pub fn create_tts_state() -> TtsState {
                 TtsRequest::SetVolume(volume_percent, resp) => {
                     current_volume_percent = volume_percent;
                     provider.set_volume(volume_percent);
+                    let _ = resp.send(Ok(()));
+                }
+                TtsRequest::SetSpeed(speed, resp) => {
+                    provider.set_speed(speed);
                     let _ = resp.send(Ok(()));
                 }
                 TtsRequest::SwitchProvider(new_provider, resp) => {

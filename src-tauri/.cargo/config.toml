@@ -1,0 +1,9 @@
+# Help bindgen (used by soundtouch-ffi) find system headers when generating
+# SoundTouch bindings. Clang needs stddef.h from the gcc include path.
+# This path is Linux x86_64–specific. On macOS/Windows the "bundled" feature
+# builds from source and typically does not need this; if build fails there,
+# try unsetting BINDGEN_EXTRA_CLANG_ARGS.
+# If on Linux you get "stddef.h not found", change "13" to your gcc version
+# (e.g. 12 or 14) in /usr/lib/gcc/x86_64-linux-gnu/<version>/include.
+[env]
+BINDGEN_EXTRA_CLANG_ARGS = "-I/usr/include -I/usr/lib/gcc/x86_64-linux-gnu/13/include"

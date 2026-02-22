@@ -169,6 +169,29 @@ async fn tts_set_volume(state: State<'_, tts::TtsState>, volume_percent: u8) -> 
     .map_err(|e| format!("spawn_blocking: {e}"))?
 }
 
+/// Sets TTS playback speed (1.0 = normal). Takes effect immediately. Clamped to 0.25..=4.0.
+#[tauri::command]
+async fn tts_set_speed(state: State<'_, tts::TtsState>, speed: f64) -> Result<(), String> {
+    let raw = speed as f32;
+    let speed_f32 = if raw.is_finite() {
+        raw.clamp(0.25, 4.0)
+    } else {
+        1.0
+    };
+    let tx = state.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let (resp_tx, resp_rx) = std::sync::mpsc::sync_channel(0);
+        tx.send(tts::TtsRequest::SetSpeed(speed_f32, resp_tx))
+            .map_err(|e| format!("TTS channel: {e}"))?;
+        resp_rx
+            .recv()
+            .map_err(|_| "TTS worker disconnected".to_string())?
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking: {e}"))?
+}
+
 /// Switches the TTS provider. provider should be "piper", "microsoft", or "polly".
 #[tauri::command]
 async fn tts_switch_provider(
@@ -448,6 +471,7 @@ pub fn run() {
             tts_seek,
             tts_get_position,
             tts_set_volume,
+            tts_set_speed,
             tts_switch_provider,
             get_platform,
             get_config,

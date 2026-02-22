@@ -1,23 +1,28 @@
-//! Minimal audio playback for TTS: rodio sink, no position tracking or FFT.
+//! Minimal audio playback for TTS: rodio sink, pitch-preserving speed via SoundTouch.
 
 use std::io::Cursor;
 use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
+use soundtouch::{Setting, SoundTouch};
 use tracing::{debug, error, trace, warn};
 
 use super::TTSError;
 
 /// Audio playback for TTS. Plays f32 samples via rodio; supports play and stop.
+/// Speed changes use SoundTouch time-stretching (pitch-preserving). Original PCM is kept
+/// so speed can be changed while playing (re-stretch + seek).
 pub struct AudioPlayer {
     sample_rate: u32,
     _stream: Option<OutputStream>,
     stream_handle: Option<OutputStreamHandle>,
     sink: Option<Sink>,
     volume: f32,
-    /// Current audio buffer (used by start_playback)
-    audio_data: Vec<f32>,
-    /// Total duration in milliseconds (for raw audio)
+    /// Playback speed factor (1.0 = normal). Applied via time-stretch; content position = get_pos() * speed.
+    speed: f32,
+    /// Original PCM (mono f32) for the current utterance. Kept so we can re-stretch on speed change.
+    original_pcm: Vec<f32>,
+    /// Content duration in ms from original_pcm length and sample_rate.
     total_duration_ms: u64,
 }
 
@@ -36,7 +41,8 @@ impl AudioPlayer {
             stream_handle: Some(stream_handle),
             sink: None,
             volume: 1.0,
-            audio_data: Vec::new(),
+            speed: 1.0,
+            original_pcm: Vec::new(),
             total_duration_ms: 0,
         })
     }
@@ -48,69 +54,89 @@ impl AudioPlayer {
             sample_rate = self.sample_rate,
             "AudioPlayer::play_audio"
         );
-        // Calculate duration: samples / sample_rate = seconds, * 1000 = ms
-        let total_duration_ms = (audio_data.len() as f32 / self.sample_rate as f32 * 1000.0) as u64;
-        debug!(total_duration_ms = total_duration_ms, "Calculated duration");
-        self.total_duration_ms = total_duration_ms;
-        self.audio_data = audio_data;
+        self.original_pcm = audio_data;
+        self.total_duration_ms = self.content_duration_ms_from_len(self.original_pcm.len());
+        debug!(
+            total_duration_ms = self.total_duration_ms,
+            "Calculated duration"
+        );
         self.start_playback()
     }
 
-    /// Play raw encoded audio (MP3/Opus) - rodio will decode it automatically.
+    /// Play raw encoded audio (MP3/Opus). Decodes to PCM once, stores as original, then uses common play path.
     pub fn play_audio_raw(
         &mut self,
         audio_data: Vec<u8>,
         _sample_rate: u32,
     ) -> Result<(), TTSError> {
-        debug!(samples = audio_data.len(), "AudioPlayer::play_audio_raw");
-        if let Some(sink) = self.sink.take() {
-            sink.stop();
-        }
-
-        let stream_handle = self
-            .stream_handle
-            .as_ref()
-            .ok_or_else(|| TTSError::AudioError("No audio output available".into()))?;
-
+        debug!(bytes = audio_data.len(), "AudioPlayer::play_audio_raw");
         if audio_data.is_empty() {
             return Err(TTSError::AudioError("No audio data to play".into()));
         }
 
-        // Clone audio_data - once for Cursor (moved), once for length check
-        let audio_bytes_len = audio_data.len();
-        let audio_bytes = audio_data.clone();
-        let cursor = Cursor::new(audio_bytes);
-        let source = Decoder::new(cursor).map_err(|e| {
+        let cursor = Cursor::new(audio_data);
+        let decoder = Decoder::new(cursor).map_err(|e| {
             error!("Failed to decode audio: {}", e);
             TTSError::AudioError(format!("Failed to decode audio: {}", e))
         })?;
 
-        // Calculate duration from the decoded source, or estimate from data size
-        let total_duration_ms = if let Some(duration) = source.total_duration() {
-            duration.as_millis() as u64
-        } else if audio_bytes_len > 0 {
-            let estimated_bitrate_bps = 48000u64;
-            let estimated_duration_ms = (audio_bytes_len as u64 * 8 * 1000) / estimated_bitrate_bps;
-            debug!(
-                estimated_ms = estimated_duration_ms,
-                "Estimated duration from data size"
-            );
-            estimated_duration_ms
+        let sample_rate = decoder.sample_rate();
+        let channels = decoder.channels();
+        self.sample_rate = sample_rate;
+
+        let samples_i16: Vec<i16> = decoder.collect();
+        let pcm_f32: Vec<f32> = if channels == 2 {
+            samples_i16
+                .chunks_exact(2)
+                .map(|lr| (lr[0] as f32 + lr[1] as f32) / 2.0 / 32768.0)
+                .collect()
         } else {
-            0
+            samples_i16
+                .into_iter()
+                .map(|s| s as f32 / 32768.0)
+                .collect()
         };
 
-        let sink = Sink::try_new(stream_handle).map_err(|e| {
-            error!("Failed to create audio sink: {}", e);
-            TTSError::AudioError(format!("Failed to create audio sink: {}", e))
-        })?;
+        self.original_pcm = pcm_f32;
+        self.total_duration_ms = self.content_duration_ms_from_len(self.original_pcm.len());
+        self.start_playback()
+    }
 
-        sink.set_volume(self.volume);
-        sink.append(source);
-        self.sink = Some(sink);
-        self.total_duration_ms = total_duration_ms;
-        self.audio_data.clear(); // Clear so get_position uses total_duration_ms
-        Ok(())
+    /// Set playback speed (1.0 = normal). Pitch-preserving. If playing, re-stretches and seeks to same content position.
+    pub fn set_speed(&mut self, value: f32) {
+        let (was_playing, was_paused, content_ms) = self
+            .sink
+            .as_ref()
+            .map(|s| {
+                (
+                    !s.empty(),
+                    s.is_paused(),
+                    (s.get_pos().as_secs_f64() * self.speed as f64 * 1000.0) as u64,
+                )
+            })
+            .unwrap_or((false, false, 0));
+
+        self.speed = value;
+
+        if was_playing && !self.original_pcm.is_empty() {
+            if let Some(sink) = self.sink.take() {
+                sink.stop();
+            }
+            if let Err(e) = self.start_playback() {
+                warn!(error = %e, "set_speed: start_playback failed");
+                return;
+            }
+            if let Some(sink) = &self.sink {
+                let seek_output_secs = content_ms as f64 / 1000.0 / self.speed as f64;
+                let seek_duration = Duration::from_secs_f64(seek_output_secs);
+                if let Err(e) = sink.try_seek(seek_duration) {
+                    warn!(error = %e, "set_speed: seek failed");
+                }
+                if was_paused {
+                    sink.pause();
+                }
+            }
+        }
     }
 
     /// Convert raw PCM bytes (16-bit signed LE mono) to normalized f32 samples.
@@ -130,7 +156,8 @@ impl AudioPlayer {
         if let Some(sink) = self.sink.take() {
             sink.stop();
         }
-        self.audio_data.clear();
+        self.original_pcm.clear();
+        self.total_duration_ms = 0;
         Ok(())
     }
 
@@ -161,8 +188,6 @@ impl AudioPlayer {
     }
 
     /// Get playback status. Returns (is_playing, is_paused).
-    /// is_playing: true if sink exists and is not empty
-    /// is_paused: true if sink exists and is paused
     pub fn get_status(&self) -> (bool, bool) {
         if let Some(sink) = &self.sink {
             let is_playing = !sink.empty();
@@ -173,41 +198,26 @@ impl AudioPlayer {
         }
     }
 
-    /// Get current playback position and total duration in milliseconds.
-    /// Returns (current_ms, total_ms). Returns (0, 0) if no audio is loaded.
+    /// Get current playback position and total duration in milliseconds (content time).
     pub fn get_position(&self) -> (u64, u64) {
-        trace!(
-            audio_len = self.audio_data.len(),
-            total_ms = self.total_duration_ms,
-            "get_position"
-        );
-
-        let total_duration_ms = if !self.audio_data.is_empty() {
-            self.calculate_duration_ms()
-        } else {
-            self.total_duration_ms
-        };
-
-        if total_duration_ms == 0 {
+        if self.total_duration_ms == 0 {
             return (0, 0);
         }
-
         if let Some(sink) = &self.sink {
-            let current_pos = sink.get_pos();
-            // Duration::as_millis() returns u128, clamp to u64::MAX to avoid truncation
-            let current_ms = current_pos.as_millis().min(u64::MAX as u128) as u64;
-            (current_ms.min(total_duration_ms), total_duration_ms)
+            let output_secs = sink.get_pos().as_secs_f64();
+            let current_content_ms = (output_secs * self.speed as f64 * 1000.0) as u64;
+            (
+                current_content_ms.min(self.total_duration_ms),
+                self.total_duration_ms,
+            )
         } else {
-            (0, total_duration_ms)
+            (0, self.total_duration_ms)
         }
     }
 
     /// Seek by the given offset in milliseconds. Returns (success, at_start, at_end).
-    /// Fails if audio is paused or if seeking is not supported.
     pub fn seek(&mut self, offset_ms: i64) -> Result<(bool, bool, bool), TTSError> {
-        // Check if we have audio data (either f32 or raw)
-        let has_audio = !self.audio_data.is_empty() || self.total_duration_ms > 0;
-        if !has_audio {
+        if self.original_pcm.is_empty() || self.total_duration_ms == 0 {
             return Err(TTSError::AudioError("No audio data loaded".into()));
         }
 
@@ -216,49 +226,32 @@ impl AudioPlayer {
             .as_ref()
             .ok_or_else(|| TTSError::AudioError("No active playback".into()))?;
 
-        // Cannot seek if paused
         if sink.is_paused() {
             return Err(TTSError::AudioError("Cannot seek while paused".into()));
         }
-
-        // Cannot seek if sink is empty (playback finished)
         if sink.empty() {
             return Err(TTSError::AudioError("Playback has finished".into()));
         }
 
-        let total_duration_ms = if !self.audio_data.is_empty() {
-            self.calculate_duration_ms()
-        } else {
-            self.total_duration_ms
-        };
+        let output_secs = sink.get_pos().as_secs_f64();
+        let current_content_ms = (output_secs * self.speed as f64 * 1000.0) as u64;
 
-        let current_pos = sink.get_pos();
-        let current_ms = current_pos.as_millis() as u64;
-
-        // Calculate new position
-        // Use unsigned_abs() to safely handle i64::MIN (which would panic on negation)
         let offset_abs = offset_ms.unsigned_abs();
-        let new_ms = if offset_ms < 0 {
-            current_ms.saturating_sub(offset_abs)
+        let new_content_ms = if offset_ms < 0 {
+            current_content_ms.saturating_sub(offset_abs)
         } else {
-            current_ms.saturating_add(offset_abs)
+            current_content_ms.saturating_add(offset_abs)
         };
 
-        // Clamp to bounds
-        let clamped_ms = new_ms.min(total_duration_ms);
+        let clamped_ms = new_content_ms.min(self.total_duration_ms);
         let at_start = clamped_ms == 0;
-        let at_end = clamped_ms >= total_duration_ms;
+        let at_end = clamped_ms >= self.total_duration_ms;
 
-        let seek_duration = Duration::from_millis(clamped_ms);
+        let seek_duration = Duration::from_secs_f64(clamped_ms as f64 / 1000.0 / self.speed as f64);
 
         match sink.try_seek(seek_duration) {
             Ok(()) => {
-                trace!(
-                    current_ms = current_ms,
-                    new_ms = clamped_ms,
-                    offset_ms = offset_ms,
-                    "Seek successful"
-                );
+                trace!(current_content_ms, clamped_ms, offset_ms, "Seek successful");
                 Ok((true, at_start, at_end))
             }
             Err(e) => {
@@ -268,19 +261,22 @@ impl AudioPlayer {
         }
     }
 
-    /// Calculate total duration in milliseconds from audio_data and sample_rate.
-    fn calculate_duration_ms(&self) -> u64 {
-        if self.audio_data.is_empty() {
+    fn content_duration_ms_from_len(&self, num_samples: usize) -> u64 {
+        if num_samples == 0 || self.sample_rate == 0 {
             return 0;
         }
-        let duration_sec = self.audio_data.len() as f64 / self.sample_rate as f64;
-        (duration_sec * 1000.0) as u64
+        (num_samples as f64 / self.sample_rate as f64 * 1000.0) as u64
     }
 
+    /// Build playback buffer (time-stretch if speed != 1.0), then create sink and play at 1.0x.
     fn start_playback(&mut self) -> Result<(), TTSError> {
         trace!("AudioPlayer::start_playback");
         if let Some(sink) = self.sink.take() {
             sink.stop();
+        }
+
+        if self.original_pcm.is_empty() {
+            return Err(TTSError::AudioError("No audio data to play".into()));
         }
 
         let stream_handle = self
@@ -288,12 +284,24 @@ impl AudioPlayer {
             .as_ref()
             .ok_or_else(|| TTSError::AudioError("No audio output available".into()))?;
 
-        if self.audio_data.is_empty() {
-            return Err(TTSError::AudioError("No audio data to play".into()));
+        let to_play: Vec<f32> = if (self.speed - 1.0).abs() < 1e-6 {
+            self.original_pcm.clone()
+        } else {
+            let mut st = SoundTouch::new();
+            st.set_channels(1)
+                .set_sample_rate(self.sample_rate)
+                .set_tempo(self.speed as f64)
+                .set_setting(Setting::UseQuickseek, 1);
+            st.generate_audio(&self.original_pcm)
+        };
+
+        if to_play.is_empty() {
+            return Err(TTSError::AudioError(
+                "Time-stretch produced no samples".into(),
+            ));
         }
 
-        let samples_i16: Vec<i16> = self
-            .audio_data
+        let samples_i16: Vec<i16> = to_play
             .iter()
             .map(|&s| (s * 32767.0).clamp(-32768.0, 32767.0) as i16)
             .collect();
@@ -301,8 +309,8 @@ impl AudioPlayer {
         let wav_data = Self::create_wav(&samples_i16, self.sample_rate);
         let cursor = Cursor::new(wav_data);
         let source = Decoder::new(cursor).map_err(|e| {
-            error!("Failed to decode audio: {e}");
-            TTSError::AudioError(format!("Failed to decode audio: {e}"))
+            error!("Failed to decode WAV: {e}");
+            TTSError::AudioError(format!("Failed to decode WAV: {e}"))
         })?;
 
         let sink = Sink::try_new(stream_handle).map_err(|e| {

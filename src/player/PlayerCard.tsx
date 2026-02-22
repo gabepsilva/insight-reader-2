@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useConfig } from "./hooks/useConfig";
 import { useTtsPlayback } from "./hooks/useTtsPlayback";
 import { useWindowChrome } from "./hooks/useWindowChrome";
@@ -35,6 +36,13 @@ export function PlayerCard() {
     hasPendingUiPrefChangeRef,
   });
   const ttsState = useTtsPlayback(windowChrome.platform);
+
+  useEffect(() => {
+    if (!configState.configLoaded) return;
+    invoke("tts_set_speed", { speed: playbackSpeed }).catch((e) =>
+      console.warn("tts_set_speed on load failed:", e)
+    );
+  }, [configState.configLoaded, playbackSpeed]);
 
   useEffect(() => {
     if (typeof console === "undefined") return;
@@ -95,6 +103,9 @@ export function PlayerCard() {
           onPlaybackSpeedChange={(speed) => {
             hasPendingUiPrefChangeRef.current = true;
             setPlaybackSpeed(speed);
+            invoke("tts_set_speed", { speed }).catch((e) =>
+              console.warn("tts_set_speed failed:", e)
+            );
           }}
           onBackward={ttsState.handleBackward}
           onForward={ttsState.handleForward}

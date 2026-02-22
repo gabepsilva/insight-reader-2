@@ -16,8 +16,6 @@ export function PiperSection({
   onChange,
   piperVoices,
   piperLanguages,
-  mostUsedLanguages,
-  otherLanguages,
   selectedPiperLanguage,
   piperModalLanguage,
   onSelectLanguage,
@@ -31,8 +29,6 @@ export function PiperSection({
   onChange: (updates: { selected_voice?: string }) => void;
   piperVoices: PiperVoice[];
   piperLanguages: PiperLanguage[];
-  mostUsedLanguages: PiperLanguage[];
-  otherLanguages: PiperLanguage[];
   selectedPiperLanguage: string;
   piperModalLanguage: string | null;
   onSelectLanguage: (code: string) => void;
@@ -48,42 +44,18 @@ export function PiperSection({
       {loadingPiper ? (
         <p>Loading voices...</p>
       ) : (
-        <>
-          {mostUsedLanguages.length > 0 && (
-            <section className="language-section">
-              <h4 className="language-section-label">Most used languages</h4>
-              <div className="language-grid">
-                {mostUsedLanguages.map((lang) => (
-                  <div
-                    key={lang.code}
-                    className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
-                    onClick={() => onSelectLanguage(lang.code)}
-                  >
-                    <span className="language-flag">{lang.flag}</span>
-                    <span className="language-name">{lang.name}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {otherLanguages.length > 0 && (
-            <section className="language-section">
-              <h4 className="language-section-label">Other languages</h4>
-              <div className="language-grid">
-                {otherLanguages.map((lang) => (
-                  <div
-                    key={lang.code}
-                    className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
-                    onClick={() => onSelectLanguage(lang.code)}
-                  >
-                    <span className="language-flag">{lang.flag}</span>
-                    <span className="language-name">{lang.name}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+        <div className="language-grid">
+          {piperLanguages.map((lang) => (
+            <div
+              key={lang.code}
+              className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
+              onClick={() => onSelectLanguage(lang.code)}
+            >
+              <span className="language-flag">{lang.flag}</span>
+              <span className="language-name">{lang.name}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {piperModalLanguage && (

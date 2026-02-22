@@ -137,6 +137,10 @@ impl MicrosoftTTSProvider {
     pub fn set_volume(&mut self, volume_percent: u8) {
         self.player.set_volume_percent(volume_percent);
     }
+
+    pub fn set_speed(&mut self, speed: f32) {
+        self.player.set_speed(speed);
+    }
 }
 
 #[cfg(test)]
