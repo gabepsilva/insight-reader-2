@@ -24,8 +24,7 @@ export function useWindowChrome(hasPendingUiPrefChangeRef: MutableRefObject<bool
   };
 
   const handleMinimize = async () => {
-    const appWindow = getCurrentWindow();
-    await appWindow.minimize();
+    await invoke("hide_main_window");
   };
 
   const handleClose = async (saveConfigBeforeClose: () => Promise<void>) => {

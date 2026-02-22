@@ -1,0 +1,5 @@
+# Permission to invoke hide_main_window (hide main window to tray, used by minimize button)
+[[permission]]
+identifier = "allow-hide-main-window"
+description = "Allows invoking hide_main_window to hide the main window to tray"
+commands.allow = ["hide_main_window"]

@@ -29,7 +29,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{
     menu::MenuEvent,
     window::{Effect, EffectsBuilder},
-    Emitter, LogicalSize, Manager, State, WebviewWindowBuilder, WindowEvent,
+    Emitter, LogicalSize, Manager, RunEvent, State, WebviewWindowBuilder, WindowEvent,
 };
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
@@ -331,6 +331,59 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Hides the main window and updates the tray menu. Shared by the close button,
+/// minimize button, and tray "Hide Window" for consistent "hide to tray" behavior.
+/// On macOS, also sets activation policy to Accessory to hide the app from the dock.
+fn hide_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("main") {
+        win.hide().map_err(|e| e.to_string())?;
+        #[cfg(target_os = "macos")]
+        {
+            let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        }
+        if let Some(t) = app.tray_by_id("main") {
+            tray::build_tray_menu(app, false)
+                .and_then(|m| t.set_menu(Some(m)))
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+/// Shows the main window, resizing if too small, and updates the tray menu.
+/// Shared by tray "Show Window" and dock icon click (RunEvent::Reopen).
+/// On macOS, restores Regular activation policy so the app appears in the dock.
+fn show_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+    }
+    if let Some(win) = app.get_webview_window("main") {
+        if let (Ok(size), Ok(scale)) = (win.inner_size(), win.scale_factor()) {
+            let logical_w = size.width as f64 / scale;
+            let logical_h = size.height as f64 / scale;
+            if logical_w < MAIN_WINDOW_MIN_WIDTH || logical_h < MAIN_WINDOW_MIN_HEIGHT {
+                if let Err(e) = win.set_size(LogicalSize::new(
+                    MAIN_WINDOW_DEFAULT_WIDTH,
+                    MAIN_WINDOW_DEFAULT_HEIGHT,
+                )) {
+                    warn!(error = %e, "Failed to resize main window when showing");
+                }
+            }
+        }
+        let _ = win.show();
+        let _ = win.set_focus();
+        if let Some(t) = app.tray_by_id("main") {
+            let _ = tray::build_tray_menu(app, true).and_then(|m| t.set_menu(Some(m)));
+        }
+    }
+}
+
+#[tauri::command]
+fn hide_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    hide_main_window_impl(&app)
+}
+
 // --- Entry point and Tauri builder ---
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -366,7 +419,7 @@ pub fn run() {
 
     let hotkey_state_for_handler = hotkey_state.clone();
 
-    if let Err(e) = tauri::Builder::default()
+    let app = match tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(window_state_plugin)
         .plugin(
@@ -414,6 +467,7 @@ pub fn run() {
             list_downloaded_voices,
             open_settings_window,
             backend::check_polly_credentials,
+            hide_main_window,
         ])
         // --- Window close behavior ---
         .on_window_event(|window, event| {
@@ -423,10 +477,9 @@ pub fn run() {
                     let _ = window.hide();
                     api.prevent_close();
                 } else if label == "main" {
-                    // Stop TTS worker thread when main window closes
-                    if let Some(state) = window.app_handle().try_state::<tts::TtsState>() {
-                        let _ = state.inner().send(tts::TtsRequest::Shutdown);
-                    }
+                    // Close button hides to tray on all platforms; restore via tray "Show Window"
+                    let _ = hide_main_window_impl(window.app_handle());
+                    api.prevent_close();
                 }
             }
         })
@@ -510,48 +563,10 @@ pub fn run() {
                             }
                         }
                         "hide_window" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.hide();
-                                if let Some(t) = app.tray_by_id("main") {
-                                    if let Err(e) = tray::build_tray_menu(app, false)
-                                        .and_then(|m| t.set_menu(Some(m)))
-                                    {
-                                        warn!(error = %e, "Failed to update tray menu");
-                                    }
-                                }
-                            }
+                            let _ = hide_main_window_impl(app);
                         }
                         "show_window" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                match (win.inner_size(), win.scale_factor()) {
-                                    (Ok(size), Ok(scale)) => {
-                                        let logical_w = size.width as f64 / scale;
-                                        let logical_h = size.height as f64 / scale;
-                                        if logical_w < MAIN_WINDOW_MIN_WIDTH
-                                            || logical_h < MAIN_WINDOW_MIN_HEIGHT
-                                        {
-                                            if let Err(e) = win.set_size(LogicalSize::new(
-                                                MAIN_WINDOW_DEFAULT_WIDTH,
-                                                MAIN_WINDOW_DEFAULT_HEIGHT,
-                                            )) {
-                                                warn!(error = %e, "Failed to resize main window when showing from tray");
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        warn!("Could not read main window size/scale when showing from tray");
-                                    }
-                                }
-                                let _ = win.show();
-                                let _ = win.set_focus();
-                                if let Some(t) = app.tray_by_id("main") {
-                                    if let Err(e) = tray::build_tray_menu(app, true)
-                                        .and_then(|m| t.set_menu(Some(m)))
-                                    {
-                                        warn!(error = %e, "Failed to update tray menu");
-                                    }
-                                }
-                            }
+                            show_main_window_impl(app);
                         }
                         "quit" => {
                             // Stop TTS worker thread before exiting
@@ -587,9 +602,23 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
     {
-        error!(error = %e, "Error while running Tauri application");
-        std::process::exit(1);
-    }
+        Ok(app) => app,
+        Err(e) => {
+            error!(error = %e, "Error while building Tauri application");
+            std::process::exit(1);
+        }
+    };
+
+    app.run(|app_handle, event| {
+        #[cfg(target_os = "macos")]
+        if let RunEvent::Reopen {
+            has_visible_windows: false,
+            ..
+        } = event
+        {
+            show_main_window_impl(app_handle);
+        }
+    });
 }
