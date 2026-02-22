@@ -7,6 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use dirs::config_dir;
+use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
 const APP_CONFIG_DIR_NAME: &str = "insight-reader";
@@ -49,6 +50,8 @@ struct RawConfig {
     ui_playback_speed: Option<f64>,
     #[serde(default)]
     editor_dark_mode: Option<bool>,
+    #[serde(default)]
+    installation_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -67,6 +70,7 @@ pub struct FullConfig {
     pub ui_theme: Option<String>,
     pub ui_playback_speed: Option<f64>,
     pub editor_dark_mode: Option<bool>,
+    pub installation_id: Option<String>,
 }
 
 impl From<RawConfig> for FullConfig {
@@ -86,6 +90,7 @@ impl From<RawConfig> for FullConfig {
             ui_theme: raw.ui_theme,
             ui_playback_speed: raw.ui_playback_speed,
             editor_dark_mode: raw.editor_dark_mode,
+            installation_id: raw.installation_id,
         }
     }
 }
@@ -107,8 +112,24 @@ impl From<FullConfig> for RawConfig {
             ui_theme: json.ui_theme,
             ui_playback_speed: json.ui_playback_speed,
             editor_dark_mode: json.editor_dark_mode,
+            installation_id: json.installation_id,
         }
     }
+}
+
+/// Returns the installation ID for this app instance, creating and persisting one if missing.
+/// Stored in the existing config file; no extra file or special permissions.
+pub fn get_or_create_installation_id() -> Result<String, String> {
+    let mut config = load_full_config()?;
+    if let Some(s) = config.installation_id.as_deref() {
+        if !s.trim().is_empty() {
+            return Ok(s.to_string());
+        }
+    }
+    let new_id = nanoid!(5);
+    config.installation_id = Some(new_id.clone());
+    save_full_config(config)?;
+    Ok(new_id)
 }
 
 pub fn load_full_config() -> Result<FullConfig, String> {

@@ -15,6 +15,7 @@ mod actions;
 mod backend;
 mod config;
 mod hotkeys;
+mod machine_id;
 mod paths;
 mod system;
 mod text_capture;
@@ -245,8 +246,10 @@ fn get_config() -> Result<config::FullConfig, String> {
 
 #[tauri::command]
 fn save_config(app: tauri::AppHandle, config_json: String) -> Result<(), String> {
-    let cfg: config::FullConfig = serde_json::from_str(&config_json)
+    let mut cfg: config::FullConfig = serde_json::from_str(&config_json)
         .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
+    // Preserve or create installation_id so frontend never overwrites it
+    cfg.installation_id = Some(config::get_or_create_installation_id()?);
     config::save_full_config(cfg).map_err(|e| e.to_string())?;
 
     if let Some(state) = app.try_state::<hotkeys::GlobalHotkeyState>() {

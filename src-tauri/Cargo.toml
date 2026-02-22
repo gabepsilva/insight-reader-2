@@ -38,6 +38,7 @@ aws-sdk-polly = "1"
 aws-config = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
+nanoid = "0.4"
 futures-util = "0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -45,3 +46,4 @@ macos-accessibility-client = "0.0.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 enigo = "0.2"
+winreg = "0.52"
