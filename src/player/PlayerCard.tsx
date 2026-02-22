@@ -7,7 +7,6 @@ import { useVolume } from "./hooks/useVolume";
 import { PlayerCardHeader } from "./PlayerCardHeader";
 import { TimeDisplay } from "./TimeDisplay";
 import { ControlsRow } from "./ControlsRow";
-import { VolumeRow } from "./VolumeRow";
 import { ActionRow } from "./ActionRow";
 import { StatusBar } from "./StatusBar";
 import { ResizeGrip } from "./ResizeGrip";
@@ -92,12 +91,6 @@ export function PlayerCard() {
           onForward={ttsState.handleForward}
           onPlayPause={ttsState.handlePlayPause}
           onStop={ttsState.handleStop}
-        />
-        <VolumeRow
-          effectiveVolume={volumeState.effectiveVolume}
-          isMuted={volumeState.isMuted}
-          onMuteToggle={volumeState.handleMuteToggle}
-          onVolumeChange={volumeState.handleVolumeChange}
         />
         <ActionRow
           platform={windowChrome.platform}

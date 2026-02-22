@@ -14,7 +14,7 @@
 }
 
 .current-time {
-  font-size: 38px;
+  font-size: 28px;
   font-weight: 300;
   color: var(--text-primary);
   line-height: 1;
@@ -23,7 +23,7 @@
 }
 
 .total-time {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 300;
   color: var(--text-subtle);
   font-variant-numeric: tabular-nums;

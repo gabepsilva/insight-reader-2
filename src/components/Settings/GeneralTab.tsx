@@ -1,4 +1,6 @@
 import type { Config, HotkeyStatus } from './Settings.types';
+import { VolumeRow } from '../../player/VolumeRow';
+import { clampVolume, DEFAULT_VOLUME } from '../../player/utils';
 
 export function GeneralTab({
   config,
@@ -11,6 +13,8 @@ export function GeneralTab({
 }) {
   const readShortcut = hotkeyStatus?.read_shortcut || `${config.hotkey_modifiers || 'control'}+${config.hotkey_key || 'r'}`;
   const pauseShortcut = hotkeyStatus?.pause_shortcut || `${config.hotkey_modifiers || 'control'}+shift+${config.hotkey_key || 'r'}`;
+
+  const effectiveVolume = config.ui_muted ? 0 : (config.ui_volume ?? DEFAULT_VOLUME);
 
   const modeHelp = hotkeyStatus?.mode === 'wayland-compositor'
     ? 'Wayland session detected: configure your compositor shortcut to run `insight-reader action read-selected`.'
@@ -60,6 +64,19 @@ export function GeneralTab({
           Secondary: {pauseShortcut} ({hotkeyStatus?.mode === 'wayland-compositor' ? 'map this to `insight-reader action pause` in your compositor' : 'pause/resume'})
         </p>
         {hotkeyStatus?.last_error && <p className="setting-help">Hotkey error: {hotkeyStatus.last_error}</p>}
+      </div>
+
+      <div className="setting-group">
+        <label>Volume</label>
+        <VolumeRow
+          effectiveVolume={effectiveVolume}
+          isMuted={config.ui_muted ?? false}
+          onMuteToggle={() => onChange({ ui_muted: !(config.ui_muted ?? false) })}
+          onVolumeChange={(rawValue) => {
+            const v = clampVolume(parseInt(rawValue, 10));
+            onChange({ ui_volume: v });
+          }}
+        />
       </div>
 
       <div className="setting-group">

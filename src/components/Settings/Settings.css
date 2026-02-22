@@ -1,5 +1,9 @@
 /* Settings extends main-shell + player-card from App.css; uses card-header from PlayerCardHeader.css */
 
+.settings-content .volume-row {
+  -webkit-app-region: no-drag;
+}
+
 .settings-page .player-card.settings-card {
   display: flex;
   flex-direction: column;

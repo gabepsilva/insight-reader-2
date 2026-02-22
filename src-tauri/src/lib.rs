@@ -44,12 +44,10 @@ use voices::download::{
 /// Managed state for initial text passed to the editor window. Used by windows and tray.
 pub type EditorInitialText = Arc<Mutex<Option<String>>>;
 
-/// Minimum main window size before we reset to default when showing from tray.
-/// Matches tauri.conf.json minWidth/minHeight so we reset when at config minimum.
-const MAIN_WINDOW_MIN_WIDTH: f64 = 340.0;
-const MAIN_WINDOW_MIN_HEIGHT: f64 = 300.0;
-const MAIN_WINDOW_DEFAULT_WIDTH: f64 = 380.0;
-const MAIN_WINDOW_DEFAULT_HEIGHT: f64 = 315.0;
+/// Main window size (default and minimum). Matches tauri.conf.json.
+/// Used when resetting size on show-from-tray if current size is below minimum.
+const MAIN_WINDOW_WIDTH: f64 = 350.0;
+const MAIN_WINDOW_HEIGHT: f64 = 260.0;
 
 // --- TTS and voice commands (thin wrappers around tts / voices) ---
 
@@ -362,11 +360,10 @@ fn show_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         if let (Ok(size), Ok(scale)) = (win.inner_size(), win.scale_factor()) {
             let logical_w = size.width as f64 / scale;
             let logical_h = size.height as f64 / scale;
-            if logical_w < MAIN_WINDOW_MIN_WIDTH || logical_h < MAIN_WINDOW_MIN_HEIGHT {
-                if let Err(e) = win.set_size(LogicalSize::new(
-                    MAIN_WINDOW_DEFAULT_WIDTH,
-                    MAIN_WINDOW_DEFAULT_HEIGHT,
-                )) {
+            if logical_w < MAIN_WINDOW_WIDTH || logical_h < MAIN_WINDOW_HEIGHT {
+                if let Err(e) =
+                    win.set_size(LogicalSize::new(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT))
+                {
                     warn!(error = %e, "Failed to resize main window when showing");
                 }
             }
