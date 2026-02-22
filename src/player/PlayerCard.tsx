@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useConfig } from "./hooks/useConfig";
 import { useTtsPlayback } from "./hooks/useTtsPlayback";
 import { useWindowChrome } from "./hooks/useWindowChrome";
+import { useWindowRadius } from "./hooks/useWindowRadius";
 import { useVolume } from "./hooks/useVolume";
 import { PlayerCardHeader } from "./PlayerCardHeader";
 import { TimeDisplay } from "./TimeDisplay";
@@ -19,6 +20,7 @@ export function PlayerCard() {
 
   const volumeState = useVolume(hasPendingUiPrefChangeRef);
   const windowChrome = useWindowChrome(hasPendingUiPrefChangeRef);
+  useWindowRadius();
   const configState = useConfig({
     volume: volumeState.volume,
     isMuted: volumeState.isMuted,
@@ -58,6 +60,7 @@ export function PlayerCard() {
   return (
     <main
       className={`main-shell main-shell--${windowChrome.themeMode}`}
+      data-tauri-drag-region
       onMouseDown={windowChrome.handleMouseDown}
     >
       <section className="player-card">
@@ -71,6 +74,7 @@ export function PlayerCard() {
         showTooltip={showTooltip}
         onTooltipEnter={() => setShowTooltip(true)}
         onTooltipLeave={() => setShowTooltip(false)}
+        platform={windowChrome.platform}
       />
       <div className="card-content">
         <TimeDisplay

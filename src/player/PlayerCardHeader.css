@@ -1,3 +1,20 @@
+/* Exclude button/interactive areas from native drag region so they remain clickable */
+.header-actions,
+.traffic-lights,
+.card-content .controls-row,
+.card-content .volume-row,
+.card-content .action-row,
+.resize-grip,
+.editor-toolbar,
+.settings-tabs,
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] select,
+[data-tauri-drag-region] textarea,
+[data-tauri-drag-region] [data-no-drag="true"] {
+  -webkit-app-region: no-drag;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -123,4 +140,97 @@
 
 .copy-errors-btn:hover {
   background: var(--copy-btn-hover-bg);
+}
+
+/* macOS-only: traffic light buttons on the left, centered app name */
+.card-header--macos .title-wrap--spacer {
+  flex: 1;
+  min-width: 0;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.card-header--macos .title-wrap--spacer .title-icon-img {
+  display: block;
+}
+
+.card-header--macos .app-name--center {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.traffic-btn {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.traffic-btn .traffic-btn-icon {
+  opacity: 0;
+  color: rgba(0, 0, 0, 0.6);
+  transition: opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.traffic-btn .traffic-btn-icon svg {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+
+.traffic-btn:hover .traffic-btn-icon {
+  opacity: 1;
+}
+
+.traffic-btn:hover {
+  filter: brightness(1.15);
+}
+
+.traffic-btn:active {
+  transform: scale(0.95);
+}
+
+.traffic-btn--close {
+  background: #ff5f57;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.traffic-btn--close:hover {
+  background: #ff7b73;
+}
+
+.traffic-btn--minimize {
+  background: #febc2e;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.traffic-btn--minimize:hover {
+  background: #ffc94a;
 }

@@ -73,6 +73,29 @@ pub async fn backend_prompt(task: String, content: String) -> Result<String, Str
     }
 }
 
+/// Pings the ReadingService backend GET /health. Returns true if reachable.
+/// Uses same URL precedence as backend_prompt. Used by status bar health indicator.
+#[tauri::command]
+pub async fn backend_health_check() -> Result<bool, String> {
+    let base = config::load_full_config()
+        .ok()
+        .and_then(|c| c.backend_url)
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| std::env::var("INSIGHT_READER_BACKEND_URL").ok())
+        .unwrap_or_else(|| BACKEND_BASE_URL.to_string());
+    let url = format!("{}/health", base.trim_end_matches('/'));
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("HTTP client: {}", e))?;
+
+    match client.get(&url).send().await {
+        Ok(resp) => Ok(resp.status().is_success()),
+        Err(_) => Ok(false),
+    }
+}
+
 /// Returns true if Polly credentials are configured and valid. Used by settings UI.
 #[tauri::command]
 pub fn check_polly_credentials() -> Result<bool, String> {

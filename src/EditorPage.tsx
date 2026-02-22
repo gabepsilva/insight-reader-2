@@ -20,16 +20,13 @@ import { applySuggestion } from "./utils/applySuggestion";
 import { callBackendPrompt } from "./backendPrompt";
 import { parseThemeMode } from "./player/utils";
 import { useWindowSize } from "./player/hooks/useWindowSize";
+import { usePlatform } from "./player/hooks/usePlatform";
+import { useWindowRadius } from "./player/hooks/useWindowRadius";
+import { useBackendHealth } from "./player/hooks/useBackendHealth";
+import { getProviderLabel, getVoiceLabel } from "./player/types";
+import type { Config } from "./player/types";
 import "./App.css";
 import "./EditorPage.css";
-
-interface Config {
-  voice_provider: string | null;
-  selected_voice: string | null;
-  selected_polly_voice: string | null;
-  selected_microsoft_voice: string | null;
-  ui_theme?: string | null;
-}
 
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
@@ -40,31 +37,6 @@ const POPUP_EDGE_MARGIN = 12;
 const POPUP_MAX_WIDTH = 360;
 const POPUP_HEIGHT_ESTIMATE = 120;
 const POPUP_HIDE_DELAY_MS = 60;
-
-const PROVIDER_LABELS: Record<string, string> = {
-  piper: "Piper",
-  polly: "AWS Polly",
-  microsoft: "Microsoft",
-};
-
-function getProviderLabel(provider: string | null): string {
-  if (!provider) return "Microsoft";
-  return PROVIDER_LABELS[provider] ?? provider;
-}
-
-function getVoiceLabel(config: Config): string {
-  const provider = config.voice_provider ?? "microsoft";
-  switch (provider) {
-    case "piper":
-      return config.selected_voice ?? "Not selected";
-    case "polly":
-      return config.selected_polly_voice ?? "Not selected";
-    case "microsoft":
-      return config.selected_microsoft_voice ?? "Not selected";
-    default:
-      return "Not selected";
-  }
-}
 
 /**
  * Computes fixed positioning for the lint popup so it stays on-screen.
@@ -93,6 +65,10 @@ function getPopupStyle(mouse: { x: number; y: number }): CSSProperties {
 }
 
 export default function EditorPage() {
+  const platform = usePlatform();
+  useWindowRadius();
+  const backendHealthy = useBackendHealth();
+  const isMacos = platform === "macos";
   const [text, setText] = useState("");
   const [lints, setLints] = useState<Lint[]>([]);
   const [hoveredLintIndex, setHoveredLintIndex] = useState<number | null>(null);
@@ -355,29 +331,55 @@ export default function EditorPage() {
   return (
     <main
       className={`main-shell main-shell--${themeMode} editor-page`}
+      data-tauri-drag-region
     >
       <section className="player-card editor-card">
         <header
-          className="card-header"
+          className={`card-header ${isMacos ? "card-header--macos" : ""}`}
           onMouseDown={handleTitleBarMouseDown}
           role="banner"
         >
-          <div className="title-wrap title-wrap--drag">
-            <div className="title-icon" aria-hidden="true">
-              <img src="/logo.svg" alt="" className="title-icon-img" />
+          {isMacos ? (
+            <div className="traffic-lights">
+              <button
+                type="button"
+                className="traffic-btn traffic-btn--close"
+                onClick={handleClose}
+                aria-label="Close"
+              >
+                <span className="traffic-btn-icon">
+                  <CloseIcon size={10} />
+                </span>
+              </button>
             </div>
-            <h1 className="app-name">Insight Editor</h1>
-          </div>
+          ) : null}
+          {!isMacos ? (
+            <div className="title-wrap title-wrap--drag">
+              <div className="title-icon" aria-hidden="true">
+                <img src="/logo.svg" alt="" className="title-icon-img" />
+              </div>
+              <h1 className="app-name">Insight Editor</h1>
+            </div>
+          ) : (
+            <div className="title-wrap title-wrap--spacer title-wrap--drag">
+              <div className="title-icon" aria-hidden="true">
+                <img src="/logo.svg" alt="" className="title-icon-img" />
+              </div>
+              <span className="app-name app-name--center">Insight Reader 2</span>
+            </div>
+          )}
           <div className="header-actions">
-            <button
-              type="button"
-              className="window-btn close"
-              onClick={handleClose}
-              aria-label="Close"
-              title="Close"
-            >
-              <CloseIcon size={14} />
-            </button>
+            {!isMacos && (
+              <button
+                type="button"
+                className="window-btn close"
+                onClick={handleClose}
+                aria-label="Close"
+                title="Close"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
           </div>
         </header>
       <div className="editor-toolbar">
@@ -473,6 +475,16 @@ export default function EditorPage() {
       </div>
       {config && (
         <div className="editor-status-bar">
+          <span className="editor-status-item">
+            <span className="editor-status-label">Backend:</span>
+            <span className="editor-status-value editor-status-value--backend">
+              <span
+                className={`status-backend-dot ${backendHealthy ? "status-backend-dot--healthy" : ""}`}
+                title={backendHealthy ? "Backend reachable" : "Backend unreachable"}
+                aria-label={backendHealthy ? "Backend reachable" : "Backend unreachable"}
+              />
+            </span>
+          </span>
           <span className="editor-status-item">
             <span className="editor-status-label">Provider:</span>
             <span className="editor-status-value">

@@ -26,7 +26,11 @@ mod windows;
 pub use action_socket::send_action_to_running_instance;
 
 use std::sync::{Arc, Mutex};
-use tauri::{menu::MenuEvent, Emitter, Manager, State, WebviewWindowBuilder, WindowEvent};
+use tauri::{
+    menu::MenuEvent,
+    window::{Effect, EffectsBuilder},
+    Emitter, LogicalSize, Manager, State, WebviewWindowBuilder, WindowEvent,
+};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -39,6 +43,13 @@ use voices::download::{
 
 /// Managed state for initial text passed to the editor window. Used by windows and tray.
 pub type EditorInitialText = Arc<Mutex<Option<String>>>;
+
+/// Minimum main window size before we reset to default when showing from tray.
+/// Matches tauri.conf.json minWidth/minHeight so we reset when at config minimum.
+const MAIN_WINDOW_MIN_WIDTH: f64 = 340.0;
+const MAIN_WINDOW_MIN_HEIGHT: f64 = 300.0;
+const MAIN_WINDOW_DEFAULT_WIDTH: f64 = 380.0;
+const MAIN_WINDOW_DEFAULT_HEIGHT: f64 = 315.0;
 
 // --- TTS and voice commands (thin wrappers around tts / voices) ---
 
@@ -289,7 +300,7 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 
     let url = windows::build_webview_url(&app, "settings.html")?;
 
-    let window = WebviewWindowBuilder::new(&app, "settings", url)
+    let mut builder = WebviewWindowBuilder::new(&app, "settings", url)
         .title("Settings - Insight Reader")
         .inner_size(600.0, 600.0)
         .min_inner_size(500.0, 500.0)
@@ -297,9 +308,20 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
         .decorations(false)
         .shadow(true)
         .accept_first_mouse(true)
-        .center()
-        .build()
-        .map_err(|e| e.to_string())?;
+        .always_on_top(true)
+        .center();
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.transparent(true).effects(
+            EffectsBuilder::new()
+                .effect(Effect::HudWindow)
+                .radius(10.0)
+                .build(),
+        );
+    }
+
+    let window = builder.build().map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "macos")]
     {
@@ -365,6 +387,7 @@ pub fn run() {
         .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
             backend::backend_prompt,
+            backend::backend_health_check,
             text_capture::get_selected_text,
             text_capture::get_clipboard_text,
             text_capture::get_text_or_clipboard,
@@ -500,6 +523,25 @@ pub fn run() {
                         }
                         "show_window" => {
                             if let Some(win) = app.get_webview_window("main") {
+                                match (win.inner_size(), win.scale_factor()) {
+                                    (Ok(size), Ok(scale)) => {
+                                        let logical_w = size.width as f64 / scale;
+                                        let logical_h = size.height as f64 / scale;
+                                        if logical_w < MAIN_WINDOW_MIN_WIDTH
+                                            || logical_h < MAIN_WINDOW_MIN_HEIGHT
+                                        {
+                                            if let Err(e) = win.set_size(LogicalSize::new(
+                                                MAIN_WINDOW_DEFAULT_WIDTH,
+                                                MAIN_WINDOW_DEFAULT_HEIGHT,
+                                            )) {
+                                                warn!(error = %e, "Failed to resize main window when showing from tray");
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        warn!("Could not read main window size/scale when showing from tray");
+                                    }
+                                }
                                 let _ = win.show();
                                 let _ = win.set_focus();
                                 if let Some(t) = app.tray_by_id("main") {

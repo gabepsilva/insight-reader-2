@@ -12,6 +12,7 @@ interface PlayerCardHeaderProps {
   showTooltip: boolean;
   onTooltipEnter: () => void;
   onTooltipLeave: () => void;
+  platform?: string | null;
 }
 
 export function PlayerCardHeader({
@@ -24,7 +25,9 @@ export function PlayerCardHeader({
   showTooltip,
   onTooltipEnter,
   onTooltipLeave,
+  platform,
 }: PlayerCardHeaderProps) {
+  const isMacos = platform === "macos";
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTooltipLeave = () => {
@@ -43,13 +46,47 @@ export function PlayerCardHeader({
   }, []);
 
   return (
-    <header className="card-header">
-      <div className="title-wrap">
-        <div className="title-icon" aria-hidden="true">
-          <img src="/logo.svg" alt="" className="title-icon-img" />
+    <header className={`card-header ${isMacos ? "card-header--macos" : ""}`}>
+      {isMacos ? (
+        <div className="traffic-lights">
+          <button
+            type="button"
+            className="traffic-btn traffic-btn--close"
+            onClick={onClose}
+            aria-label="Close window"
+          >
+            <span className="traffic-btn-icon">
+              <CloseIcon size={10} />
+            </span>
+          </button>
+          <button
+            type="button"
+            className="traffic-btn traffic-btn--minimize"
+            onClick={onMinimize}
+            aria-label="Minimize window"
+          >
+            <span className="traffic-btn-icon">
+              <MinimizeIcon size={10} />
+            </span>
+          </button>
         </div>
-        <h1 className="app-name">Insight Reader</h1>
-      </div>
+      ) : null}
+
+      {!isMacos ? (
+        <div className="title-wrap">
+          <div className="title-icon" aria-hidden="true">
+            <img src="/logo.svg" alt="" className="title-icon-img" />
+          </div>
+          <h1 className="app-name">Insight Reader</h1>
+        </div>
+      ) : (
+        <div className="title-wrap title-wrap--spacer title-wrap--drag">
+          <div className="title-icon" aria-hidden="true">
+            <img src="/logo.svg" alt="" className="title-icon-img" />
+          </div>
+          <span className="app-name app-name--center">Insight Reader 2</span>
+        </div>
+      )}
 
       <div className="header-actions">
         <button
@@ -79,12 +116,16 @@ export function PlayerCardHeader({
         <button className="window-btn" onClick={onOpenSettings} aria-label="Open settings">
           <SettingsIcon size={14} />
         </button>
-        <button className="window-btn minimize" onClick={onMinimize} aria-label="Minimize window">
-          <MinimizeIcon size={14} />
-        </button>
-        <button className="window-btn close" onClick={onClose} aria-label="Close window">
-          <CloseIcon size={14} />
-        </button>
+        {!isMacos && (
+          <>
+            <button className="window-btn minimize" onClick={onMinimize} aria-label="Minimize window">
+              <MinimizeIcon size={14} />
+            </button>
+            <button className="window-btn close" onClick={onClose} aria-label="Close window">
+              <CloseIcon size={14} />
+            </button>
+          </>
+        )}
 
         {errors.length > 0 && (
           <div

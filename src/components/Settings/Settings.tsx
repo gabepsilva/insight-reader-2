@@ -10,10 +10,15 @@ import { CloseIcon } from '../icons';
 import { ResizeGrip } from '../../player/ResizeGrip';
 import { parseThemeMode } from '../../player/utils';
 import { useWindowSize } from '../../player/hooks/useWindowSize';
+import { usePlatform } from '../../player/hooks/usePlatform';
+import { useWindowRadius } from '../../player/hooks/useWindowRadius';
 import '../../App.css';
 import './Settings.css';
 
 function Settings() {
+  const platform = usePlatform();
+  useWindowRadius();
+  const isMacos = platform === 'macos';
   const [activeTab, setActiveTab] = useState<Tab>('voices');
   const [config, setConfig] = useState<Config | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -119,7 +124,10 @@ function Settings() {
 
   if (!config) {
     return (
-      <main className={`main-shell main-shell--${themeMode} settings-page`}>
+      <main
+        className={`main-shell main-shell--${themeMode} settings-page`}
+        data-tauri-drag-region
+      >
         <section className="player-card settings-card">
           <div className="settings-loading">Loading...</div>
           <ResizeGrip
@@ -134,19 +142,45 @@ function Settings() {
   }
 
   return (
-    <main className={`main-shell main-shell--${themeMode} settings-page`}>
+    <main
+      className={`main-shell main-shell--${themeMode} settings-page`}
+      data-tauri-drag-region
+    >
       <section className="player-card settings-card">
         <header
-          className="card-header"
+          className={`card-header ${isMacos ? 'card-header--macos' : ''}`}
           role="banner"
           onMouseDown={handleTitleBarMouseDown}
         >
-          <div className="title-wrap title-wrap--drag">
-            <div className="title-icon" aria-hidden="true">
-              <img src="/logo.svg" alt="" className="title-icon-img" />
+          {isMacos ? (
+            <div className="traffic-lights">
+              <button
+                type="button"
+                className="traffic-btn traffic-btn--close"
+                onClick={handleClose}
+                aria-label="Close"
+              >
+                <span className="traffic-btn-icon">
+                  <CloseIcon size={10} />
+                </span>
+              </button>
             </div>
-            <h1 className="app-name">Settings</h1>
-          </div>
+          ) : null}
+          {!isMacos ? (
+            <div className="title-wrap title-wrap--drag">
+              <div className="title-icon" aria-hidden="true">
+                <img src="/logo.svg" alt="" className="title-icon-img" />
+              </div>
+              <h1 className="app-name">Settings</h1>
+            </div>
+          ) : (
+            <div className="title-wrap title-wrap--spacer title-wrap--drag">
+              <div className="title-icon" aria-hidden="true">
+                <img src="/logo.svg" alt="" className="title-icon-img" />
+              </div>
+              <span className="app-name app-name--center">Insight Reader 2</span>
+            </div>
+          )}
           <div className="header-actions">
             {errors.length > 0 && (
               <div
@@ -172,15 +206,17 @@ function Settings() {
                 )}
               </div>
             )}
-            <button
-              type="button"
-              className="window-btn close"
-              onClick={handleClose}
-              aria-label="Close"
-              title="Close"
-            >
-              <CloseIcon size={14} />
-            </button>
+            {!isMacos && (
+              <button
+                type="button"
+                className="window-btn close"
+                onClick={handleClose}
+                aria-label="Close"
+                title="Close"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
           </div>
         </header>
 

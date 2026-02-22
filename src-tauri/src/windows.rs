@@ -5,9 +5,15 @@
 //! (emitting `editor-set-text` if it already exists) or create it. Used by the open_editor_window
 //! command and by the tray "Insight Editor" and "Summarize Selected" flows.
 
-use tauri::{Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    window::{Effect, EffectsBuilder},
+    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder,
+};
 
 use crate::EditorInitialText;
+
+/// Window corner radius in logical pixels. Mac-only for now.
+const WINDOW_RADIUS_MACOS: f64 = 10.0;
 
 // --- URL building ---
 
@@ -62,7 +68,7 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
 
     let url = build_webview_url(app, "editor.html")?;
 
-    let window = WebviewWindowBuilder::new(app, "editor", url)
+    let mut builder = WebviewWindowBuilder::new(app, "editor", url)
         .title("Insight Editor")
         .inner_size(500.0, 400.0)
         .min_inner_size(400.0, 300.0)
@@ -71,9 +77,19 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
         .always_on_top(true)
         .accept_first_mouse(true)
         .shadow(true)
-        .center()
-        .build()
-        .map_err(|e| e.to_string())?;
+        .center();
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.transparent(true).effects(
+            EffectsBuilder::new()
+                .effect(Effect::HudWindow)
+                .radius(WINDOW_RADIUS_MACOS)
+                .build(),
+        );
+    }
+
+    let window = builder.build().map_err(|e| e.to_string())?;
 
     // Ensure decorations stay off on macOS (builder can be inconsistent for secondary windows)
     #[cfg(target_os = "macos")]

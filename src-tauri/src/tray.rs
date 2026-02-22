@@ -39,7 +39,7 @@ pub fn build_tray_menu<R: tauri::Runtime>(
         app,
         "show_window",
         "Show Window",
-        !is_main_visible,
+        true, // Always enabled so user can restore/resize if window is too small
         None::<&str>,
     )?;
     let sep2 = PredefinedMenuItem::separator(app)?;

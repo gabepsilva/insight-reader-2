@@ -6,3 +6,11 @@
 @import "./player/ActionRow.css";
 @import "./player/StatusBar.css";
 @import "./player/ResizeGrip.css";
+
+/* Shared: backend status indicator container (StatusBar + EditorPage) */
+.status-value--backend,
+.editor-status-value--backend {
+  display: inline-flex;
+  align-items: center;
+  overflow: visible;
+}
