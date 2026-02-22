@@ -1,8 +1,10 @@
 import { getCountryFlag } from '../voices/languageUtils';
+import { LanguageSection } from './LanguageSection';
 
 interface MicrosoftLanguage {
   code: string;
   name: string;
+  locale?: string;
 }
 
 interface MicrosoftVoice {
@@ -10,6 +12,7 @@ interface MicrosoftVoice {
   short_name?: string;
   gender: string;
   voice_type: string;
+  language: string;
   language_code: string;
 }
 
@@ -19,6 +22,8 @@ export function MicrosoftSection({
   loadingMicrosoft,
   microsoftVoices,
   microsoftLanguages,
+  mostUsedLanguages,
+  otherLanguages,
   selectedMicrosoftLanguage,
   microsoftModalLanguage,
   onSelectLanguage,
@@ -29,6 +34,8 @@ export function MicrosoftSection({
   loadingMicrosoft: boolean;
   microsoftVoices: MicrosoftVoice[];
   microsoftLanguages: MicrosoftLanguage[];
+  mostUsedLanguages: MicrosoftLanguage[];
+  otherLanguages: MicrosoftLanguage[];
   selectedMicrosoftLanguage: string;
   microsoftModalLanguage: string | null;
   onSelectLanguage: (code: string) => void;
@@ -38,29 +45,37 @@ export function MicrosoftSection({
     <>
       <h3>Microsoft Edge Voices</h3>
       {loadingMicrosoft ? (
-        <p>Loading voices...</p>
+        <p className="voices-loading">Loading voices...</p>
       ) : microsoftVoices.length === 0 ? (
         <p>No voices available.</p>
       ) : (
-        <div className="language-grid">
-          {microsoftLanguages.map((lang) => (
-            <div
-              key={lang.code}
-              className={`language-item ${selectedMicrosoftLanguage === lang.code ? 'selected' : ''}`}
-              onClick={() => onSelectLanguage(lang.code)}
-            >
-              <span className="language-flag">{getCountryFlag(lang.code)}</span>
-              <span className="language-name">{lang.code}</span>
-            </div>
-          ))}
-        </div>
+        <>
+          <LanguageSection
+            title="Most used languages"
+            languages={mostUsedLanguages}
+            selectedCode={selectedMicrosoftLanguage}
+            onSelect={onSelectLanguage}
+            getFlag={(lang) => getCountryFlag(lang.locale ?? lang.code)}
+          />
+          <LanguageSection
+            title="All languages"
+            languages={otherLanguages}
+            selectedCode={selectedMicrosoftLanguage}
+            onSelect={onSelectLanguage}
+            getFlag={(lang) => getCountryFlag(lang.locale ?? lang.code)}
+          />
+        </>
       )}
 
       {microsoftModalLanguage && (
         <div className="modal-overlay" onClick={onModalClose}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Select Voice - {microsoftModalLanguage}</h3>
+              <h3>
+                Select Voice -{' '}
+                {microsoftLanguages.find((l) => l.code === microsoftModalLanguage)?.name ??
+                  microsoftModalLanguage}
+              </h3>
               <button className="close-button" onClick={onModalClose} type="button">
                 ×
               </button>

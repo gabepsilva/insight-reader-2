@@ -1,3 +1,5 @@
+import { LanguageSection } from './LanguageSection';
+
 interface PiperLanguage {
   code: string;
   name: string;
@@ -16,6 +18,8 @@ export function PiperSection({
   onChange,
   piperVoices,
   piperLanguages,
+  mostUsedLanguages,
+  otherLanguages,
   selectedPiperLanguage,
   piperModalLanguage,
   onSelectLanguage,
@@ -29,6 +33,8 @@ export function PiperSection({
   onChange: (updates: { selected_voice?: string }) => void;
   piperVoices: PiperVoice[];
   piperLanguages: PiperLanguage[];
+  mostUsedLanguages: PiperLanguage[];
+  otherLanguages: PiperLanguage[];
   selectedPiperLanguage: string;
   piperModalLanguage: string | null;
   onSelectLanguage: (code: string) => void;
@@ -42,20 +48,26 @@ export function PiperSection({
     <>
       <h3>Piper Voices</h3>
       {loadingPiper ? (
-        <p>Loading voices...</p>
+        <p className="voices-loading">Loading voices...</p>
+      ) : piperVoices.length === 0 ? (
+        <p>No voices available.</p>
       ) : (
-        <div className="language-grid">
-          {piperLanguages.map((lang) => (
-            <div
-              key={lang.code}
-              className={`language-item ${selectedPiperLanguage === lang.code ? 'selected' : ''}`}
-              onClick={() => onSelectLanguage(lang.code)}
-            >
-              <span className="language-flag">{lang.flag}</span>
-              <span className="language-name">{lang.name}</span>
-            </div>
-          ))}
-        </div>
+        <>
+          <LanguageSection
+            title="Most used languages"
+            languages={mostUsedLanguages}
+            selectedCode={selectedPiperLanguage}
+            onSelect={onSelectLanguage}
+            getFlag={(lang) => lang.flag}
+          />
+          <LanguageSection
+            title="All languages"
+            languages={otherLanguages}
+            selectedCode={selectedPiperLanguage}
+            onSelect={onSelectLanguage}
+            getFlag={(lang) => lang.flag}
+          />
+        </>
       )}
 
       {piperModalLanguage && (

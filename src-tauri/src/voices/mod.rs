@@ -229,7 +229,10 @@ pub async fn fetch_microsoft_voices() -> Result<Vec<MicrosoftVoiceInfo>, String>
                 .replace("pt-BR", "Portuguese (Brazil)")
                 .replace("pt-PT", "Portuguese (Portugal)")
                 .replace("zh-CN", "Chinese (Simplified)")
-                .replace("zh-TW", "Chinese (Traditional)"),
+                .replace("zh-TW", "Chinese (Traditional)")
+                .replace("fr-FR", "French (France)")
+                .replace("de-DE", "German (Germany)")
+                .replace("hi-IN", "Hindi (India)"),
             status: v.status.unwrap_or_default(),
             voice_type: format!("{:?}", v.voice_tag),
         })
