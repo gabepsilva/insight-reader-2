@@ -456,12 +456,7 @@ export default function EditorPage() {
               <h1 className="app-name">Insight Editor</h1>
             </div>
           ) : (
-            <div className="title-wrap title-wrap--spacer title-wrap--drag">
-              <div className="title-icon" aria-hidden="true">
-                <img src="/logo.svg" alt="" className="title-icon-img" />
-              </div>
-              <span className="app-name app-name--center">Insight Reader 2</span>
-            </div>
+            <div className="title-wrap title-wrap--spacer title-wrap--drag" />
           )}
           <div className="editor-header__toolbar">
             <EditorToolbar

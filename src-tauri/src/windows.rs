@@ -70,7 +70,7 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
 
     let builder = WebviewWindowBuilder::new(app, "editor", url)
         .title("Insight Editor")
-        .inner_size(1000.0, 600.0)
+        .inner_size(800.0, 400.0)
         .min_inner_size(400.0, 300.0)
         .resizable(true)
         .decorations(false)

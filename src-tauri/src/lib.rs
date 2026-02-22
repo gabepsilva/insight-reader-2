@@ -1,5 +1,5 @@
 //! Insight Reader Tauri backend: app entry, command wiring, and lifecycle.
-//!
+#![allow(unexpected_cfgs)] // objc crate macros use cargo-clippy cfg
 //! This crate is the Rust entry point for the Tauri app. It owns `run()`, plugin and state
 //! registration, `invoke_handler![]`, `on_window_event`, and `setup` that delegates to modules.
 //! Business logic lives in the modules below; this file does not contain domain logic.
@@ -10,12 +10,18 @@
 //! timeout-wrapped selection/clipboard; `tts` / `voices` — TTS and voice listing; `tray` — tray
 //! menu and icon; `windows` — webview URL and editor window.
 
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+
 mod action_socket;
 mod actions;
 mod backend;
 mod config;
 mod hotkeys;
 mod machine_id;
+#[cfg(target_os = "macos")]
+mod macos_dock_icon;
 mod paths;
 mod system;
 mod text_capture;
@@ -354,13 +360,17 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 /// Hides the main window and updates the tray menu. Shared by the close button,
-/// minimize button, and tray "Hide Window" for consistent "hide to tray" behavior.
-/// On macOS, also sets activation policy to Accessory to hide the app from the dock.
-fn hide_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
+/// minimize button, and tray "Hide Window".
+/// - `to_tray`: when true (tray "Hide Window"), on macOS sets Accessory to hide from Dock.
+///   When false (minimize/close buttons), keeps Regular so the app stays in the Dock.
+fn hide_main_window_impl<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    to_tray: bool,
+) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("main") {
         win.hide().map_err(|e| e.to_string())?;
         #[cfg(target_os = "macos")]
-        {
+        if to_tray {
             let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
         }
         if let Some(t) = app.tray_by_id("main") {
@@ -375,11 +385,8 @@ fn hide_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result
 /// Shows the main window, resizing if too small, and updates the tray menu.
 /// Shared by tray "Show Window" and dock icon click (RunEvent::Reopen).
 /// On macOS, restores Regular activation policy so the app appears in the dock.
+/// We set the policy after showing the window so the Dock picks up the correct app icon.
 fn show_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    #[cfg(target_os = "macos")]
-    {
-        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
-    }
     if let Some(win) = app.get_webview_window("main") {
         if let (Ok(size), Ok(scale)) = (win.inner_size(), win.scale_factor()) {
             let logical_w = size.width as f64 / scale;
@@ -394,6 +401,12 @@ fn show_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         }
         let _ = win.show();
         let _ = win.set_focus();
+        #[cfg(target_os = "macos")]
+        {
+            let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+            // Explicitly set app icon; switching Accessory→Regular can show generic icon otherwise
+            macos_dock_icon::restore_dock_icon();
+        }
         if let Some(t) = app.tray_by_id("main") {
             let _ = tray::build_tray_menu(app, true).and_then(|m| t.set_menu(Some(m)));
         }
@@ -401,8 +414,8 @@ fn show_main_window_impl<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 #[tauri::command]
-fn hide_main_window(app: tauri::AppHandle) -> Result<(), String> {
-    hide_main_window_impl(&app)
+fn hide_main_window(app: tauri::AppHandle, to_tray: Option<bool>) -> Result<(), String> {
+    hide_main_window_impl(&app, to_tray.unwrap_or(false))
 }
 
 // --- Entry point and Tauri builder ---
@@ -499,8 +512,8 @@ pub fn run() {
                     let _ = window.hide();
                     api.prevent_close();
                 } else if label == "main" {
-                    // Close button hides to tray on all platforms; restore via tray "Show Window"
-                    let _ = hide_main_window_impl(window.app_handle());
+                    // Close button hides window but keeps app in Dock; restore via tray or Dock
+                    let _ = hide_main_window_impl(window.app_handle(), false);
                     api.prevent_close();
                 }
             }
@@ -585,7 +598,7 @@ pub fn run() {
                             }
                         }
                         "hide_window" => {
-                            let _ = hide_main_window_impl(app);
+                            let _ = hide_main_window_impl(app, true);
                         }
                         "show_window" => {
                             show_main_window_impl(app);
