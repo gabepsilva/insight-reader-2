@@ -14,6 +14,7 @@ export const BACKEND_PROMPT_TASKS = [
   "SUMMARIZE_AND_READ_PROMPT",
   "EXPLAIN1",
   "EXPLAIN2",
+  "REWRITE",
 ] as const;
 
 export type BackendPromptTask = (typeof BACKEND_PROMPT_TASKS)[number];
@@ -24,7 +25,8 @@ export type BackendPromptTask = (typeof BACKEND_PROMPT_TASKS)[number];
  */
 export async function callBackendPrompt(
   task: BackendPromptTask,
-  content: string
+  content: string,
+  options?: { tone?: string; format?: string },
 ): Promise<string> {
-  return invoke<string>("backend_prompt", { task, content });
+  return invoke<string>("backend_prompt", { task, content, ...options });
 }

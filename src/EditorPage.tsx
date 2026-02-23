@@ -262,14 +262,17 @@ export default function EditorPage() {
 
   const runTransformTask = async (
     task: BackendPromptTask,
-    options?: { silent?: boolean },
+    options?: { silent?: boolean; tone?: string; format?: string },
   ): Promise<string | null> => {
     const content = text.trim();
     if (!content) return null;
     if (!backendHealthy) return null;
     setTransformTask(task);
     try {
-      const response = await callBackendPrompt(task, content);
+      const response = await callBackendPrompt(task, content, {
+        tone: options?.tone,
+        format: options?.format,
+      });
       setText(response);
       return response;
     } catch (e) {
@@ -496,8 +499,17 @@ export default function EditorPage() {
     setCustomPrompt("");
   };
 
-  const handleAssistantRewrite = () => {
-    void runTransformTask("SUMMARIZE");
+  const handleAssistantRewrite = async () => {
+    const tone = activeTone?.trim() || undefined;
+    const baseFormat = activeFormat?.trim() || "";
+    const sub = activeSubOption?.trim() || "";
+    const format =
+      baseFormat && sub ? `${baseFormat}:${sub}` : baseFormat || undefined;
+    void runTransformTask("REWRITE", { tone, format });
+  };
+
+  const handleQuickEditRewrite = async () => {
+    void runTransformTask("REWRITE");
   };
 
   const hasText = text.trim().length > 0;
@@ -637,6 +649,7 @@ export default function EditorPage() {
           onApplyPrompt={handleApplyPrompt}
           onUseHistoryPrompt={setCustomPrompt}
           onApplyRewrite={handleAssistantRewrite}
+          onApplyQuickEdit={handleQuickEditRewrite}
         />
       </div>
       <EditorLegend

@@ -26,6 +26,7 @@ interface EditorAssistantPanelProps {
   onApplyPrompt: () => void;
   onUseHistoryPrompt: (value: string) => void;
   onApplyRewrite: () => void;
+  onApplyQuickEdit: () => void;
 }
 
 export function EditorAssistantPanel({
@@ -47,6 +48,7 @@ export function EditorAssistantPanel({
   onApplyPrompt,
   onUseHistoryPrompt,
   onApplyRewrite,
+  onApplyQuickEdit,
 }: EditorAssistantPanelProps) {
   const currentTone = TONE_OPTIONS.find((t) => t.id === activeTone);
   const currentFormat = FORMAT_OPTIONS.find((item) => item.id === activeFormat);
@@ -143,14 +145,16 @@ export function EditorAssistantPanel({
 
         {activeTab === "quick" && (
           <>
-            <p className="editor-assistant__section-label">Quick edits</p>
+            <p className="editor-assistant__section-label editor-assistant__section-label--body">
+              Quick edits keep your tone and format, but change the perspective.
+            </p>
             <div className="editor-assistant__quick-list">
               {QUICK_EDIT_OPTIONS.map((quickEdit) => (
                 <button
                   key={quickEdit.label}
                   type="button"
                   className="editor-assistant__quick-button"
-                  onClick={onApplyRewrite}
+                  onClick={onApplyQuickEdit}
                   disabled={rewriteDisabled}
                 >
                   <span className="editor-assistant__quick-icon">{quickEdit.icon}</span>

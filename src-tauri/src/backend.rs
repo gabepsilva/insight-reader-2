@@ -45,7 +45,12 @@ fn installation_header_value(install_id: &str) -> String {
 /// Calls the ReadingService backend POST /api/prompt. Returns the response string on success.
 /// Async so the command does not block the app; long-running HTTP runs on the async runtime.
 #[tauri::command]
-pub async fn backend_prompt(task: String, content: String) -> Result<String, String> {
+pub async fn backend_prompt(
+    task: String,
+    content: String,
+    tone: Option<String>,
+    format: Option<String>,
+) -> Result<String, String> {
     let base = backend_base_url();
     let url = format!("{}/api/prompt", base);
 
@@ -53,6 +58,10 @@ pub async fn backend_prompt(task: String, content: String) -> Result<String, Str
     struct Request {
         task: String,
         content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tone: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        format: Option<String>,
     }
     #[derive(serde::Deserialize)]
     struct SuccessResponse {
@@ -74,7 +83,12 @@ pub async fn backend_prompt(task: String, content: String) -> Result<String, Str
         .post(&url)
         .header("X-Installation-ID", &installation_header)
         .header("X-Session-ID", get_session_id())
-        .json(&Request { task, content })
+        .json(&Request {
+            task,
+            content,
+            tone,
+            format,
+        })
         .send()
         .await
         .map_err(|e| {
