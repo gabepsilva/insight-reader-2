@@ -1,9 +1,8 @@
 //! System tray icon and menu.
 //!
 //! Builds the tray menu (Read Selected, Summarize Selected, Insight Editor, Hide Window,
-//! Show Window, Quit) and provides the app logo for the tray icon. The menu event handler
-//! lives in lib's setup and dispatches to actions, windows, and backend. Hide/Show control
-//! main window visibility; Quit stops the TTS worker and exits.
+//! Show Window, Quit) and provides the app logo for the tray icon. Menu event handling
+//! lives in `tray_actions`; hide/show control the main window; quit is handled there too.
 
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 
