@@ -4,6 +4,31 @@
   gap: 8px;
 }
 
+.action-row__summary-group {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.08));
+  background: var(--action-bg);
+}
+
+.action-row__summary-group .action-btn {
+  border: none;
+  border-radius: 0;
+}
+
+.action-row__summary-group .action-row__summary-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-row__summary-group .action-row__summary-toggle {
+  flex: 0 0 auto;
+  width: 36px;
+  padding: 0;
+  border-left: 1px solid var(--card-border, rgba(0, 0, 0, 0.08));
+}
+
 .action-btn {
   display: flex;
   align-items: center;

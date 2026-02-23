@@ -9,7 +9,7 @@
 use tauri::window::{Effect, EffectsBuilder};
 use tauri::{Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
-use crate::EditorInitialText;
+use crate::{EditorInitialStateInner, EditorInitialText};
 
 /// Window corner radius in logical pixels. Mac-only for now.
 #[cfg(target_os = "macos")]
@@ -43,19 +43,23 @@ pub fn build_webview_url<R: tauri::Runtime>(
 
 // --- Editor window ---
 
-/// Stores initial text, then focuses the editor window (emitting `editor-set-text` if it exists)
-/// or creates it. Shared by the `open_editor_window` command and the "Insight Editor" tray item.
+/// Stores initial text (and optional trigger_read), then focuses the editor window
+/// (emitting `editor-set-text` and optionally `editor-trigger-read` if it exists) or creates it.
 pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     state: &State<EditorInitialText>,
     initial_text: String,
+    trigger_read: bool,
 ) -> Result<(), String> {
     {
         let mut guard = state
             .inner()
             .lock()
             .map_err(|e| format!("editor state lock: {}", e))?;
-        *guard = Some(initial_text.clone());
+        *guard = EditorInitialStateInner {
+            text: Some(initial_text.clone()),
+            trigger_read,
+        };
     }
 
     if let Some(win) = app.get_webview_window("editor") {
@@ -63,6 +67,9 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
             .map_err(|e: tauri::Error| e.to_string())?;
         let _ = win.show(); // restore if it was hidden (user had "closed" it)
         win.set_focus().map_err(|e| e.to_string())?;
+        if trigger_read {
+            let _ = win.emit("editor-trigger-read", ());
+        }
         return Ok(());
     }
 
@@ -87,11 +94,14 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
             .build(),
     );
 
-    let _window = builder.build().map_err(|e| e.to_string())?;
+    let window = builder.build().map_err(|e| e.to_string())?;
+    if trigger_read {
+        let _ = window.emit("editor-trigger-read", ());
+    }
 
     // Ensure decorations stay off on macOS (builder can be inconsistent for secondary windows)
     #[cfg(target_os = "macos")]
-    let _ = _window.set_decorations(false);
+    let _ = window.set_decorations(false);
 
     Ok(())
 }
@@ -100,22 +110,27 @@ pub fn open_or_focus_editor_with_text<R: tauri::Runtime>(
 
 /// Opens the grammar editor window, creating it if it does not exist.
 /// If the window already exists, emits `editor-set-text` with `initial_text` and focuses it.
+/// When `trigger_read` is true, also emits `editor-trigger-read` so the editor starts TTS.
 #[tauri::command]
 pub fn open_editor_window(
     app: tauri::AppHandle,
     state: State<EditorInitialText>,
     initial_text: String,
+    trigger_read: Option<bool>,
 ) -> Result<(), String> {
-    open_or_focus_editor_with_text(&app, &state, initial_text)
+    open_or_focus_editor_with_text(&app, &state, initial_text, trigger_read.unwrap_or(false))
 }
 
-/// Returns the stored initial text for the editor (does not consume, so
-/// React StrictMode double-mount or HMR remounts can still receive the value).
+/// Returns the stored initial text and trigger_read flag, and clears trigger_read after read.
 #[tauri::command]
-pub fn get_editor_initial_text(state: State<EditorInitialText>) -> Result<Option<String>, String> {
-    let guard = state
+pub fn get_editor_initial_text(
+    state: State<EditorInitialText>,
+) -> Result<EditorInitialStateInner, String> {
+    let mut guard = state
         .inner()
         .lock()
         .map_err(|e| format!("editor state lock: {}", e))?;
-    Ok(guard.clone())
+    let out = guard.clone();
+    guard.trigger_read = false;
+    Ok(out)
 }

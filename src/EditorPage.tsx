@@ -101,6 +101,7 @@ export default function EditorPage() {
   const editorInstanceRef = useRef<Editor | null>(null);
   const linterRef = useRef<WorkerLinter | null>(null);
   const textRef = useRef(text);
+  const triggerReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [transformTask, setTransformTask] = useState<
     "TTS" | "SUMMARIZE" | "EXPLAIN1" | null
@@ -256,11 +257,29 @@ export default function EditorPage() {
     let isMounted = true;
     (async () => {
       try {
-        const initial =
-          (await invoke<string | null>("get_editor_initial_text")) ?? "";
-        // Only apply when non-empty so we don't overwrite with "" when there was no initial text.
-        if (isMounted && initial.length > 0) {
-          setText(initial);
+        const state = await invoke<{
+          text: string | null;
+          trigger_read: boolean;
+        }>("get_editor_initial_text");
+        const initial = state?.text ?? "";
+        if (!isMounted || initial.length === 0) return;
+        setText(initial);
+        if (state?.trigger_read) {
+          if (triggerReadTimeoutRef.current) clearTimeout(triggerReadTimeoutRef.current);
+          triggerReadTimeoutRef.current = setTimeout(() => {
+            const t = initial.trim();
+            if (t) {
+              invoke("tts_speak", { text: t }).catch((e) => {
+                console.warn("[EditorPage] tts_speak failed:", e);
+                alert(
+                  typeof e === "string"
+                    ? e
+                    : "Could not read aloud. Is Piper installed?",
+                );
+              });
+            }
+            triggerReadTimeoutRef.current = null;
+          }, 50);
         }
       } catch (e) {
         if (isMounted)
@@ -269,6 +288,10 @@ export default function EditorPage() {
     })();
     return () => {
       isMounted = false;
+      if (triggerReadTimeoutRef.current) {
+        clearTimeout(triggerReadTimeoutRef.current);
+        triggerReadTimeoutRef.current = null;
+      }
     };
   }, []);
 

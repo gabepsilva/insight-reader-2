@@ -18,6 +18,7 @@ export function PlayerCard() {
   const [errors, setErrors] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryMuted, setSummaryMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(DEFAULT_PLAYBACK_SPEED);
 
   const volumeState = useVolume(hasPendingUiPrefChangeRef);
@@ -116,6 +117,8 @@ export function PlayerCard() {
           platform={windowChrome.platform}
           isSummarizing={isSummarizing}
           onSummarizingChange={setIsSummarizing}
+          summaryMuted={summaryMuted}
+          onSummaryMutedChange={setSummaryMuted}
           onErrorsAdd={(msg) =>
             setErrors((prev) => [...prev.slice(-4), msg])
           }

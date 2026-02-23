@@ -50,8 +50,18 @@ use voices::download::{
 
 // --- State types (shared with windows and tray) ---
 
-/// Managed state for initial text passed to the editor window. Used by windows and tray.
-pub type EditorInitialText = Arc<Mutex<Option<String>>>;
+/// Initial state for the editor window: text to show and whether to trigger TTS read after load.
+#[derive(Clone, Default, serde::Serialize)]
+pub struct EditorInitialStateInner {
+    pub text: Option<String>,
+    pub trigger_read: bool,
+}
+
+/// Managed state for initial text and trigger-read flag passed to the editor window.
+pub type EditorInitialState = Arc<Mutex<EditorInitialStateInner>>;
+
+/// Legacy type alias for code that still refers to EditorInitialText (e.g. try_state).
+pub type EditorInitialText = EditorInitialState;
 
 /// Main window size (default and minimum). Matches tauri.conf.json.
 /// Used when resetting size on show-from-tray if current size is below minimum.
@@ -436,7 +446,8 @@ pub fn run() {
 
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let editor_initial: EditorInitialText = Arc::new(Mutex::new(None));
+    let editor_initial: EditorInitialState =
+        Arc::new(Mutex::new(EditorInitialStateInner::default()));
     let tts_state = tts::create_tts_state();
     let hotkey_state: hotkeys::GlobalHotkeyState =
         Arc::new(Mutex::new(hotkeys::HotkeyRuntime::default()));
@@ -560,7 +571,7 @@ pub fn run() {
                                     Ok(summary) => {
                                         if let Some(state) = app.try_state::<EditorInitialText>() {
                                             if let Err(e) =
-                                                windows::open_or_focus_editor_with_text(&app, &state, summary)
+                                                windows::open_or_focus_editor_with_text(&app, &state, summary, false)
                                             {
                                                 warn!(error = %e, "Summarize Selected: open_editor_window failed");
                                             }
@@ -574,6 +585,7 @@ pub fn run() {
                                                 &app,
                                                 &state,
                                                 format!("Summary failed: {}", e),
+                                                false,
                                             );
                                         } else {
                                             warn!(error = %e, "Summarize Selected: backend_prompt failed");
@@ -587,7 +599,7 @@ pub fn run() {
                             match app.try_state::<EditorInitialText>() {
                                 Some(state) => {
                                     if let Err(e) =
-                                        windows::open_or_focus_editor_with_text(app, &state, text)
+                                        windows::open_or_focus_editor_with_text(app, &state, text, false)
                                     {
                                         warn!(error = %e, "Insight Editor: open_editor_window failed");
                                     }
