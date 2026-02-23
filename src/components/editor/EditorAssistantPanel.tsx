@@ -59,6 +59,7 @@ export function EditorAssistantPanel({
       : currentFormat.label
     : activeFormat;
   const rewriteDisabled = !hasText || !backendHealthy || isRunningTransform;
+  const promptDisabled = !customPrompt.trim() || !hasText || !backendHealthy || isRunningTransform;
 
   return (
     <aside
@@ -209,7 +210,7 @@ export function EditorAssistantPanel({
             <button
               type="button"
               className="editor-assistant__apply editor-assistant__apply--prompt"
-              disabled={!customPrompt.trim()}
+              disabled={promptDisabled}
               onClick={onApplyPrompt}
             >
               <span aria-hidden="true">↵</span>

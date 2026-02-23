@@ -501,8 +501,11 @@ export default function EditorPage() {
   const handleApplyPrompt = () => {
     const next = customPrompt.trim();
     if (!next) return;
-    setPromptHistory((current) => [next, ...current.filter((item) => item !== next)].slice(0, 8));
+    setPromptHistory((current) =>
+      [next, ...current.filter((item) => item !== next)].slice(0, 8),
+    );
     setCustomPrompt("");
+    void runTransformTask("PROMPT", { instruction: next });
   };
 
   const handleAssistantRewrite = async () => {
