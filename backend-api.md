@@ -54,8 +54,10 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 
 | Field     | Type   | Required | Description |
 |----------|--------|----------|-------------|
-| `task`   | string | Yes      | One of: `PROMPT`, `TTS`, `SUMMARIZE`, `SUMMARIZE_PROMPT`, `SUMMARIZE_AND_READ_PROMPT`, `EXPLAIN1`, `EXPLAIN2` (case-sensitive). |
-| `content`| string | Yes      | Input text: raw content for TTS/Summarize/Explain, or the user prompt for `PROMPT`. |
+| `task`   | string | Yes      | One of: `PROMPT`, `TTS`, `SUMMARIZE`, `SUMMARIZE_PROMPT`, `SUMMARIZE_AND_READ_PROMPT`, `EXPLAIN1`, `EXPLAIN2`, `REWRITE` (case-sensitive). |
+| `content`| string | Yes      | Input text: raw content for TTS/Summarize/Explain/Rewrite, or the user prompt for `PROMPT`. |
+| `tone`   | string | No       | Optional tone hint for `REWRITE` (e.g. `professional`, `casual`). Ignored by other tasks. |
+| `format` | string | No       | Optional format hint for `REWRITE` (e.g. `email:follow-up`). Ignored by other tasks. |
 
 **Task semantics:**
 
@@ -74,6 +76,7 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 - **`SUMMARIZE_AND_READ_PROMPT`** — Same as `SUMMARIZE`; used when the client **will** read the result aloud. The backend may optimize the summary for TTS (e.g. phrasing, length).
 - **`EXPLAIN1`** — Explain the substance for capable professionals who “missed the point”: clearer wording, brief clarifications, same rigor; not oversimplified.
 - **`EXPLAIN2`** — Stronger simplification: plain language, short sentences, concrete examples, minimal jargon; still professional and respectful.
+- **`REWRITE`** — Rewrite `content` to keep the same core meaning while adjusting style. Uses optional `tone` and `format` hints when provided (e.g. “professional” tone, “email:follow-up” format).
 
 **Success (200):** JSON with the LLM’s reply.
 
@@ -109,7 +112,7 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 ## Summary for LLM / app logic
 
 1. **Reachability:** `GET /` or `GET /health` to confirm the service is up.
-2. **LLM work:** `POST /api/prompt` with JSON `{ "task": "<PROMPT|TTS|SUMMARIZE|SUMMARIZE_PROMPT|SUMMARIZE_AND_READ_PROMPT|EXPLAIN1|EXPLAIN2>", "content": "<user text>" }`. Response is `{ "response": "<LLM output>" }`.
+2. **LLM work:** `POST /api/prompt` with JSON `{ "task": "<PROMPT|TTS|SUMMARIZE|SUMMARIZE_PROMPT|SUMMARIZE_AND_READ_PROMPT|EXPLAIN1|EXPLAIN2|REWRITE>", "content": "<user text>", "tone": "<optional tone>", "format": "<optional format>" }`. Response is `{ "response": "<LLM output>" }`.
 3. **Errors:** Always check HTTP status; on 4xx/5xx, read `error` in the JSON body for the message.
 4. **Size:** Keep request bodies under 1 MB.
 

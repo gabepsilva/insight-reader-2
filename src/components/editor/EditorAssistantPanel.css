@@ -71,6 +71,11 @@
   margin-top: 2px;
 }
 
+.editor-assistant__section-label--body {
+  text-transform: none;
+  margin-bottom: 6px;
+}
+
 .editor-assistant__tone-grid,
 .editor-assistant__format-grid {
   display: grid;

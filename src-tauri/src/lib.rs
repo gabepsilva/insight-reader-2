@@ -620,6 +620,8 @@ pub fn run() {
                                 let result = rt.block_on(backend::backend_prompt(
                                     task.to_string(),
                                     text,
+                                    None,
+                                    None,
                                 ));
                                 match result {
                                     Ok(summary) => {

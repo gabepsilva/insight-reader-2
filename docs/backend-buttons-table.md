@@ -14,8 +14,8 @@ See [backend-protocol.md](backend-protocol.md) and [backend-api.md](../backend-a
 | Explain | Editor toolbar (split button) | `"EXPLAIN1"` or `"EXPLAIN2"` | Split: main runs current mode. Modes: "Like I missed the meeting" (EXPLAIN1, capable professionals), "Like high school" (EXPLAIN2, plain language). Choice persisted in config |
 | Summary | Player ActionRow (main card) | `"SUMMARIZE_PROMPT"` when speaker muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Summarizes clipboard/selection, opens editor with result; triggers read when unmuted |
 | Summarize Selected | Tray menu | `"SUMMARIZE_PROMPT"` when summary muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Uses shared preference (config); summarizes selection/clipboard, opens editor with result; triggers read when unmuted |
-| Rewrite (tone + format) | Editor Assistant panel footer | `"SUMMARIZE"` | Currently uses SUMMARIZE; tone/format not sent (Phase 3: `{ "tone": "...", "format": "..." }`) |
-| Quick edits (Make shorter, Simplify language, etc.) | Editor Assistant panel → Edits tab | `"SUMMARIZE"` | All use handleAssistantRewrite → SUMMARIZE |
+| Rewrite (tone + format) | Editor Assistant panel footer | `"REWRITE"` | Sends content plus `tone` and `format` fields for rewrite using REWRITE task |
+| Quick edits (Make shorter, Simplify language, etc.) | Editor Assistant panel → Edits tab | `"REWRITE"` | Same rewrite pipeline as above (content + `tone` + `format`) via handleAssistantRewrite |
 
 ---
 
