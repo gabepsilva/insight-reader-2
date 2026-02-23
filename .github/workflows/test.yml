@@ -10,37 +10,44 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Linux]
-    container:
-      image: ubuntu:22.04
-      options: --user root
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo-home
+      RUSTUP_HOME: ${{ github.workspace }}/.rustup-home
     steps:
       - uses: actions/checkout@v4
         with:
-          path: repo
+          path: repo-host
 
-      - name: Install system dependencies
+      - name: Verify host system dependencies
         run: |
-          apt-get update
+          command -v curl >/dev/null
+          command -v unzip >/dev/null
+          command -v pkg-config >/dev/null
+          command -v patchelf >/dev/null
 
           WEBKIT_DEV_PACKAGE="libwebkit2gtk-4.1-dev"
-          if ! apt-cache show "$WEBKIT_DEV_PACKAGE" >/dev/null 2>&1; then
+          if ! dpkg -s "$WEBKIT_DEV_PACKAGE" >/dev/null 2>&1; then
             WEBKIT_DEV_PACKAGE="libwebkit2gtk-4.0-dev"
           fi
 
           APPINDICATOR_DEV_PACKAGE="libayatana-appindicator3-dev"
-          if ! apt-cache show "$APPINDICATOR_DEV_PACKAGE" >/dev/null 2>&1; then
+          if ! dpkg -s "$APPINDICATOR_DEV_PACKAGE" >/dev/null 2>&1; then
             APPINDICATOR_DEV_PACKAGE="libappindicator3-dev"
           fi
 
-          apt-get install -y curl unzip build-essential pkg-config libssl-dev \
-            libgtk-3-dev "$APPINDICATOR_DEV_PACKAGE" librsvg2-dev patchelf "$WEBKIT_DEV_PACKAGE" \
-            libasound2-dev xdg-utils libclang-dev
+          for pkg in build-essential libssl-dev libgtk-3-dev "$APPINDICATOR_DEV_PACKAGE" \
+            librsvg2-dev "$WEBKIT_DEV_PACKAGE" libasound2-dev xdg-utils libclang-dev; do
+            dpkg -s "$pkg" >/dev/null 2>&1 || {
+              echo "Missing host dependency: $pkg" >&2
+              exit 1
+            }
+          done
 
       - name: Install Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
-          export PATH="$HOME/.cargo/bin:$PATH"
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$CARGO_HOME/bin:$PATH"
+          echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
           rustup default stable
           rustup component add rustfmt clippy
           rustc --version
@@ -49,7 +56,7 @@ jobs:
       - name: Cache Rust and Tauri artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: repo/src-tauri -> target
+          workspaces: repo-host/src-tauri -> target
           cache-directories: |
             ~/.cache/tauri
           cache-on-failure: true
@@ -62,35 +69,35 @@ jobs:
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
-          path: repo/node_modules
-          key: ${{ runner.os }}-bun-modules-${{ hashFiles('repo/bun.lock') }}
+          path: repo-host/node_modules
+          key: ${{ runner.os }}-bun-modules-${{ hashFiles('repo-host/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-modules-
 
       - name: Install dependencies
         run: bun install
-        working-directory: repo
+        working-directory: repo-host
 
       - name: Type check
         run: bun run tsc --noEmit
-        working-directory: repo
+        working-directory: repo-host
 
       - name: Run tests
         run: bun run test
-        working-directory: repo
+        working-directory: repo-host
 
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
-        working-directory: repo/src-tauri
+        working-directory: repo-host/src-tauri
 
       - name: Lint Rust (deny warnings)
         run: cargo clippy --all-targets --all-features -- -D warnings
-        working-directory: repo/src-tauri
+        working-directory: repo-host/src-tauri
 
       - name: Run Rust tests
         run: cargo test
-        working-directory: repo/src-tauri
+        working-directory: repo-host/src-tauri
 
       - name: Build release (no bundles)
         run: bun run tauri build --no-bundle
-        working-directory: repo
+        working-directory: repo-host
