@@ -1,6 +1,6 @@
 //! ReadingService HTTP API client.
 //!
-//! Calls the backend POST /api/prompt for tasks (SUMMARIZE, TTS, EXPLAIN1, EXPLAIN2, PROMPT).
+//! Calls the backend POST /api/prompt for tasks (SUMMARIZE, SUMMARIZE_PROMPT, SUMMARIZE_AND_READ_PROMPT, TTS, EXPLAIN1, EXPLAIN2, PROMPT).
 //! URL precedence: config.backend_url, then INSIGHT_READER_BACKEND_URL env, then default.
 //! See backend-api.md in the repo root for task semantics. Used by the frontend and by the
 //! tray "Summarize Selected" flow.

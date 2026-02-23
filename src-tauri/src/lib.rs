@@ -561,17 +561,25 @@ pub fn run() {
                                     warn!("Summarize Selected: no text available");
                                     return;
                                 }
-                                // backend_prompt is async; run it in a dedicated runtime so this thread can block until done.
+                                let summary_muted = config::load_full_config()
+                                    .ok()
+                                    .and_then(|c| c.summary_muted)
+                                    .unwrap_or(false);
+                                let task = if summary_muted {
+                                    "SUMMARIZE_PROMPT"
+                                } else {
+                                    "SUMMARIZE_AND_READ_PROMPT"
+                                };
                                 let rt = tokio::runtime::Runtime::new().expect("tokio runtime for tray summarize");
                                 let result = rt.block_on(backend::backend_prompt(
-                                    "SUMMARIZE".to_string(),
+                                    task.to_string(),
                                     text,
                                 ));
                                 match result {
                                     Ok(summary) => {
                                         if let Some(state) = app.try_state::<EditorInitialText>() {
                                             if let Err(e) =
-                                                windows::open_or_focus_editor_with_text(&app, &state, summary, false)
+                                                windows::open_or_focus_editor_with_text(&app, &state, summary, !summary_muted)
                                             {
                                                 warn!(error = %e, "Summarize Selected: open_editor_window failed");
                                             }

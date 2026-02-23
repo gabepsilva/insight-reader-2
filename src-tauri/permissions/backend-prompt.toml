@@ -1,5 +1,5 @@
 # Permission to invoke backend_prompt (call ReadingService backend /api/prompt from Rust, avoids CORS)
 [[permission]]
 identifier = "allow-backend-prompt"
-description = "Allows invoking backend_prompt for any task (SUMMARIZE, TTS, EXPLAIN1, EXPLAIN2, PROMPT)"
+description = "Allows invoking backend_prompt for any task (SUMMARIZE, SUMMARIZE_PROMPT, SUMMARIZE_AND_READ_PROMPT, TTS, EXPLAIN1, EXPLAIN2, PROMPT)"
 commands.allow = ["backend_prompt", "backend_health_check"]

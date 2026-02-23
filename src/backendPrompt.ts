@@ -10,6 +10,8 @@ export const BACKEND_PROMPT_TASKS = [
   "PROMPT",
   "TTS",
   "SUMMARIZE",
+  "SUMMARIZE_PROMPT",
+  "SUMMARIZE_AND_READ_PROMPT",
   "EXPLAIN1",
   "EXPLAIN2",
 ] as const;

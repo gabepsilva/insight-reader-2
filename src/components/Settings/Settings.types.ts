@@ -12,6 +12,7 @@ export interface Config {
   ui_muted?: boolean | null;
   ui_theme?: string | null;
   editor_dark_mode?: boolean | null;
+  summary_muted?: boolean | null;
 }
 
 export interface HotkeyStatus {

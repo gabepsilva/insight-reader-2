@@ -16,10 +16,12 @@ import {
 export interface UseConfigInput {
   volume: number;
   isMuted: boolean;
+  summaryMuted: boolean;
   themeMode: ThemeMode;
   playbackSpeed: number;
   setVolume: (v: number) => void;
   setIsMuted: (v: boolean) => void;
+  setSummaryMuted: (v: boolean) => void;
   setThemeMode: (v: ThemeMode | ((prev: ThemeMode) => ThemeMode)) => void;
   setPlaybackSpeed: (v: number) => void;
   previousVolumeRef: MutableRefObject<number>;
@@ -30,10 +32,12 @@ export function useConfig(input: UseConfigInput) {
   const {
     volume,
     isMuted,
+    summaryMuted,
     themeMode,
     playbackSpeed,
     setVolume,
     setIsMuted,
+    setSummaryMuted,
     setThemeMode,
     setPlaybackSpeed,
     previousVolumeRef,
@@ -55,6 +59,7 @@ export function useConfig(input: UseConfigInput) {
     if (cfg.ui_muted != null) {
       setIsMuted(cfg.ui_muted);
     }
+    setSummaryMuted(cfg.summary_muted ?? false);
     const parsedTheme = parseThemeMode(cfg.ui_theme);
     if (parsedTheme != null) {
       setThemeMode(parsedTheme);
@@ -64,17 +69,18 @@ export function useConfig(input: UseConfigInput) {
       setPlaybackSpeed(parsedSpeed);
     }
     return { configVolume, parsedTheme, parsedSpeed };
-  }, [previousVolumeRef, setPlaybackSpeed, setIsMuted, setThemeMode, setVolume]);
+  }, [previousVolumeRef, setPlaybackSpeed, setIsMuted, setSummaryMuted, setThemeMode, setVolume]);
 
   const applyCurrentUiPrefsToConfig = useCallback(
     (baseConfig: Config): Config => ({
       ...baseConfig,
       ui_volume: clampVolume(volume),
       ui_muted: isMuted,
+      summary_muted: summaryMuted,
       ui_theme: themeMode,
       ui_playback_speed: playbackSpeed,
     }),
-    [isMuted, playbackSpeed, themeMode, volume],
+    [isMuted, summaryMuted, playbackSpeed, themeMode, volume],
   );
 
   useEffect(() => {
@@ -86,6 +92,7 @@ export function useConfig(input: UseConfigInput) {
           ...cfg,
           ui_volume: configVolume ?? DEFAULT_VOLUME,
           ui_muted: cfg.ui_muted ?? false,
+          summary_muted: cfg.summary_muted ?? false,
           ui_theme: parsedTheme ?? "dark",
           ui_playback_speed: parsedSpeed ?? DEFAULT_PLAYBACK_SPEED,
         };
@@ -93,6 +100,7 @@ export function useConfig(input: UseConfigInput) {
         const shouldBackfillUiPrefs =
           cfg.ui_volume == null ||
           cfg.ui_muted == null ||
+          cfg.summary_muted == null ||
           parsedTheme == null ||
           parsedSpeed == null;
         if (shouldBackfillUiPrefs) {

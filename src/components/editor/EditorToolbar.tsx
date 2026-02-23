@@ -1,4 +1,5 @@
 import type { BackendPromptTask } from "../../backendPrompt";
+import { SummaryWithSpeaker } from "../SummaryWithSpeaker";
 import "./EditorToolbar.css";
 
 interface EditorToolbarProps {
@@ -9,6 +10,8 @@ interface EditorToolbarProps {
   transformTask: BackendPromptTask | null;
   hasText: boolean;
   backendHealthy: boolean;
+  summaryMuted: boolean;
+  onSummaryMutedChange: (muted: boolean) => void;
   onDecreaseFontSize: () => void;
   onIncreaseFontSize: () => void;
   onRead: () => void;
@@ -25,6 +28,8 @@ export function EditorToolbar({
   transformTask,
   hasText,
   backendHealthy,
+  summaryMuted,
+  onSummaryMutedChange,
   onDecreaseFontSize,
   onIncreaseFontSize,
   onRead,
@@ -118,25 +123,19 @@ export function EditorToolbar({
           </>
         )}
       </button>
-      <button
-        type="button"
-        className="editor-toolbar__primary-btn"
-        onClick={onSummarize}
+      <SummaryWithSpeaker
+        variant="toolbar"
+        label="Summarize"
+        isSummarizing={
+          transformTask === "SUMMARIZE" ||
+          transformTask === "SUMMARIZE_PROMPT" ||
+          transformTask === "SUMMARIZE_AND_READ_PROMPT"
+        }
+        summaryMuted={summaryMuted}
+        onSummaryMutedChange={onSummaryMutedChange}
+        onSummaryClick={onSummarize}
         disabled={aiDisabled}
-        aria-label="Summarize"
-        title={backendHealthy ? "Replace content with concise summary" : "Backend unavailable"}
-      >
-        {transformTask === "SUMMARIZE" ? (
-          "..."
-        ) : (
-          <>
-            <span className="editor-toolbar__icon" aria-hidden="true">
-              ✦
-            </span>
-            <span className="editor-toolbar__label">Summarize</span>
-          </>
-        )}
-      </button>
+      />
     </div>
   );
 }

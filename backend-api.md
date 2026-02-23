@@ -54,7 +54,7 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 
 | Field     | Type   | Required | Description |
 |----------|--------|----------|-------------|
-| `task`   | string | Yes      | One of: `PROMPT`, `TTS`, `SUMMARIZE`, `EXPLAIN1`, `EXPLAIN2` (case-sensitive). |
+| `task`   | string | Yes      | One of: `PROMPT`, `TTS`, `SUMMARIZE`, `SUMMARIZE_PROMPT`, `SUMMARIZE_AND_READ_PROMPT`, `EXPLAIN1`, `EXPLAIN2` (case-sensitive). |
 | `content`| string | Yes      | Input text: raw content for TTS/Summarize/Explain, or the user prompt for `PROMPT`. |
 
 **Task semantics:**
@@ -70,6 +70,8 @@ This document describes the REST API of the ReadingService backend so an LLM (or
     - A short one–two sentence overview, then
     - A bulleted list of 3–8 key points, and
     - An optional `Action items:` or `Open questions:` sub-list if the text clearly implies tasks or unresolved issues.
+- **`SUMMARIZE_PROMPT`** — Same as `SUMMARIZE`; used when the client will **not** read the result aloud (e.g. speaker muted). The backend may use a slightly different system prompt if desired.
+- **`SUMMARIZE_AND_READ_PROMPT`** — Same as `SUMMARIZE`; used when the client **will** read the result aloud. The backend may optimize the summary for TTS (e.g. phrasing, length).
 - **`EXPLAIN1`** — Explain the substance for capable professionals who “missed the point”: clearer wording, brief clarifications, same rigor; not oversimplified.
 - **`EXPLAIN2`** — Stronger simplification: plain language, short sentences, concrete examples, minimal jargon; still professional and respectful.
 
@@ -94,7 +96,7 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 
 | HTTP status | When it happens |
 |-------------|------------------|
-| **400**     | Invalid `task` (not one of the five allowed values). |
+| **400**     | Invalid `task` (not one of the allowed values). |
 | **413**     | Request body larger than 1 MB. |
 | **502**     | Upstream LLM API error (e.g. 4xx/5xx from the provider). |
 | **504**     | Request to the LLM timed out. |
@@ -107,7 +109,7 @@ This document describes the REST API of the ReadingService backend so an LLM (or
 ## Summary for LLM / app logic
 
 1. **Reachability:** `GET /` or `GET /health` to confirm the service is up.
-2. **LLM work:** `POST /api/prompt` with JSON `{ "task": "<PROMPT|TTS|SUMMARIZE|EXPLAIN1|EXPLAIN2>", "content": "<user text>" }`. Response is `{ "response": "<LLM output>" }`.
+2. **LLM work:** `POST /api/prompt` with JSON `{ "task": "<PROMPT|TTS|SUMMARIZE|SUMMARIZE_PROMPT|SUMMARIZE_AND_READ_PROMPT|EXPLAIN1|EXPLAIN2>", "content": "<user text>" }`. Response is `{ "response": "<LLM output>" }`.
 3. **Errors:** Always check HTTP status; on 4xx/5xx, read `error` in the JSON body for the message.
 4. **Size:** Keep request bodies under 1 MB.
 

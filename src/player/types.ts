@@ -9,6 +9,7 @@ export interface Config {
   ui_muted?: boolean | null;
   ui_theme?: string | null;
   ui_playback_speed?: number | null;
+  summary_muted?: boolean | null;
 }
 
 export const PROVIDER_LABELS: Record<string, string> = {

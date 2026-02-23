@@ -1,0 +1,96 @@
+/* Shared Summary + speaker toggle. Used in main window ActionRow and Editor toolbar. */
+
+.summary-with-speaker {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.08));
+  background: var(--action-bg);
+}
+
+.summary-with-speaker .summary-with-speaker__main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.summary-with-speaker .summary-with-speaker__main:hover:not(:disabled) {
+  background: var(--action-hover-bg);
+  color: var(--text-primary);
+}
+
+.summary-with-speaker .summary-with-speaker__main:disabled {
+  background: var(--disabled-action-bg);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.summary-with-speaker .summary-with-speaker__toggle {
+  flex: 0 0 auto;
+  width: 36px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--card-border, rgba(0, 0, 0, 0.08));
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.summary-with-speaker .summary-with-speaker__toggle:hover {
+  background: var(--action-hover-bg);
+  color: var(--text-primary);
+}
+
+/* Toolbar variant: match editor primary button style for the main button */
+.summary-with-speaker--toolbar {
+  border-radius: 8px;
+  border-color: var(--header-border);
+  height: 36px;
+}
+
+.summary-with-speaker--toolbar .summary-with-speaker__main {
+  height: 36px;
+  padding: 4px 10px;
+  font-size: 14px;
+  background: var(--volume-fill-color);
+  color: #fff;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.summary-with-speaker--toolbar .summary-with-speaker__main:hover:not(:disabled) {
+  background: var(--volume-fill-color);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.summary-with-speaker--toolbar .summary-with-speaker__main:disabled {
+  background: var(--disabled-action-bg);
+  color: var(--text-muted);
+  filter: none;
+}
+
+.summary-with-speaker--toolbar .summary-with-speaker__toggle {
+  border-left-color: var(--header-border);
+  height: 36px;
+  flex: 0 0 36px;
+}

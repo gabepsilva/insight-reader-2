@@ -24,7 +24,7 @@ import { EditorAssistantPanel } from "./components/editor/EditorAssistantPanel";
 import { EditorLegend } from "./components/editor/EditorLegend";
 import { FORMAT_OPTIONS, type AssistantTabId } from "./components/editor/editorData";
 import { applySuggestion } from "./utils/applySuggestion";
-import { callBackendPrompt } from "./backendPrompt";
+import { callBackendPrompt, type BackendPromptTask } from "./backendPrompt";
 import { parseThemeMode } from "./player/utils";
 import { useWindowSize } from "./player/hooks/useWindowSize";
 import { usePlatform } from "./player/hooks/usePlatform";
@@ -103,9 +103,9 @@ export default function EditorPage() {
   const textRef = useRef(text);
   const triggerReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
-  const [transformTask, setTransformTask] = useState<
-    "TTS" | "SUMMARIZE" | "EXPLAIN1" | null
-  >(null);
+  const [transformTask, setTransformTask] = useState<BackendPromptTask | null>(
+    null,
+  );
   const [activeTone, setActiveTone] = useState("professional");
   const [activeFormat, setActiveFormat] = useState(FORMAT_OPTIONS[0]?.id ?? "email");
   const [activeSubOption, setActiveSubOption] = useState(
@@ -120,12 +120,28 @@ export default function EditorPage() {
   ]);
   /** True while Read aloud is starting (TTS request in progress). */
   const [readPreparing, setReadPreparing] = useState(false);
+  const [summaryMuted, setSummaryMuted] = useState(false);
   const windowSize = useWindowSize();
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
   const [assistantPanelWidth, setAssistantPanelWidth] = useState(loadStoredWidth);
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
     setConfig(cfg);
+    setSummaryMuted(cfg.summary_muted ?? false);
+  }, []);
+
+  const handleSummaryMutedChange = useCallback((muted: boolean) => {
+    setSummaryMuted(muted);
+    void (async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        await invoke("save_config", {
+          configJson: JSON.stringify({ ...cfg, summary_muted: muted }),
+        });
+      } catch (e) {
+        console.warn("[EditorPage] save_config (summary_muted) failed:", e);
+      }
+    })();
   }, []);
 
   const themeMode = config ? (parseThemeMode(config.ui_theme) ?? "dark") : "dark";
@@ -232,24 +248,46 @@ export default function EditorPage() {
   };
 
   const runTransformTask = async (
-    task: "TTS" | "SUMMARIZE" | "EXPLAIN1",
-  ) => {
+    task: BackendPromptTask,
+    options?: { silent?: boolean },
+  ): Promise<string | null> => {
     const content = text.trim();
-    if (!content) return;
-    if (!backendHealthy) return;
+    if (!content) return null;
+    if (!backendHealthy) return null;
     setTransformTask(task);
     try {
       const response = await callBackendPrompt(task, content);
       setText(response);
+      return response;
     } catch (e) {
       console.warn(`[EditorPage] backend_prompt ${task} failed:`, e);
-      alert(
-        typeof e === "string"
-          ? e
-          : `Backend ${task} failed. Is the ReadingService running on port 8080?`,
-      );
+      if (!options?.silent) {
+        alert(
+          typeof e === "string"
+            ? e
+            : `Backend ${task} failed. Is the ReadingService running on port 8080?`,
+        );
+      }
+      return null;
     } finally {
       setTransformTask(null);
+    }
+  };
+
+  const handleSummarize = async () => {
+    const task: BackendPromptTask = summaryMuted
+      ? "SUMMARIZE_PROMPT"
+      : "SUMMARIZE_AND_READ_PROMPT";
+    const newText = await runTransformTask(task, { silent: true });
+    if (newText != null && !summaryMuted && newText.trim()) {
+      try {
+        await invoke("tts_speak", { text: newText.trim() });
+      } catch (e) {
+        console.warn("[EditorPage] tts_speak after summarize failed:", e);
+        alert(
+          typeof e === "string" ? e : "Could not read aloud. Is Piper installed?",
+        );
+      }
     }
   };
 
@@ -495,11 +533,13 @@ export default function EditorPage() {
               transformTask={transformTask}
               hasText={hasText}
               backendHealthy={backendHealthy}
+              summaryMuted={summaryMuted}
+              onSummaryMutedChange={handleSummaryMutedChange}
               onDecreaseFontSize={decreaseFontSize}
               onIncreaseFontSize={increaseFontSize}
               onRead={() => void handleRead()}
               onClear={() => void runTransformTask("TTS")}
-              onSummarize={() => void runTransformTask("SUMMARIZE")}
+              onSummarize={() => void handleSummarize()}
               onExplain={() => void runTransformTask("EXPLAIN1")}
             />
           </div>

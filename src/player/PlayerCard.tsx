@@ -27,10 +27,12 @@ export function PlayerCard() {
   const configState = useConfig({
     volume: volumeState.volume,
     isMuted: volumeState.isMuted,
+    summaryMuted,
     themeMode: windowChrome.themeMode,
     playbackSpeed,
     setVolume: volumeState.setVolume,
     setIsMuted: volumeState.setIsMuted,
+    setSummaryMuted,
     setThemeMode: windowChrome.setThemeMode,
     setPlaybackSpeed,
     previousVolumeRef: volumeState.previousVolumeRef,
@@ -65,6 +67,11 @@ export function PlayerCard() {
       console.error = originalError;
     };
   }, []);
+
+  const handleSummaryMutedChange = (v: boolean) => {
+    hasPendingUiPrefChangeRef.current = true;
+    setSummaryMuted(v);
+  };
 
   const handleClose = () =>
     windowChrome.handleClose(configState.saveConfigBeforeClose);
@@ -118,7 +125,7 @@ export function PlayerCard() {
           isSummarizing={isSummarizing}
           onSummarizingChange={setIsSummarizing}
           summaryMuted={summaryMuted}
-          onSummaryMutedChange={setSummaryMuted}
+          onSummaryMutedChange={handleSummaryMutedChange}
           onErrorsAdd={(msg) =>
             setErrors((prev) => [...prev.slice(-4), msg])
           }

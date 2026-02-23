@@ -12,6 +12,8 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
+  height: 36px;
+  box-sizing: border-box;
   padding: 4px 10px;
   font-size: 14px;
   font-family: var(--editor-font);
@@ -65,7 +67,7 @@
 
 .editor-toolbar__separator {
   width: 1px;
-  height: 18px;
+  height: 36px;
   background: var(--header-border);
   margin: 0 2px;
 }

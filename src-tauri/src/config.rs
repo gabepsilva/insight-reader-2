@@ -49,6 +49,8 @@ struct RawConfig {
     #[serde(default)]
     ui_playback_speed: Option<f64>,
     #[serde(default)]
+    summary_muted: Option<bool>,
+    #[serde(default)]
     editor_dark_mode: Option<bool>,
     #[serde(default)]
     installation_id: Option<String>,
@@ -69,6 +71,7 @@ pub struct FullConfig {
     pub ui_muted: Option<bool>,
     pub ui_theme: Option<String>,
     pub ui_playback_speed: Option<f64>,
+    pub summary_muted: Option<bool>,
     pub editor_dark_mode: Option<bool>,
     pub installation_id: Option<String>,
 }
@@ -89,6 +92,7 @@ impl From<RawConfig> for FullConfig {
             ui_muted: raw.ui_muted,
             ui_theme: raw.ui_theme,
             ui_playback_speed: raw.ui_playback_speed,
+            summary_muted: raw.summary_muted,
             editor_dark_mode: raw.editor_dark_mode,
             installation_id: raw.installation_id,
         }
@@ -111,6 +115,7 @@ impl From<FullConfig> for RawConfig {
             ui_muted: json.ui_muted,
             ui_theme: json.ui_theme,
             ui_playback_speed: json.ui_playback_speed,
+            summary_muted: json.summary_muted,
             editor_dark_mode: json.editor_dark_mode,
             installation_id: json.installation_id,
         }

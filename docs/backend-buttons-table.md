@@ -10,10 +10,10 @@ See [backend-protocol.md](backend-protocol.md) and [backend-api.md](../backend-a
 | Feature / Button | Location | `task` value | Notes |
 |------------------|----------|--------------|-------|
 | Format doc for reading | Editor toolbar (book icon) | `"TTS"` | Cleans content for TTS; replaces editor text with result |
-| Summarize | Editor toolbar (✦) | `"SUMMARIZE"` | Replaces content with concise summary |
+| Summarize | Editor toolbar (✦) | `"SUMMARIZE_PROMPT"` when speaker muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Only these two tasks (no SUMMARIZE). Replaces content with summary; reads aloud when unmuted |
 | Explain | Editor toolbar (?) | `"EXPLAIN1"` | Explains content for capable professionals |
-| Summary | Player ActionRow (main card) | `"SUMMARIZE"` | Summarizes clipboard/selection, opens editor with result |
-| Summarize Selected | Tray menu | `"SUMMARIZE"` | Summarizes selected text, opens editor with result |
+| Summary | Player ActionRow (main card) | `"SUMMARIZE_PROMPT"` when speaker muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Summarizes clipboard/selection, opens editor with result; triggers read when unmuted |
+| Summarize Selected | Tray menu | `"SUMMARIZE_PROMPT"` when summary muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Uses shared preference (config); summarizes selection/clipboard, opens editor with result; triggers read when unmuted |
 | Rewrite (tone + format) | Editor Assistant panel footer | `"SUMMARIZE"` | Currently uses SUMMARIZE; tone/format not sent (Phase 3: `{ "tone": "...", "format": "..." }`) |
 | Quick edits (Make shorter, Simplify language, etc.) | Editor Assistant panel → Edits tab | `"SUMMARIZE"` | All use handleAssistantRewrite → SUMMARIZE |
 
