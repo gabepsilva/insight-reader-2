@@ -1,0 +1,89 @@
+/* Reusable toolbar split button: primary main + neutral toggle. Used by Summary and Explain. */
+
+.toolbar-split-button {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--header-border);
+  background: var(--action-bg);
+  height: 36px;
+}
+
+/* Higher specificity so .editor-toolbar button does not override the main primary style */
+.toolbar-split-button .toolbar-split-button__main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: var(--volume-fill-color);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s ease, filter 0.15s ease;
+  font-family: var(--editor-font);
+}
+
+.toolbar-split-button .toolbar-split-button__main:hover:not(:disabled) {
+  background: var(--volume-fill-color);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.toolbar-split-button .toolbar-split-button__main:disabled {
+  background: var(--disabled-action-bg);
+  color: var(--text-muted);
+  filter: none;
+  cursor: not-allowed;
+}
+
+/* Neutral main: same grey as toggle (no blue) */
+.toolbar-split-button--neutral-main .toolbar-split-button__main {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.toolbar-split-button--neutral-main .toolbar-split-button__main:hover:not(:disabled) {
+  background: var(--action-hover-bg);
+  color: var(--text-primary);
+  filter: none;
+}
+
+.toolbar-split-button--neutral-main .toolbar-split-button__main:disabled {
+  background: var(--disabled-action-bg);
+  color: var(--text-muted);
+}
+
+.toolbar-split-button .toolbar-split-button__toggle {
+  flex: 0 0 36px;
+  width: 36px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--header-border);
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.toolbar-split-button .toolbar-split-button__toggle:hover:not(:disabled) {
+  background: var(--action-hover-bg);
+  color: var(--text-primary);
+}
+
+.toolbar-split-button .toolbar-split-button__toggle:disabled {
+  cursor: not-allowed;
+  color: var(--text-muted);
+}

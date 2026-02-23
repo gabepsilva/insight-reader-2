@@ -10,6 +10,7 @@ export interface Config {
   ui_theme?: string | null;
   ui_playback_speed?: number | null;
   summary_muted?: boolean | null;
+  explain_mode?: "EXPLAIN1" | "EXPLAIN2" | null;
 }
 
 export const PROVIDER_LABELS: Record<string, string> = {
