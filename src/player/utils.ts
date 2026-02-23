@@ -51,6 +51,7 @@ export function hasMatchingUiPrefs(left: Config, right: Config): boolean {
     (left.ui_muted ?? null) === (right.ui_muted ?? null) &&
     (left.ui_theme ?? null) === (right.ui_theme ?? null) &&
     (left.ui_playback_speed ?? null) === (right.ui_playback_speed ?? null) &&
-    (left.summary_muted ?? null) === (right.summary_muted ?? null)
+    (left.summary_muted ?? null) === (right.summary_muted ?? null) &&
+    (left.explain_mode ?? null) === (right.explain_mode ?? null)
   );
 }

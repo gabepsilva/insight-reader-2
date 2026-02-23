@@ -13,6 +13,7 @@ export interface Config {
   ui_theme?: string | null;
   editor_dark_mode?: boolean | null;
   summary_muted?: boolean | null;
+  explain_mode?: "EXPLAIN1" | "EXPLAIN2" | null;
 }
 
 export interface HotkeyStatus {

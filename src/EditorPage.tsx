@@ -121,6 +121,7 @@ export default function EditorPage() {
   /** True while Read aloud is starting (TTS request in progress). */
   const [readPreparing, setReadPreparing] = useState(false);
   const [summaryMuted, setSummaryMuted] = useState(false);
+  const [explainMode, setExplainMode] = useState<"EXPLAIN1" | "EXPLAIN2">("EXPLAIN1");
   const windowSize = useWindowSize();
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
   const [assistantPanelWidth, setAssistantPanelWidth] = useState(loadStoredWidth);
@@ -128,6 +129,7 @@ export default function EditorPage() {
   const applyConfigToUiState = useCallback((cfg: Config) => {
     setConfig(cfg);
     setSummaryMuted(cfg.summary_muted ?? false);
+    setExplainMode(cfg.explain_mode === "EXPLAIN2" ? "EXPLAIN2" : "EXPLAIN1");
   }, []);
 
   const handleSummaryMutedChange = useCallback((muted: boolean) => {
@@ -140,6 +142,20 @@ export default function EditorPage() {
         });
       } catch (e) {
         console.warn("[EditorPage] save_config (summary_muted) failed:", e);
+      }
+    })();
+  }, []);
+
+  const handleExplainModeChange = useCallback((mode: "EXPLAIN1" | "EXPLAIN2") => {
+    setExplainMode(mode);
+    void (async () => {
+      try {
+        const cfg = await invoke<Config>("get_config");
+        await invoke("save_config", {
+          configJson: JSON.stringify({ ...cfg, explain_mode: mode }),
+        });
+      } catch (e) {
+        console.warn("[EditorPage] save_config (explain_mode) failed:", e);
       }
     })();
   }, []);
@@ -535,12 +551,14 @@ export default function EditorPage() {
               backendHealthy={backendHealthy}
               summaryMuted={summaryMuted}
               onSummaryMutedChange={handleSummaryMutedChange}
+              explainMode={explainMode}
+              onExplainModeChange={handleExplainModeChange}
               onDecreaseFontSize={decreaseFontSize}
               onIncreaseFontSize={increaseFontSize}
               onRead={() => void handleRead()}
               onClear={() => void runTransformTask("TTS")}
               onSummarize={() => void handleSummarize()}
-              onExplain={() => void runTransformTask("EXPLAIN1")}
+              onExplain={() => void runTransformTask(explainMode)}
             />
           </div>
           <div className="header-actions">

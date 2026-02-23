@@ -1,4 +1,5 @@
 import type { BackendPromptTask } from "../../backendPrompt";
+import { ExplainWithMode } from "../ExplainWithMode";
 import { SummaryWithSpeaker } from "../SummaryWithSpeaker";
 import "./EditorToolbar.css";
 
@@ -12,6 +13,8 @@ interface EditorToolbarProps {
   backendHealthy: boolean;
   summaryMuted: boolean;
   onSummaryMutedChange: (muted: boolean) => void;
+  explainMode: "EXPLAIN1" | "EXPLAIN2";
+  onExplainModeChange: (mode: "EXPLAIN1" | "EXPLAIN2") => void;
   onDecreaseFontSize: () => void;
   onIncreaseFontSize: () => void;
   onRead: () => void;
@@ -30,6 +33,8 @@ export function EditorToolbar({
   backendHealthy,
   summaryMuted,
   onSummaryMutedChange,
+  explainMode,
+  onExplainModeChange,
   onDecreaseFontSize,
   onIncreaseFontSize,
   onRead,
@@ -38,6 +43,8 @@ export function EditorToolbar({
   onExplain,
 }: EditorToolbarProps) {
   const aiDisabled = !hasText || !backendHealthy || transformTask != null;
+  const isExplaining =
+    transformTask === "EXPLAIN1" || transformTask === "EXPLAIN2";
 
   return (
     <div className="editor-toolbar">
@@ -104,25 +111,14 @@ export function EditorToolbar({
       </div>
       <div className="editor-toolbar__separator" aria-hidden="true" />
       <div className="editor-toolbar__spacer" />
-      <button
-        type="button"
-        className="editor-toolbar__primary-btn"
-        onClick={onExplain}
+      <ExplainWithMode
+        explainMode={explainMode}
+        onExplainModeChange={onExplainModeChange}
+        onExplain={onExplain}
         disabled={aiDisabled}
-        aria-label="Explain"
-        title={backendHealthy ? "Explain the content in simpler terms" : "Backend unavailable"}
-      >
-        {transformTask === "EXPLAIN1" ? (
-          "..."
-        ) : (
-          <>
-            <span className="editor-toolbar__icon" aria-hidden="true">
-              ?
-            </span>
-            <span className="editor-toolbar__label">Explain</span>
-          </>
-        )}
-      </button>
+        isExplaining={isExplaining}
+        title={backendHealthy ? "Explain the content" : "Backend unavailable"}
+      />
       <SummaryWithSpeaker
         variant="toolbar"
         label="Summarize"
