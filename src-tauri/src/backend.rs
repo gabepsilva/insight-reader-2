@@ -15,6 +15,9 @@ use crate::machine_id;
 /// Default backend base URL when not set in config or env.
 const BACKEND_BASE_URL: &str = "http://grars-backend.i.psilva.org:8080";
 
+/// Application version used in HTTP headers.
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// Base URL for backend (config, then INSIGHT_READER_BACKEND_URL env, then default). Trimmed.
 fn backend_base_url() -> String {
     config::load_full_config()
@@ -42,6 +45,23 @@ fn installation_header_value(install_id: &str) -> String {
     }
 }
 
+fn user_agent() -> String {
+    format!(
+        "InsightReader/{version} (tauri; {os}; {arch})",
+        version = APP_VERSION,
+        os = std::env::consts::OS,
+        arch = std::env::consts::ARCH,
+    )
+}
+
+fn make_client(timeout_secs: u64) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(timeout_secs))
+        .user_agent(user_agent())
+        .build()
+        .map_err(|e| format!("HTTP client: {}", e))
+}
+
 /// Calls the ReadingService backend POST /api/prompt. Returns the response string on success.
 /// Async so the command does not block the app; long-running HTTP runs on the async runtime.
 #[tauri::command]
@@ -50,6 +70,7 @@ pub async fn backend_prompt(
     content: String,
     tone: Option<String>,
     format: Option<String>,
+    instruction: Option<String>,
 ) -> Result<String, String> {
     let base = backend_base_url();
     let url = format!("{}/api/prompt", base);
@@ -62,6 +83,8 @@ pub async fn backend_prompt(
         tone: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         format: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        instruction: Option<String>,
     }
     #[derive(serde::Deserialize)]
     struct SuccessResponse {
@@ -72,10 +95,7 @@ pub async fn backend_prompt(
         error: Option<String>,
     }
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(|e| format!("HTTP client: {}", e))?;
+    let client = make_client(120)?;
 
     let install_id = config::get_or_create_installation_id().unwrap_or_default();
     let installation_header = installation_header_value(&install_id);
@@ -88,6 +108,7 @@ pub async fn backend_prompt(
             content,
             tone,
             format,
+            instruction,
         })
         .send()
         .await
@@ -125,10 +146,7 @@ pub async fn backend_health_check() -> Result<bool, String> {
     let base = backend_base_url();
     let url = format!("{}/health", base);
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| format!("HTTP client: {}", e))?;
+    let client = make_client(5)?;
 
     let install_id = config::get_or_create_installation_id().unwrap_or_default();
     let installation_header = installation_header_value(&install_id);

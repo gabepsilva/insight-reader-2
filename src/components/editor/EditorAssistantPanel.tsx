@@ -26,7 +26,7 @@ interface EditorAssistantPanelProps {
   onApplyPrompt: () => void;
   onUseHistoryPrompt: (value: string) => void;
   onApplyRewrite: () => void;
-  onApplyQuickEdit: () => void;
+  onApplyQuickEdit: (instruction: string) => void;
 }
 
 export function EditorAssistantPanel({
@@ -154,7 +154,7 @@ export function EditorAssistantPanel({
                   key={quickEdit.label}
                   type="button"
                   className="editor-assistant__quick-button"
-                  onClick={onApplyQuickEdit}
+                  onClick={() => onApplyQuickEdit(quickEdit.label)}
                   disabled={rewriteDisabled}
                 >
                   <span className="editor-assistant__quick-icon">{quickEdit.icon}</span>

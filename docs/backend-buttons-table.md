@@ -15,7 +15,7 @@ See [backend-protocol.md](backend-protocol.md) and [backend-api.md](../backend-a
 | Summary | Player ActionRow (main card) | `"SUMMARIZE_PROMPT"` when speaker muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Summarizes clipboard/selection, opens editor with result; triggers read when unmuted |
 | Summarize Selected | Tray menu | `"SUMMARIZE_PROMPT"` when summary muted, `"SUMMARIZE_AND_READ_PROMPT"` when not | Uses shared preference (config); summarizes selection/clipboard, opens editor with result; triggers read when unmuted |
 | Rewrite (tone + format) | Editor Assistant panel footer | `"REWRITE"` | Sends content plus `tone` and `format` fields for rewrite using REWRITE task |
-| Quick edits (Make shorter, Simplify language, etc.) | Editor Assistant panel → Edits tab | `"REWRITE"` | Same rewrite pipeline as above (content + `tone` + `format`) via handleAssistantRewrite |
+| Quick edits (Make shorter, Simplify language, etc.) | Editor Assistant panel → Edits tab | `"QUICK_EDIT"` | Sends content plus a quick-edit instruction string; tone/format settings are preserved but not sent |
 
 ---
 

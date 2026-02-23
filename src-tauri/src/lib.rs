@@ -622,6 +622,7 @@ pub fn run() {
                                     text,
                                     None,
                                     None,
+                                    None,
                                 ));
                                 match result {
                                     Ok(summary) => {

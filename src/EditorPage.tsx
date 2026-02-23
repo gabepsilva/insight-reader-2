@@ -262,7 +262,12 @@ export default function EditorPage() {
 
   const runTransformTask = async (
     task: BackendPromptTask,
-    options?: { silent?: boolean; tone?: string; format?: string },
+    options?: {
+      silent?: boolean;
+      tone?: string;
+      format?: string;
+      instruction?: string;
+    },
   ): Promise<string | null> => {
     const content = text.trim();
     if (!content) return null;
@@ -272,6 +277,7 @@ export default function EditorPage() {
       const response = await callBackendPrompt(task, content, {
         tone: options?.tone,
         format: options?.format,
+        instruction: options?.instruction,
       });
       setText(response);
       return response;
@@ -508,8 +514,8 @@ export default function EditorPage() {
     void runTransformTask("REWRITE", { tone, format });
   };
 
-  const handleQuickEditRewrite = async () => {
-    void runTransformTask("REWRITE");
+  const handleQuickEditRewrite = (instruction: string) => {
+    void runTransformTask("QUICK_EDIT", { instruction });
   };
 
   const hasText = text.trim().length > 0;
