@@ -5,6 +5,7 @@ import {
   TONE_OPTIONS,
   type AssistantTabId,
 } from "./editorData";
+import { EnterIcon, SparklesIcon } from "../icons";
 import "./EditorAssistantPanel.css";
 
 interface EditorAssistantPanelProps {
@@ -93,8 +94,18 @@ export function EditorAssistantPanel({
                   className={`editor-assistant__tile editor-assistant__tile--tone${activeTone === tone.id ? " editor-assistant__tile--active" : ""}`}
                   onClick={() => onActiveToneChange(tone.id)}
                 >
+                  {(() => {
+                    const ToneIcon = tone.icon;
+                    return (
+                      <span
+                        className="editor-assistant__tile-icon"
+                        aria-hidden="true"
+                      >
+                        <ToneIcon size={16} />
+                      </span>
+                    );
+                  })()}
                   <div className="editor-assistant__tile-header">
-                    <span className="editor-assistant__tile-icon">{tone.icon}</span>
                     <span className="editor-assistant__tile-title">{tone.label}</span>
                   </div>
                   <span className="editor-assistant__tile-description">
@@ -119,7 +130,17 @@ export function EditorAssistantPanel({
                     onActiveFormatChange(format.id, format.subOptions[0] ?? "")
                   }
                 >
-                  <span className="editor-assistant__tile-icon">{format.icon}</span>
+                  {(() => {
+                    const FormatIcon = format.icon;
+                    return (
+                      <span
+                        className="editor-assistant__tile-icon"
+                        aria-hidden="true"
+                      >
+                        <FormatIcon size={16} />
+                      </span>
+                    );
+                  })()}
                   <span className="editor-assistant__tile-title">{format.label}</span>
                 </button>
               ))}
@@ -158,7 +179,17 @@ export function EditorAssistantPanel({
                   onClick={() => onApplyQuickEdit(quickEdit.label)}
                   disabled={rewriteDisabled}
                 >
-                  <span className="editor-assistant__quick-icon">{quickEdit.icon}</span>
+                  {(() => {
+                    const QuickIcon = quickEdit.icon;
+                    return (
+                      <span
+                        className="editor-assistant__quick-icon"
+                        aria-hidden="true"
+                      >
+                        <QuickIcon size={14} />
+                      </span>
+                    );
+                  })()}
                   {quickEdit.label}
                 </button>
               ))}
@@ -213,7 +244,9 @@ export function EditorAssistantPanel({
               disabled={promptDisabled}
               onClick={onApplyPrompt}
             >
-              <span aria-hidden="true">↵</span>
+              <span aria-hidden="true" className="editor-assistant__apply-icon">
+                <EnterIcon size={14} />
+              </span>
               <span>Apply instruction</span>
             </button>
           ) : (
@@ -227,7 +260,12 @@ export function EditorAssistantPanel({
                 "Rewriting..."
               ) : (
                 <>
-                  <span aria-hidden="true">✦</span>
+                  <span
+                    aria-hidden="true"
+                    className="editor-assistant__apply-icon"
+                  >
+                    <SparklesIcon size={16} />
+                  </span>
                   <span>Rewrite </span>
                   <span className="editor-assistant__rewrite-hint">
                     {" "}

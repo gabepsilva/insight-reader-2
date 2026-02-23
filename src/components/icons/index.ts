@@ -10,3 +10,22 @@ export { SummaryIcon } from "./SummaryIcon";
 export { QuickReplayIcon } from "./QuickReplayIcon";
 export { MinimizeIcon } from "./MinimizeIcon";
 export { CloseIcon } from "./CloseIcon";
+export {
+  BriefcaseIcon,
+  SmileIcon,
+  LightningIcon,
+  CasualWaveIcon,
+  TargetIcon,
+  EmailIcon,
+  ChatBubbleIcon,
+  DocumentIcon,
+  MegaphoneIcon,
+  ScissorsIcon,
+  LettersIcon,
+  ArrowRightIcon,
+  CheckBadgeIcon,
+  LightbulbIcon,
+  PinIcon,
+  SparklesIcon,
+  EnterIcon,
+} from "./ToneAndFormatIcons";
