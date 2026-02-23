@@ -48,6 +48,9 @@ use voices::download::{
     DownloadedVoice,
 };
 
+/// Shared, in-memory configuration state guarded by a mutex.
+type ConfigState = Arc<Mutex<config::FullConfig>>;
+
 // --- State types (shared with windows and tray) ---
 
 /// Initial state for the editor window: text to show and whether to trigger TTS read after load.
@@ -256,17 +259,56 @@ fn get_platform() -> &'static str {
 }
 
 #[tauri::command]
-fn get_config() -> Result<config::FullConfig, String> {
-    config::load_full_config()
+fn get_config(state: State<'_, ConfigState>) -> Result<config::FullConfig, String> {
+    let cfg = state
+        .lock()
+        .map_err(|_| "Config lock poisoned".to_string())?;
+    Ok(cfg.clone())
 }
 
 #[tauri::command]
-fn save_config(app: tauri::AppHandle, config_json: String) -> Result<(), String> {
+fn save_config(
+    app: tauri::AppHandle,
+    state: State<'_, ConfigState>,
+    config_json: String,
+) -> Result<(), String> {
     let mut cfg: config::FullConfig = serde_json::from_str(&config_json)
         .map_err(|e| format!("Failed to parse config JSON: {}", e))?;
     // Preserve or create installation_id so frontend never overwrites it
     cfg.installation_id = Some(config::get_or_create_installation_id()?);
+    {
+        let mut shared = state
+            .lock()
+            .map_err(|_| "Config lock poisoned".to_string())?;
+        *shared = cfg.clone();
+    }
     config::save_full_config(cfg).map_err(|e| e.to_string())?;
+
+    if let Some(state) = app.try_state::<hotkeys::GlobalHotkeyState>() {
+        hotkeys::refresh_global_hotkeys(&app, &state.inner().clone());
+    }
+
+    let _ = app.emit("config-changed", ());
+    Ok(())
+}
+
+/// Sets the explain mode preference in a single, serialized read-modify-write.
+/// Accepts a string mode (e.g. "EXPLAIN1", "EXPLAIN2") from the frontend.
+#[tauri::command]
+fn set_explain_mode(
+    app: tauri::AppHandle,
+    state: State<'_, ConfigState>,
+    mode: String,
+) -> Result<(), String> {
+    let new_cfg = {
+        let mut cfg = state
+            .lock()
+            .map_err(|_| "Config lock poisoned".to_string())?;
+        cfg.explain_mode = Some(mode);
+        cfg.clone()
+    };
+
+    config::save_full_config(new_cfg).map_err(|e| e.to_string())?;
 
     if let Some(state) = app.try_state::<hotkeys::GlobalHotkeyState>() {
         hotkeys::refresh_global_hotkeys(&app, &state.inner().clone());
@@ -448,6 +490,8 @@ pub fn run() {
 
     let editor_initial: EditorInitialState =
         Arc::new(Mutex::new(EditorInitialStateInner::default()));
+    let initial_config = config::load_full_config().unwrap_or_default();
+    let config_state: ConfigState = Arc::new(Mutex::new(initial_config));
     let tts_state = tts::create_tts_state();
     let hotkey_state: hotkeys::GlobalHotkeyState =
         Arc::new(Mutex::new(hotkeys::HotkeyRuntime::default()));
@@ -481,6 +525,7 @@ pub fn run() {
                 .build(),
         )
         .manage(editor_initial)
+        .manage(config_state)
         .manage(tts_state)
         .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
@@ -504,6 +549,7 @@ pub fn run() {
             get_config,
             hotkeys::get_hotkey_status,
             save_config,
+            set_explain_mode,
             list_piper_voices,
             refresh_piper_voices,
             list_polly_voices,

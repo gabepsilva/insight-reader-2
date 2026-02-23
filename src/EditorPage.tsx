@@ -150,12 +150,9 @@ export default function EditorPage() {
     setExplainMode(mode);
     void (async () => {
       try {
-        const cfg = await invoke<Config>("get_config");
-        await invoke("save_config", {
-          configJson: JSON.stringify({ ...cfg, explain_mode: mode }),
-        });
+        await invoke("set_explain_mode", { mode });
       } catch (e) {
-        console.warn("[EditorPage] save_config (explain_mode) failed:", e);
+        console.warn("[EditorPage] set_explain_mode failed:", e);
       }
     })();
   }, []);
