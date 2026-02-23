@@ -365,12 +365,12 @@ fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
 ///   When false (minimize/close buttons), keeps Regular so the app stays in the Dock.
 fn hide_main_window_impl<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
-    to_tray: bool,
+    _to_tray: bool,
 ) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("main") {
         win.hide().map_err(|e| e.to_string())?;
         #[cfg(target_os = "macos")]
-        if to_tray {
+        if _to_tray {
             let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
         }
         if let Some(t) = app.tray_by_id("main") {
