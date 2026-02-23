@@ -10,6 +10,9 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Linux]
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo-home
+      RUSTUP_HOME: ${{ github.workspace }}/.rustup-home
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,8 +46,8 @@ jobs:
       - name: Install Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
-          export PATH="$HOME/.cargo/bin:$PATH"
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$CARGO_HOME/bin:$PATH"
+          echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
           rustup default stable
           rustup component add rustfmt clippy
           rustc --version
