@@ -528,15 +528,19 @@ jobs:
           fi
           if ! command -v python3 >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y python3
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv
           fi
-          if ! python3 -m pip --version >/dev/null 2>&1; then
+          if ! python3 -m venv --help >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y python3-pip
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv
           fi
-          python3 -m pip install --user awscli
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.local/bin:$PATH"
+          AWSCLI_VENV="${RUNNER_TEMP:-/tmp}/awscli-venv"
+          rm -rf "$AWSCLI_VENV"
+          python3 -m venv "$AWSCLI_VENV"
+          "$AWSCLI_VENV/bin/pip" install --upgrade pip
+          "$AWSCLI_VENV/bin/pip" install awscli
+          echo "$AWSCLI_VENV/bin" >> "$GITHUB_PATH"
+          export PATH="$AWSCLI_VENV/bin:$PATH"
           aws --version
 
       - name: Upload artifacts to Backblaze B2
