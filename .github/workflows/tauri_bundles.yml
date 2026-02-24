@@ -82,26 +82,26 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
-          path: src-tauri/target/release/bundle/appimage/
+          path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/appimage/
           if-no-files-found: error
 
       - name: Upload Linux deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-deb
-          path: src-tauri/target/release/bundle/deb/
+          path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/deb/
           if-no-files-found: error
 
       - name: Upload Linux rpm artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-rpm
-          path: src-tauri/target/release/bundle/rpm/
+          path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/rpm/
           if-no-files-found: error
 
       - name: Remove generated bundle outputs
         if: always()
-        run: rm -rf src-tauri/target/release/bundle
+        run: rm -rf "${CARGO_TARGET_DIR}/release/bundle"
 
   build-windows-artifacts:
     if: ${{ github.event.inputs.windows == 'true' }}
