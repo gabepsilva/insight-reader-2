@@ -112,38 +112,36 @@ jobs:
     defaults:
       run:
         shell: cmd
-    strategy:
-      fail-fast: false
-      matrix:
-        bundle: [msi, nsis]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set Rust cache dirs
+        run: |
+          if not exist "%USERPROFILE%\.cargo\%RUNNER_NAME%" mkdir "%USERPROFILE%\.cargo\%RUNNER_NAME%"
+          if not exist "%USERPROFILE%\.rustup\%RUNNER_NAME%" mkdir "%USERPROFILE%\.rustup\%RUNNER_NAME%"
+          if not exist "%USERPROFILE%\.cargo\%RUNNER_NAME%\target" mkdir "%USERPROFILE%\.cargo\%RUNNER_NAME%\target"
+          echo CARGO_HOME=%USERPROFILE%\.cargo\%RUNNER_NAME%>>"%GITHUB_ENV%"
+          echo RUSTUP_HOME=%USERPROFILE%\.rustup\%RUNNER_NAME%>>"%GITHUB_ENV%"
+          echo CARGO_TARGET_DIR=%USERPROFILE%\.cargo\%RUNNER_NAME%\target\insight-reader-2-tauri-bundles-windows>>"%GITHUB_ENV%"
 
       - name: Install Rust
         shell: cmd
         run: |
-          if not exist "%USERPROFILE%\.cargo\bin\rustup.exe" (
+          if not exist "%CARGO_HOME%\bin\rustup.exe" (
             curl -L --retry 3 --output "%TEMP%\rustup-init.exe" https://win.rustup.rs/x86_64
             "%TEMP%\rustup-init.exe" -y --profile minimal --default-toolchain stable
           )
-          echo %USERPROFILE%\.cargo\bin>>"%GITHUB_PATH%"
-          "%USERPROFILE%\.cargo\bin\rustup.exe" default stable
-          "%USERPROFILE%\.cargo\bin\rustc.exe" --version
-          "%USERPROFILE%\.cargo\bin\cargo.exe" --version
-
-      - name: Cache Rust and Tauri artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-          cache-directories: |
-            ~/.cache/tauri
-          cache-on-failure: true
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          "%CARGO_HOME%\bin\rustup.exe" toolchain install 1.93.1 --profile minimal
+          "%CARGO_HOME%\bin\rustup.exe" default 1.93.1
+          "%CARGO_HOME%\bin\rustc.exe" --version
+          "%CARGO_HOME%\bin\cargo.exe" --version
 
       - name: Install Bun
         shell: cmd
         run: |
           if not exist "%USERPROFILE%\.bun\bin\bun.exe" (
-            curl -L --retry 3 --output "%TEMP%\bun-windows-x64.zip" https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip
+            curl -L --retry 3 --output "%TEMP%\bun-windows-x64.zip" https://github.com/oven-sh/bun/releases/download/bun-v1.3.9/bun-windows-x64.zip
             powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%TEMP%\\bun-windows-x64.zip' -DestinationPath '%TEMP%\\bun-extract' -Force"
             if not exist "%USERPROFILE%\.bun\bin" mkdir "%USERPROFILE%\.bun\bin"
             copy /Y "%TEMP%\bun-extract\bun-windows-x64\bun.exe" "%USERPROFILE%\.bun\bin\bun.exe"
@@ -162,7 +160,7 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build Windows bundle
+      - name: Build Windows msi bundle
         run: |
           set "VSDEVCMD="
 
@@ -192,19 +190,60 @@ jobs:
 
           call "%VSDEVCMD%" -arch=x64 -host_arch=x64
           where link
-          bun run tauri build --bundles ${{ matrix.bundle }}
+          bun run tauri build --bundles msi
 
-      - name: Upload Windows bundle artifact
+      - name: Build Windows nsis bundle
+        run: |
+          set "VSDEVCMD="
+
+          if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
+            for /f "usebackq delims=" %%I in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find **\VsDevCmd.bat`) do set "VSDEVCMD=%%I"
+          )
+
+          if not defined VSDEVCMD (
+            for %%I in (
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles%\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat"
+            ) do (
+              if exist "%%~I" set "VSDEVCMD=%%~I"
+            )
+          )
+
+          if not defined VSDEVCMD (
+            echo Visual Studio Build Tools not found
+            exit /b 1
+          )
+
+          call "%VSDEVCMD%" -arch=x64 -host_arch=x64
+          where link
+          bun run tauri build --bundles nsis
+
+      - name: Upload Windows msi artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.bundle }}
-          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/
+          name: windows-msi
+          path: ${{ env.CARGO_TARGET_DIR }}\release\bundle\msi\
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Upload Windows nsis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-nsis
+          path: ${{ env.CARGO_TARGET_DIR }}\release\bundle\nsis\
+          compression-level: 0
           if-no-files-found: error
 
       - name: Remove generated bundle outputs
         if: always()
         run: |
-          if exist src-tauri\target\release\bundle rmdir /s /q src-tauri\target\release\bundle
+          if exist "%CARGO_TARGET_DIR%\release\bundle" rmdir /s /q "%CARGO_TARGET_DIR%\release\bundle"
 
   build-macos-artifacts:
     if: ${{ github.event.inputs.macos == 'true' }}
