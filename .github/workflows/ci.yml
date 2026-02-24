@@ -1,45 +1,28 @@
-name: CI
+name: Tauri Bundles
 
 on:
   workflow_dispatch:
+    inputs:
+      linux:
+        description: Build Linux bundles
+        type: boolean
+        required: true
+        default: true
+      windows:
+        description: Build Windows bundles
+        type: boolean
+        required: true
+        default: false
+      macos:
+        description: Build macOS bundles
+        type: boolean
+        required: true
+        default: false
 
 jobs:
-  test:
-    runs-on: [self-hosted, Linux]
-    container:
-      image: ubuntu:22.04
-      options: --user root
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: apt-get update && apt-get install -y curl unzip
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-bun-modules-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-modules-
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Type check
-        run: bun run tsc --noEmit
-
-      - name: Run tests
-        run: bun run test
-
   build-linux-artifacts:
+    if: ${{ github.event.inputs.linux == 'true' }}
     runs-on: [self-hosted, Linux]
-    needs: test
     container:
       image: ubuntu:24.04
       options: --user root
@@ -94,13 +77,20 @@ jobs:
             bun run tauri build --bundles ${{ matrix.bundle }}
           fi
 
+      - name: Upload Linux bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.bundle }}
+          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/
+          if-no-files-found: error
+
       - name: Remove generated bundle outputs
         if: always()
         run: rm -rf src-tauri/target/release/bundle
 
   build-windows-artifacts:
+    if: ${{ github.event.inputs.windows == 'true' }}
     runs-on: [self-hosted, Windows]
-    needs: test
     defaults:
       run:
         shell: cmd
@@ -186,9 +176,21 @@ jobs:
           where link
           bun run tauri build --bundles ${{ matrix.bundle }}
 
+      - name: Upload Windows bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.bundle }}
+          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/
+          if-no-files-found: error
+
+      - name: Remove generated bundle outputs
+        if: always()
+        run: |
+          if exist src-tauri\target\release\bundle rmdir /s /q src-tauri\target\release\bundle
+
   build-macos-artifacts:
+    if: ${{ github.event.inputs.macos == 'true' }}
     runs-on: [self-hosted, macOS]
-    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -296,3 +298,14 @@ jobs:
 
       - name: Build macOS bundle
         run: bun run tauri build --bundles ${{ matrix.bundle }}
+
+      - name: Upload macOS bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.bundle }}
+          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/
+          if-no-files-found: error
+
+      - name: Remove generated bundle outputs
+        if: always()
+        run: rm -rf src-tauri/target/release/bundle

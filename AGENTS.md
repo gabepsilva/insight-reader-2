@@ -22,6 +22,17 @@ bun run test        # vitest tests
 cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && cargo test
 ```
 
+**Bundle workflow / runners (GitHub Actions):**
+- Bundle builds run from `.github/workflows/ci.yml` (manual `workflow_dispatch`) and are separate from `.github/workflows/test.yml`.
+- Check runner availability before changing bundle jobs or assuming all OS builds can run:
+  ```bash
+  gh api repos/gabepsilva/insight-reader-2/actions/runners
+  ```
+- Runner snapshot (checked on 2026-02-24): Linux self-hosted runners online (`github`, `github-runner-vm108-02`, `github-runner-vm108-03`); macOS self-hosted runner present but offline (`github-runner-vm106-01`); Windows self-hosted runner present but offline (`github-runner-vm111-01`).
+- The bundle workflow uses per-OS dispatch inputs (`linux`, `windows`, `macos`) so you can avoid queueing jobs on offline self-hosted runners.
+- Self-hosted runners keep workspace state between runs. Bundle jobs should upload artifacts and then clean `src-tauri/target/release/bundle` to avoid stale outputs contaminating later builds.
+- If future bundle changes require signing/notarization/secrets, ask first and document the required runner-side tools/certs in this file.
+
 **Detailed guidelines (by topic):**
 - [Rust & Tauri development](docs/ai-guidelines/rust-development.md) — standards, errors, Tauri patterns, platform notes
 - [Code simplification](docs/ai-guidelines/code-simplification.md) — cleanup and simplification before commit
