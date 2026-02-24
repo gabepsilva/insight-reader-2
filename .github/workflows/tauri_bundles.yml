@@ -534,7 +534,7 @@ jobs:
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv
           fi
-          PYTHON_ABI="$(python3 -c 'import sys; print(f\"python{sys.version_info.major}.{sys.version_info.minor}\")')"
+          PYTHON_ABI="python$(python3 -c 'import sys; print(str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
           if ! dpkg -s "${PYTHON_ABI}-venv" >/dev/null 2>&1; then
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${PYTHON_ABI}-venv"
