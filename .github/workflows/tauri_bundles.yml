@@ -137,6 +137,38 @@ jobs:
           "%CARGO_HOME%\bin\rustc.exe" --version
           "%CARGO_HOME%\bin\cargo.exe" --version
 
+      - name: Configure libclang for bindgen
+        shell: cmd
+        run: |
+          set "LIBCLANG_BIN="
+
+          for %%D in (
+            "%ProgramFiles%\LLVM\bin"
+            "%ProgramFiles(x86)%\LLVM\bin"
+            "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
+            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
+            "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+          ) do (
+            if exist "%%~D\libclang.dll" set "LIBCLANG_BIN=%%~D"
+          )
+
+          if not defined LIBCLANG_BIN (
+            where choco >nul 2>nul && choco install llvm -y --no-progress
+          )
+
+          if not defined LIBCLANG_BIN if exist "%ProgramFiles%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles%\LLVM\bin"
+          if not defined LIBCLANG_BIN if exist "%ProgramFiles(x86)%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles(x86)%\LLVM\bin"
+
+          if not defined LIBCLANG_BIN (
+            echo libclang.dll not found on runner and LLVM install was unavailable or failed
+            exit /b 1
+          )
+
+          echo LIBCLANG_PATH=%LIBCLANG_BIN%>>"%GITHUB_ENV%"
+          echo %LIBCLANG_BIN%>>"%GITHUB_PATH%"
+          dir "%LIBCLANG_BIN%\libclang.dll"
+
       - name: Install Bun
         shell: cmd
         run: |
