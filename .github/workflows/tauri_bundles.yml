@@ -371,6 +371,16 @@ jobs:
       - name: Install macOS build dependencies
         run: |
           if ! command -v brew >/dev/null 2>&1; then
+            if [ -x /opt/homebrew/bin/brew ]; then
+              echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+              eval "$(/opt/homebrew/bin/brew shellenv)"
+            elif [ -x /usr/local/bin/brew ]; then
+              echo "/usr/local/bin" >> "$GITHUB_PATH"
+              eval "$(/usr/local/bin/brew shellenv)"
+            fi
+          fi
+
+          if ! command -v brew >/dev/null 2>&1; then
             echo "Homebrew is missing, installing..."
             NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
@@ -386,7 +396,8 @@ jobs:
             exit 1
           fi
 
-          brew install pkgconf openssl@3
+          brew list pkgconf >/dev/null 2>&1 || brew install pkgconf
+          brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
 
           OPENSSL_PREFIX=$(brew --prefix openssl@3)
           echo "$OPENSSL_PREFIX/bin" >> "$GITHUB_PATH"
