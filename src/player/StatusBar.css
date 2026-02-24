@@ -32,18 +32,6 @@
   white-space: nowrap;
 }
 
-.status-backend-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.status-backend-dot--healthy {
-  background: #22c55e;
-}
-
 .status-separator {
   width: 1px;
   height: 12px;

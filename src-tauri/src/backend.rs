@@ -139,29 +139,6 @@ pub async fn backend_prompt(
     }
 }
 
-/// Pings the ReadingService backend GET /health. Returns true if reachable.
-/// Uses same URL precedence as backend_prompt. Used by status bar health indicator.
-#[tauri::command]
-pub async fn backend_health_check() -> Result<bool, String> {
-    let base = backend_base_url();
-    let url = format!("{}/health", base);
-
-    let client = make_client(1)?;
-
-    let install_id = config::get_or_create_installation_id().unwrap_or_default();
-    let installation_header = installation_header_value(&install_id);
-    match client
-        .get(&url)
-        .header("X-Installation-ID", &installation_header)
-        .header("X-Session-ID", get_session_id())
-        .send()
-        .await
-    {
-        Ok(resp) => Ok(resp.status().is_success()),
-        Err(_) => Ok(false),
-    }
-}
-
 /// Returns true if Polly credentials are configured and valid. Used by settings UI.
 #[tauri::command]
 pub fn check_polly_credentials() -> Result<bool, String> {

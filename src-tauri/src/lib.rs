@@ -117,7 +117,6 @@ pub fn run() {
         .manage(hotkey_state.clone())
         .invoke_handler(tauri::generate_handler![
             backend::backend_prompt,
-            backend::backend_health_check,
             backend::check_polly_credentials,
             text_capture::get_selected_text,
             text_capture::get_clipboard_text,

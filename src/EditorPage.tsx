@@ -29,8 +29,7 @@ import { parseThemeMode } from "./player/utils";
 import { useWindowSize } from "./player/hooks/useWindowSize";
 import { usePlatform } from "./player/hooks/usePlatform";
 import { useWindowRadius } from "./player/hooks/useWindowRadius";
-import { useBackendHealth } from "./player/hooks/useBackendHealth";
-import type { Config } from "./player/types";
+import type { Config, ThemeMode } from "./player/types";
 import "./App.css";
 import "./EditorPage.css";
 
@@ -85,7 +84,6 @@ function getPopupStyle(mouse: { x: number; y: number }): CSSProperties {
 export default function EditorPage() {
   const platform = usePlatform();
   useWindowRadius();
-  const backendHealthy = useBackendHealth();
   const isMacos = platform === "macos";
   const [text, setText] = useState("");
   const [lints, setLints] = useState<Lint[]>([]);
@@ -125,11 +123,28 @@ export default function EditorPage() {
   const windowSize = useWindowSize();
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
   const [assistantPanelWidth, setAssistantPanelWidth] = useState(loadStoredWidth);
+  const [cachedThemeMode] = useState<ThemeMode | null>(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const stored = window.localStorage.getItem("insight-reader-theme");
+      return parseThemeMode(stored);
+    } catch {
+      return null;
+    }
+  });
 
   const applyConfigToUiState = useCallback((cfg: Config) => {
     setConfig(cfg);
     setSummaryMuted(cfg.summary_muted ?? false);
     setExplainMode(cfg.explain_mode === "EXPLAIN2" ? "EXPLAIN2" : "EXPLAIN1");
+    const parsedTheme = parseThemeMode(cfg.ui_theme);
+    if (parsedTheme != null) {
+      try {
+        window.localStorage.setItem("insight-reader-theme", parsedTheme);
+      } catch {
+        // Best-effort cache only
+      }
+    }
   }, []);
 
   const handleSummaryMutedChange = useCallback((muted: boolean) => {
@@ -157,7 +172,10 @@ export default function EditorPage() {
     })();
   }, []);
 
-  const themeMode = config ? (parseThemeMode(config.ui_theme) ?? "dark") : "dark";
+  const themeMode =
+    (config && (parseThemeMode(config.ui_theme) ?? cachedThemeMode)) ||
+    cachedThemeMode ||
+    "dark";
 
   const getOrCreateLinter = useCallback(async (): Promise<WorkerLinter> => {
     if (linterRef.current) return linterRef.current;
@@ -271,7 +289,6 @@ export default function EditorPage() {
   ): Promise<string | null> => {
     const content = text.trim();
     if (!content) return null;
-    if (!backendHealthy) return null;
     setTransformTask(task);
     try {
       const response = await callBackendPrompt(task, content, {
@@ -566,7 +583,6 @@ export default function EditorPage() {
               readPreparing={readPreparing}
               transformTask={transformTask}
               hasText={hasText}
-              backendHealthy={backendHealthy}
               summaryMuted={summaryMuted}
               onSummaryMutedChange={handleSummaryMutedChange}
               explainMode={explainMode}
@@ -645,7 +661,6 @@ export default function EditorPage() {
           customPrompt={customPrompt}
           promptHistory={promptHistory}
           hasText={hasText}
-          backendHealthy={backendHealthy}
           isRunningTransform={transformTask != null}
           onActiveToneChange={setActiveTone}
           onActiveFormatChange={(format, subOption) => {

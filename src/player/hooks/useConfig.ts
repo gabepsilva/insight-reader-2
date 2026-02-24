@@ -63,6 +63,11 @@ export function useConfig(input: UseConfigInput) {
     const parsedTheme = parseThemeMode(cfg.ui_theme);
     if (parsedTheme != null) {
       setThemeMode(parsedTheme);
+      try {
+        window.localStorage.setItem("insight-reader-theme", parsedTheme);
+      } catch {
+        // Best-effort cache only
+      }
     }
     const parsedSpeed = parseConfigPlaybackSpeed(cfg.ui_playback_speed);
     if (parsedSpeed != null) {

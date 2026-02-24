@@ -17,7 +17,6 @@ interface EditorAssistantPanelProps {
   customPrompt: string;
   promptHistory: string[];
   hasText: boolean;
-  backendHealthy: boolean;
   isRunningTransform: boolean;
   onActiveToneChange: (value: string) => void;
   onActiveFormatChange: (value: string, subOption: string) => void;
@@ -39,7 +38,6 @@ export function EditorAssistantPanel({
   customPrompt,
   promptHistory,
   hasText,
-  backendHealthy,
   isRunningTransform,
   onActiveToneChange,
   onActiveFormatChange,
@@ -59,8 +57,9 @@ export function EditorAssistantPanel({
       ? `${currentFormat.label} (${activeSubOption})`
       : currentFormat.label
     : activeFormat;
-  const rewriteDisabled = !hasText || !backendHealthy || isRunningTransform;
-  const promptDisabled = !customPrompt.trim() || !hasText || !backendHealthy || isRunningTransform;
+  const rewriteDisabled = !hasText || isRunningTransform;
+  const promptDisabled =
+    !customPrompt.trim() || !hasText || isRunningTransform;
 
   return (
     <aside

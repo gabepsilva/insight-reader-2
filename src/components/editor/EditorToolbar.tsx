@@ -10,7 +10,6 @@ interface EditorToolbarProps {
   readPreparing: boolean;
   transformTask: BackendPromptTask | null;
   hasText: boolean;
-  backendHealthy: boolean;
   summaryMuted: boolean;
   onSummaryMutedChange: (muted: boolean) => void;
   explainMode: "EXPLAIN1" | "EXPLAIN2";
@@ -30,7 +29,6 @@ export function EditorToolbar({
   readPreparing,
   transformTask,
   hasText,
-  backendHealthy,
   summaryMuted,
   onSummaryMutedChange,
   explainMode,
@@ -42,7 +40,7 @@ export function EditorToolbar({
   onSummarize,
   onExplain,
 }: EditorToolbarProps) {
-  const aiDisabled = !hasText || !backendHealthy || transformTask != null;
+  const aiDisabled = !hasText || transformTask != null;
   const isExplaining =
     transformTask === "EXPLAIN1" || transformTask === "EXPLAIN2";
 
@@ -75,7 +73,7 @@ export function EditorToolbar({
           onClick={onClear}
           disabled={aiDisabled}
           aria-label="Format doc for reading"
-          title={backendHealthy ? "Format document for text-to-speech reading" : "Backend unavailable"}
+          title="Format document for text-to-speech reading"
         >
           {transformTask === "TTS" ? (
             "..."
@@ -117,7 +115,7 @@ export function EditorToolbar({
         onExplain={onExplain}
         disabled={aiDisabled}
         isExplaining={isExplaining}
-        title={backendHealthy ? "Explain the content" : "Backend unavailable"}
+        title="Explain the content"
       />
       <SummaryWithSpeaker
         variant="toolbar"

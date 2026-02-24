@@ -2,13 +2,22 @@ import { useEffect, useState, type MouseEvent, type MutableRefObject } from "rea
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import type { ThemeMode } from "../types";
+import { parseThemeMode } from "../utils";
 import { useWindowSize } from "./useWindowSize";
 
 export function useWindowChrome(hasPendingUiPrefChangeRef: MutableRefObject<boolean>) {
   const windowSize = useWindowSize();
   const [platform, setPlatform] = useState<string | null>(null);
   const [resizeGripHovered, setResizeGripHovered] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try {
+      if (typeof window === "undefined") return "dark";
+      const stored = window.localStorage.getItem("insight-reader-theme");
+      return parseThemeMode(stored) ?? "dark";
+    } catch {
+      return "dark";
+    }
+  });
 
   useEffect(() => {
     invoke<string>("get_platform")
