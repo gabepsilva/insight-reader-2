@@ -1,0 +1,24 @@
+[package]
+authors = ["Cyanism <github@cyan.slmail.me>"]
+categories = ["external-ffi-bindings", "multimedia::audio"]
+description = "A utility wrapper around the SoundTouch C++ audio library"
+edition = "2021"
+license = "LGPL-2.1"
+keywords = ["soundtouch", "audio", "music", "audio-processing", "audio-library"]
+name = "soundtouch"
+readme = "README.md"
+repository = "https://github.com/Cyanistic/soundtouch"
+version = "0.5.1"
+
+[dependencies.soundtouch-ffi]
+version = "0.3.0"
+
+[dev-dependencies]
+anyhow = "1.0"
+hound = "3.5"
+
+[features]
+default = ["alloc"]
+alloc = []
+bundled = ["soundtouch-ffi/bundled"]
+dynamic = ["soundtouch-ffi/dynamic"]
