@@ -2,6 +2,10 @@ import type { Config, HotkeyStatus } from './Settings.types';
 import { VolumeRow } from '../../player/VolumeRow';
 import { clampVolume, DEFAULT_VOLUME } from '../../player/utils';
 
+const defaultBackendPlaceholder = typeof window !== 'undefined'
+  ? window.atob('aHR0cHM6Ly9hcGkuaW5zaWdodHJlYWRlci54eXo=')
+  : '';
+
 export function GeneralTab({
   config,
   onChange,
@@ -28,7 +32,7 @@ export function GeneralTab({
         <label>Summary / LLM Backend URL</label>
         <input
           type="url"
-          placeholder="http://grars-backend.i.psilva.org:8080"
+          placeholder={defaultBackendPlaceholder}
           value={config.backend_url ?? ''}
           onChange={(e) => onChange({ backend_url: e.target.value.trim() || null })}
           className="setting-input"

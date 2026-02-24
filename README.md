@@ -26,14 +26,31 @@ Insight Reader reads text from clipboard selections. It supports offline voices 
 
 ## Features
 
-- Multiple voice providers:
-  - Piper (local and offline)
-  - Microsoft Edge TTS (cloud neural voices)
-  - AWS Polly (optional)
-- Floating desktop UI with playback controls and waveform visualization
-- System tray integration with quick actions
-- Global hotkey support (Windows and macOS; Linux depends on compositor setup)
-- Cross-platform desktop bundles (Windows, macOS, Linux)
+- **Read anything, from almost anywhere**
+  - Reads from selected text or clipboard, so it works across browsers, PDFs, terminals, and native apps.
+  - Fast, timeout-protected text capture keeps the app responsive even on slower systems.
+
+- **Multiple voice providers**
+  - **Piper** (local and offline)
+  - **Microsoft Edge TTS** (cloud neural voices, default)
+  - **AWS Polly** (optional, when credentials are configured)
+
+- **Floating desktop player**
+  - Always-on-top mini window with play/pause, stop, ±5s seek, volume, and speed control (0.75×–2×).
+  - Dark/light themes with macOS-style window chrome and quick access to Settings.
+
+- **Insight Editor (AI-assisted)**
+  - Clean up text for reading, summarize, or explain in two modes (“Like I missed the meeting” / “Like high school”).
+  - Rewrite with presets for **tone** (Professional, Friendly, Concise, Casual, Confident) and **format** (Email, IM/Slack, Document, Social with subtypes).
+  - One-click quick edits (Make shorter, Simplify language, Add call to action, Fix grammar, More persuasive, Add subject line).
+  - Built‑in grammar and style checking via Harper.js, with suggestions, dictionary, and ignore lists.
+
+- **Tray and shortcuts**
+  - System tray menu for **Read Selected**, **Summarize Selected**, and **Insight Editor** on Windows, macOS, and Linux.
+  - Global hotkey support on Windows/macOS/X11, with a compositor-friendly model for Wayland (Hyprland, etc.).
+
+- **Cross-platform desktop bundles**
+  - Native installers for **Windows, macOS, and Linux**, with optional universal macOS (Apple Silicon + Intel) builds.
 
 ## Development
 
@@ -52,6 +69,19 @@ bun run build        # frontend build
 bun run tauri build  # desktop bundles/installers
 bun run test         # vitest tests
 ```
+
+### Secrets scanning
+
+- **CI**: All pushes and pull requests run a **Gitleaks** secret scan in the `Test` workflow. Any detected secrets will fail the workflow.
+- **Optional local hook**:
+  - Install `gitleaks` and `pre-commit` (e.g. via your package manager or `pip install pre-commit`).
+  - From the repo root, run:
+
+    ```bash
+    pre-commit install
+    ```
+
+  - This will run Gitleaks as a pre-commit hook against staged changes.
 
 Rust checks (from `src-tauri`):
 
@@ -106,6 +136,10 @@ set CI= && bun run tauri build
 <td align="center">
 <strong>macOS</strong><br>
 <img src="assets/screenshots/tray-macos.png" alt="macOS Tray" width="200">
+</td>
+<td align="center">
+<strong>Linux</strong><br>
+<img src="assets/screenshots/tray-linux.png" alt="Linux Tray" width="200">
 </td>
 </tr>
 </table>

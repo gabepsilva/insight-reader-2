@@ -8,8 +8,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  secrets-scan:
+    runs-on: [self-hosted, Linux]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks secret scan
+        uses: gacts/gitleaks@v1
+
   test:
     runs-on: [self-hosted, Linux]
+    needs: secrets-scan
     env:
       CARGO_HOME: ${{ github.workspace }}/.cargo-home
       RUSTUP_HOME: ${{ github.workspace }}/.rustup-home
