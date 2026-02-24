@@ -83,6 +83,7 @@ jobs:
         with:
           name: linux-appimage
           path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/appimage/
+          compression-level: 0
           if-no-files-found: error
 
       - name: Upload Linux deb artifact
@@ -90,6 +91,7 @@ jobs:
         with:
           name: linux-deb
           path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/deb/
+          compression-level: 0
           if-no-files-found: error
 
       - name: Upload Linux rpm artifact
@@ -97,6 +99,7 @@ jobs:
         with:
           name: linux-rpm
           path: ${{ env.CARGO_TARGET_DIR }}/release/bundle/rpm/
+          compression-level: 0
           if-no-files-found: error
 
       - name: Remove generated bundle outputs
