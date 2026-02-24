@@ -526,8 +526,17 @@ jobs:
             aws --version
             exit 0
           fi
-          sudo apt-get update
-          sudo apt-get install -y awscli
+          if ! command -v python3 >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y python3
+          fi
+          if ! python3 -m pip --version >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y python3-pip
+          fi
+          python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           aws --version
 
       - name: Upload artifacts to Backblaze B2
