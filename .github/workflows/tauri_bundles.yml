@@ -161,11 +161,11 @@ jobs:
           if not defined LIBCLANG_BIN if exist "%ProgramFiles(x86)%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles(x86)%\LLVM\bin"
 
           if not defined LIBCLANG_BIN (
-            if not exist "%USERPROFILE%\llvm-18.1.8\bin\libclang.dll" (
-              curl -L --retry 3 --output "%TEMP%\LLVM-18.1.8-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/LLVM-18.1.8-win64.exe"
-              "%TEMP%\LLVM-18.1.8-win64.exe" /S /D=%USERPROFILE%\llvm-18.1.8
+            if not exist "%USERPROFILE%\llvm-19.1.7\bin\libclang.dll" (
+              curl -L --retry 3 --output "%TEMP%\LLVM-19.1.7-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-win64.exe"
+              "%TEMP%\LLVM-19.1.7-win64.exe" /S /D=%USERPROFILE%\llvm-19.1.7
             )
-            if exist "%USERPROFILE%\llvm-18.1.8\bin\libclang.dll" set "LIBCLANG_BIN=%USERPROFILE%\llvm-18.1.8\bin"
+            if exist "%USERPROFILE%\llvm-19.1.7\bin\libclang.dll" set "LIBCLANG_BIN=%USERPROFILE%\llvm-19.1.7\bin"
           )
 
           if not defined LIBCLANG_BIN (
