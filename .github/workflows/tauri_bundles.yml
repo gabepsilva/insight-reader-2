@@ -24,6 +24,13 @@ jobs:
     if: ${{ github.event.inputs.linux == 'true' }}
     runs-on: [self-hosted, Linux]
     steps:
+      - name: Fix workspace permissions (self-hosted cleanup)
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+            sudo find "$GITHUB_WORKSPACE" -type d -exec chmod u+rwx {} + || true
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Set Rust cache dirs
