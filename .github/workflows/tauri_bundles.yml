@@ -161,6 +161,16 @@ jobs:
           if not defined LIBCLANG_BIN if exist "%ProgramFiles(x86)%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles(x86)%\LLVM\bin"
 
           if not defined LIBCLANG_BIN (
+            set "LLVM_VERSION=18.1.8"
+            set "LLVM_ROOT=%USERPROFILE%\llvm-%LLVM_VERSION%"
+            if not exist "%LLVM_ROOT%\bin\libclang.dll" (
+              curl -L --retry 3 --output "%TEMP%\LLVM-%LLVM_VERSION%-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-%LLVM_VERSION%/LLVM-%LLVM_VERSION%-win64.exe"
+              "%TEMP%\LLVM-%LLVM_VERSION%-win64.exe" /S /D=%LLVM_ROOT%
+            )
+            if exist "%LLVM_ROOT%\bin\libclang.dll" set "LIBCLANG_BIN=%LLVM_ROOT%\bin"
+          )
+
+          if not defined LIBCLANG_BIN (
             echo libclang.dll not found on runner and LLVM install was unavailable or failed
             exit /b 1
           )
