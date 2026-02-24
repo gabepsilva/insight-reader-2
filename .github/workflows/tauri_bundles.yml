@@ -141,31 +141,33 @@ jobs:
         shell: cmd
         run: |
           set "LIBCLANG_BIN="
+          set "PINNED_LLVM_ROOT=%USERPROFILE%\llvm-19.1.7"
 
-          for %%D in (
-            "%ProgramFiles%\LLVM\bin"
-            "%ProgramFiles(x86)%\LLVM\bin"
-            "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
-            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
-            "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
-            "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
-          ) do (
-            if exist "%%~D\libclang.dll" set "LIBCLANG_BIN=%%~D"
+          if exist "%PINNED_LLVM_ROOT%\bin\libclang.dll" set "LIBCLANG_BIN=%PINNED_LLVM_ROOT%\bin"
+
+          if not defined LIBCLANG_BIN (
+            curl -L --retry 3 --output "%TEMP%\LLVM-19.1.7-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-win64.exe"
+            "%TEMP%\LLVM-19.1.7-win64.exe" /S /D=%PINNED_LLVM_ROOT%
+            if exist "%PINNED_LLVM_ROOT%\bin\libclang.dll" set "LIBCLANG_BIN=%PINNED_LLVM_ROOT%\bin"
+          )
+
+          if not defined LIBCLANG_BIN (
+            for %%D in (
+              "%ProgramFiles%\LLVM\bin"
+              "%ProgramFiles(x86)%\LLVM\bin"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Tools\Llvm\x64\bin"
+              "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+              "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+            ) do (
+              if exist "%%~D\libclang.dll" set "LIBCLANG_BIN=%%~D"
+            )
           )
 
           if not defined LIBCLANG_BIN (
             where choco >nul 2>nul && choco install llvm -y --no-progress
-          )
-
-          if not defined LIBCLANG_BIN if exist "%ProgramFiles%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles%\LLVM\bin"
-          if not defined LIBCLANG_BIN if exist "%ProgramFiles(x86)%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles(x86)%\LLVM\bin"
-
-          if not defined LIBCLANG_BIN (
-            if not exist "%USERPROFILE%\llvm-19.1.7\bin\libclang.dll" (
-              curl -L --retry 3 --output "%TEMP%\LLVM-19.1.7-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-win64.exe"
-              "%TEMP%\LLVM-19.1.7-win64.exe" /S /D=%USERPROFILE%\llvm-19.1.7
-            )
-            if exist "%USERPROFILE%\llvm-19.1.7\bin\libclang.dll" set "LIBCLANG_BIN=%USERPROFILE%\llvm-19.1.7\bin"
+            if exist "%ProgramFiles%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles%\LLVM\bin"
+            if not defined LIBCLANG_BIN if exist "%ProgramFiles(x86)%\LLVM\bin\libclang.dll" set "LIBCLANG_BIN=%ProgramFiles(x86)%\LLVM\bin"
           )
 
           if not defined LIBCLANG_BIN (
@@ -175,6 +177,7 @@ jobs:
 
           echo LIBCLANG_PATH=%LIBCLANG_BIN%>>"%GITHUB_ENV%"
           echo %LIBCLANG_BIN%>>"%GITHUB_PATH%"
+          echo Using LIBCLANG_PATH=%LIBCLANG_BIN%
           dir "%LIBCLANG_BIN%\libclang.dll"
 
       - name: Install Bun
@@ -200,8 +203,29 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Reset soundtouch artifacts in shared target cache
+        run: |
+          if exist "%CARGO_TARGET_DIR%\release\build" (
+            for /d %%D in ("%CARGO_TARGET_DIR%\release\build\soundtouch*") do if exist "%%~fD" rmdir /s /q "%%~fD"
+          )
+          if exist "%CARGO_TARGET_DIR%\release\.fingerprint" (
+            for /d %%D in ("%CARGO_TARGET_DIR%\release\.fingerprint\soundtouch*") do if exist "%%~fD" rmdir /s /q "%%~fD"
+          )
+          if exist "%CARGO_TARGET_DIR%\release\deps" (
+            del /q "%CARGO_TARGET_DIR%\release\deps\*soundtouch*.*" 2>nul
+          )
+
       - name: Build Windows msi bundle
         run: |
+          if not defined LIBCLANG_PATH (
+            echo LIBCLANG_PATH is not set
+            exit /b 1
+          )
+          if not exist "%LIBCLANG_PATH%\libclang.dll" (
+            echo libclang.dll not found at LIBCLANG_PATH=%LIBCLANG_PATH%
+            exit /b 1
+          )
+
           set "VSDEVCMD="
 
           if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
@@ -229,11 +253,22 @@ jobs:
           )
 
           call "%VSDEVCMD%" -arch=x64 -host_arch=x64
+          set "PATH=%LIBCLANG_PATH%;%PATH%"
           where link
+          dir "%LIBCLANG_PATH%\libclang.dll"
           bun run tauri build --bundles msi
 
       - name: Build Windows nsis bundle
         run: |
+          if not defined LIBCLANG_PATH (
+            echo LIBCLANG_PATH is not set
+            exit /b 1
+          )
+          if not exist "%LIBCLANG_PATH%\libclang.dll" (
+            echo libclang.dll not found at LIBCLANG_PATH=%LIBCLANG_PATH%
+            exit /b 1
+          )
+
           set "VSDEVCMD="
 
           if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
@@ -261,7 +296,9 @@ jobs:
           )
 
           call "%VSDEVCMD%" -arch=x64 -host_arch=x64
+          set "PATH=%LIBCLANG_PATH%;%PATH%"
           where link
+          dir "%LIBCLANG_PATH%\libclang.dll"
           bun run tauri build --bundles nsis
 
       - name: Upload Windows msi artifact
