@@ -534,6 +534,11 @@ jobs:
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv
           fi
+          PYTHON_ABI="$(python3 -c 'import sys; print(f\"python{sys.version_info.major}.{sys.version_info.minor}\")')"
+          if ! dpkg -s "${PYTHON_ABI}-venv" >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${PYTHON_ABI}-venv"
+          fi
           AWSCLI_VENV="${RUNNER_TEMP:-/tmp}/awscli-venv"
           rm -rf "$AWSCLI_VENV"
           python3 -m venv "$AWSCLI_VENV"
