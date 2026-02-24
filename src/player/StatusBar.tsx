@@ -12,7 +12,6 @@ export function StatusBar({ config }: StatusBarProps) {
   return (
     <footer className="status-bar">
       <span className="status-item">
-        <span className="status-label">Backend:</span>
         <span className="status-value status-value--backend">
           <span
             className={`status-backend-dot ${backendHealthy ? "status-backend-dot--healthy" : ""}`}

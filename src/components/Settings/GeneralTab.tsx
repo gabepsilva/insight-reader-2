@@ -2,9 +2,7 @@ import type { Config, HotkeyStatus } from './Settings.types';
 import { VolumeRow } from '../../player/VolumeRow';
 import { clampVolume, DEFAULT_VOLUME } from '../../player/utils';
 
-const defaultBackendPlaceholder = typeof window !== 'undefined'
-  ? window.atob('aHR0cHM6Ly9hcGkuaW5zaWdodHJlYWRlci54eXo=')
-  : '';
+const defaultBackendPlaceholder = 'https://api.insightreader.xyz';
 
 export function GeneralTab({
   config,

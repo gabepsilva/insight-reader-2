@@ -13,12 +13,12 @@ use crate::config;
 use crate::machine_id;
 
 /// Default backend base URL when not set in config or env.
-const BACKEND_BASE_URL: &str = "http://grars-backend.i.psilva.org:8080";
+const BACKEND_BASE_URL: &str = "https://api.insightreader.xyz";
 
 /// Application version used in HTTP headers.
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Base URL for backend (config, then INSIGHT_READER_BACKEND_URL env, then default). Trimmed.
+/// Base URL for backend (config, then INSIGHT_READER_BACKEND_URL env, then default).
 fn backend_base_url() -> String {
     config::load_full_config()
         .ok()
@@ -146,7 +146,7 @@ pub async fn backend_health_check() -> Result<bool, String> {
     let base = backend_base_url();
     let url = format!("{}/health", base);
 
-    let client = make_client(5)?;
+    let client = make_client(1)?;
 
     let install_id = config::get_or_create_installation_id().unwrap_or_default();
     let installation_header = installation_header_value(&install_id);

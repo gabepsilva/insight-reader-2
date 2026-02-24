@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-const POLL_FAST_MS = 2000;
+const POLL_FAST_MS = 500;
 const POLL_SLOW_MS = 10000;
 
 /**
