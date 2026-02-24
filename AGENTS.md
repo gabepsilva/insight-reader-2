@@ -33,9 +33,13 @@ cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && 
   - Linux runner alias: `ssh gitrunner` (`github@github.i.psilva.org`)
   - macOS runner alias: `ssh gitrunner-mac` (`gitbuilder@gitbuildersipro.i.psilva.org`)
   - Keep these aliases in `~/.ssh/config` aligned with actual runner hostnames/users when infra changes.
+- macOS runner service management:
+  - Installed as a user LaunchAgent via `~/actions-runner/svc.sh` (`runsvc.sh` / `Runner.Listener --startuptype service`).
+  - Prefer `cd ~/actions-runner && ./svc.sh status|start|stop` over manually running `./run.sh`.
   
 - The bundle workflow uses per-OS dispatch inputs (`linux`, `windows`, `macos`) so you can avoid queueing jobs on offline self-hosted runners.
 - Self-hosted runners keep workspace state between runs. Bundle jobs should upload artifacts and then clean `src-tauri/target/release/bundle` to avoid stale outputs contaminating later builds.
+- macOS bundle output paths differ by bundle type in Tauri: `.app` outputs under `src-tauri/target/release/bundle/macos/` while `.dmg` outputs under `src-tauri/target/release/bundle/dmg/`. Keep workflow upload paths aligned with this mapping.
 - If future bundle changes require signing/notarization/secrets, ask first and document the required runner-side tools/certs in this file.
 
 **Detailed guidelines (by topic):**
