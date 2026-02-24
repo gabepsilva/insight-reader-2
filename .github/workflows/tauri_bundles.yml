@@ -450,3 +450,107 @@ jobs:
       - name: Remove generated bundle outputs
         if: always()
         run: rm -rf src-tauri/target/release/bundle
+
+  upload-b2-artifacts:
+    needs: [build-linux-artifacts, build-windows-artifacts, build-macos-artifacts]
+    if: >-
+      ${{
+        always() &&
+        (github.event.inputs.linux == 'true' || github.event.inputs.windows == 'true' || github.event.inputs.macos == 'true') &&
+        (needs.build-linux-artifacts.result == 'success' || needs.build-linux-artifacts.result == 'skipped') &&
+        (needs.build-windows-artifacts.result == 'success' || needs.build-windows-artifacts.result == 'skipped') &&
+        (needs.build-macos-artifacts.result == 'success' || needs.build-macos-artifacts.result == 'skipped')
+      }}
+    runs-on: [self-hosted, Linux]
+    env:
+      B2_BUCKET_NAME: insight-reader2
+      B2_ENDPOINT_URL: https://s3.us-east-005.backblazeb2.com
+      AWS_DEFAULT_REGION: us-east-005
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - name: Prepare upload workspace
+        run: mkdir -p _bundle-uploads
+
+      - name: Download Linux appimage artifact
+        if: ${{ github.event.inputs.linux == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage
+          path: _bundle-uploads/linux-appimage
+
+      - name: Download Linux deb artifact
+        if: ${{ github.event.inputs.linux == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-deb
+          path: _bundle-uploads/linux-deb
+
+      - name: Download Linux rpm artifact
+        if: ${{ github.event.inputs.linux == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-rpm
+          path: _bundle-uploads/linux-rpm
+
+      - name: Download Windows msi artifact
+        if: ${{ github.event.inputs.windows == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-msi
+          path: _bundle-uploads/windows-msi
+
+      - name: Download Windows nsis artifact
+        if: ${{ github.event.inputs.windows == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-nsis
+          path: _bundle-uploads/windows-nsis
+
+      - name: Download macOS app artifact
+        if: ${{ github.event.inputs.macos == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-app
+          path: _bundle-uploads/macos-app
+
+      - name: Download macOS dmg artifact
+        if: ${{ github.event.inputs.macos == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: _bundle-uploads/macos-dmg
+
+      - name: Install AWS CLI
+        run: |
+          if command -v aws >/dev/null 2>&1; then
+            aws --version
+            exit 0
+          fi
+          sudo apt-get update
+          sudo apt-get install -y awscli
+          aws --version
+
+      - name: Upload artifacts to Backblaze B2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+            echo "Missing GitHub secrets B2_KEY_ID and/or B2_APPLICATION_KEY"
+            exit 1
+          fi
+
+          PREFIX="tauri-bundles/${GITHUB_REF_NAME}/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          echo "Uploading files from _bundle-uploads to s3://${B2_BUCKET_NAME}/${PREFIX}/"
+          find _bundle-uploads -type f | sort
+
+          aws s3 cp _bundle-uploads/ "s3://${B2_BUCKET_NAME}/${PREFIX}/" \
+            --recursive \
+            --endpoint-url "${B2_ENDPOINT_URL}" \
+            --no-progress
+
+          echo "B2 upload prefix: s3://${B2_BUCKET_NAME}/${PREFIX}/"
+          echo "Public URL prefix (B2 native): https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}/${PREFIX}/"
