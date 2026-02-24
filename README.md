@@ -168,6 +168,26 @@ To use AWS Polly, configure credentials using one of these approaches:
 
 3. Named profile (`~/.aws/credentials`) and `AWS_PROFILE`.
 
+## Linux Wayland global hotkeys
+
+On Linux Wayland sessions, Insight Reader does not register traditional app-owned global hotkeys. Instead, configure your compositor or desktop environment to run Insight Reader actions:
+
+- **Read selected text**: `insight-reader action read-selected`
+- **Pause / resume**: `insight-reader action pause`
+- **Stop**: `insight-reader action stop`
+
+Make sure the `insight-reader` binary is on your `PATH` (for example, `~/.local/bin/insight-reader` when installing a local build), then bind your preferred key combinations to these commands in your compositor:
+
+- **Hyprland example** (`~/.config/hypr/bindings.conf`):
+
+  ```conf
+  bindd = CTRL, R, Read selected text, exec, insight-reader action read-selected
+  bindd = CTRL SHIFT, R, Pause or resume speech, exec, insight-reader action pause
+  bindd = CTRL ALT, R, Stop speech, exec, insight-reader action stop
+  ```
+
+For other Wayland compositors or desktop environments (GNOME, KDE, etc.), create equivalent custom shortcuts that execute the same commands. All of these entrypoints trigger the same internal actions as the tray menu and native hotkeys on Windows/macOS/X11.
+
 ## Troubleshooting
 
 - No audio playback: verify system audio output is working.

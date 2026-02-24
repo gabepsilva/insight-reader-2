@@ -19,7 +19,7 @@ export function GeneralTab({
   const effectiveVolume = config.ui_muted ? 0 : (config.ui_volume ?? DEFAULT_VOLUME);
 
   const modeHelp = hotkeyStatus?.mode === 'wayland-compositor'
-    ? 'Wayland session detected: configure your compositor shortcut to run `insight-reader action read-selected`.'
+    ? 'Wayland session detected: app-owned global hotkeys are not available. Configure your compositor shortcut to run `insight-reader action read-selected` instead.'
     : hotkeyStatus?.native_active
       ? `Global shortcuts are active in-app: ${readShortcut} (read), ${pauseShortcut} (pause/resume).`
       : 'Global shortcuts are currently not active in-app.';
@@ -52,13 +52,7 @@ export function GeneralTab({
       </div>
 
       <div className="setting-group">
-        <label>Hotkey</label>
-        <input 
-          type="text"
-          value={readShortcut}
-          disabled
-          className="hotkey-input"
-        />
+        <label>HotKeys</label>
         <p className="setting-help">
           {modeHelp}
         </p>

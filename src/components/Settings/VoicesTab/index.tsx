@@ -84,14 +84,25 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
       } finally {
         setLoadingPiper(false);
       }
+
+      let awsConfigured = false;
       try {
-        const polly = await invoke<any[]>('list_polly_voices');
-        setPollyVoices(polly || []);
-      } catch (e) {
-        console.error('Failed to load Polly voices:', e);
-      } finally {
-        setLoadingPolly(false);
+        awsConfigured = await awsCheckPromise;
+      } catch (_e) {
+        awsConfigured = false;
       }
+      setAwsCredentialsConfigured(awsConfigured);
+
+      if (awsConfigured) {
+        try {
+          const polly = await invoke<any[]>('list_polly_voices');
+          setPollyVoices(polly || []);
+        } catch (e) {
+          console.error('Failed to load Polly voices:', e);
+        }
+      }
+      setLoadingPolly(false);
+
       try {
         const microsoft = await invoke<any[]>('list_microsoft_voices');
         setMicrosoftVoices(microsoft || []);
@@ -100,8 +111,6 @@ export function VoicesTab({ config, onChange }: { config: Config; onChange: (upd
       } finally {
         setLoadingMicrosoft(false);
       }
-
-      setAwsCredentialsConfigured(await awsCheckPromise);
     };
     const loadDownloadedVoices = async () => {
       try {

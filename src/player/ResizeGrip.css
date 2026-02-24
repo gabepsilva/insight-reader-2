@@ -5,8 +5,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
-  gap: 4px;
-  padding: 4px 6px 4px 8px;
+  gap: 0;
+  padding: 0;
   color: var(--text-subtle);
   cursor: nwse-resize;
   pointer-events: auto;
