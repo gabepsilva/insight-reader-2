@@ -29,6 +29,11 @@ cd src-tauri && cargo fmt --all && cargo clippy --all-targets --all-features && 
   gh api repos/gabepsilva/insight-reader-2/actions/runners
   ```
 - Runner snapshot (checked on 2026-02-24): Linux self-hosted runners online (`github`, `github-runner-vm108-02`, `github-runner-vm108-03`); macOS self-hosted runner present but offline (`github-runner-vm106-01`); Windows self-hosted runner present but offline (`github-runner-vm111-01`).
+- Runner SSH access (local aliases):
+  - Linux runner alias: `ssh gitrunner` (`github@github.i.psilva.org`)
+  - macOS runner alias: `ssh gitrunner-mac` (`gitbuilder@gitbuildersipro.i.psilva.org`)
+  - Keep these aliases in `~/.ssh/config` aligned with actual runner hostnames/users when infra changes.
+  
 - The bundle workflow uses per-OS dispatch inputs (`linux`, `windows`, `macos`) so you can avoid queueing jobs on offline self-hosted runners.
 - Self-hosted runners keep workspace state between runs. Bundle jobs should upload artifacts and then clean `src-tauri/target/release/bundle` to avoid stale outputs contaminating later builds.
 - If future bundle changes require signing/notarization/secrets, ask first and document the required runner-side tools/certs in this file.
