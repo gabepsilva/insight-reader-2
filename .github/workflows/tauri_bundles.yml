@@ -473,6 +473,8 @@ jobs:
       AWS_DEFAULT_REGION: us-east-005
       AWS_EC2_METADATA_DISABLED: "true"
     steps:
+      - uses: actions/checkout@v4
+
       - name: Prepare upload workspace
         run: mkdir -p _bundle-uploads
 
@@ -521,15 +523,81 @@ jobs:
             exit 1
           fi
 
-          PREFIX="tauri-bundles/${GITHUB_REF_NAME}/${GITHUB_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          APP_VERSION="$(python3 - <<'PY'
+import json
+from pathlib import Path
 
-          echo "Uploading files from _bundle-uploads to s3://${B2_BUCKET_NAME}/${PREFIX}/"
+config = Path("src-tauri/tauri.conf.json")
+with config.open("r", encoding="utf-8") as f:
+    data = json.load(f)
+print(data["version"])
+PY
+          )"
+
+          if [ -z "${APP_VERSION}" ]; then
+            echo "Failed to read version from src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+          BUILD_TIMESTAMP="$(date -u +'%Y-%m-%d_%H_%M_%S')"
+          IMMUTABLE_BUILD_ID="${BUILD_TIMESTAMP}-${GITHUB_RUN_ID}"
+          IMMUTABLE_PREFIX="bundles/${GITHUB_REF_NAME}/${APP_VERSION}/${IMMUTABLE_BUILD_ID}"
+          LATEST_PREFIX="bundles/latest/${GITHUB_REF_NAME}"
+
+          echo "Uploading files from _bundle-uploads to s3://${B2_BUCKET_NAME}/${IMMUTABLE_PREFIX}/"
           find _bundle-uploads -type f | sort
 
-          aws s3 cp _bundle-uploads/ "s3://${B2_BUCKET_NAME}/${PREFIX}/" \
+          aws s3 cp _bundle-uploads/ "s3://${B2_BUCKET_NAME}/${IMMUTABLE_PREFIX}/" \
             --recursive \
             --endpoint-url "${B2_ENDPOINT_URL}" \
             --no-progress
 
-          echo "B2 upload prefix: s3://${B2_BUCKET_NAME}/${PREFIX}/"
-          echo "Public URL prefix (B2 native): https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}/${PREFIX}/"
+          echo "B2 immutable upload prefix: s3://${B2_BUCKET_NAME}/${IMMUTABLE_PREFIX}/"
+          echo "Public URL prefix (B2 native, immutable): https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}/${IMMUTABLE_PREFIX}/"
+
+          echo "Public URLs for uploaded files (immutable):"
+          PUBLIC_BASE_URL="https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}" \
+          IMMUTABLE_PREFIX="${IMMUTABLE_PREFIX}" \
+          python3 - <<'PY'
+import os
+from pathlib import Path
+from urllib.parse import quote
+
+root = Path("_bundle-uploads")
+public_base = os.environ["PUBLIC_BASE_URL"].rstrip("/")
+immutable_prefix = os.environ["IMMUTABLE_PREFIX"].strip("/")
+
+for path in sorted(p for p in root.rglob("*") if p.is_file()):
+    relative = path.relative_to(root).as_posix()
+    encoded_relative = quote(relative, safe="/")
+    print(f"immutable: {public_base}/{quote(immutable_prefix, safe='/')}/{encoded_relative}")
+PY
+
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "Syncing files to stable latest path s3://${B2_BUCKET_NAME}/${LATEST_PREFIX}/"
+            aws s3 sync _bundle-uploads/ "s3://${B2_BUCKET_NAME}/${LATEST_PREFIX}/" \
+              --endpoint-url "${B2_ENDPOINT_URL}" \
+              --no-progress
+
+            echo "B2 latest upload prefix: s3://${B2_BUCKET_NAME}/${LATEST_PREFIX}/"
+            echo "Public URL prefix (B2 native, latest): https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}/${LATEST_PREFIX}/"
+            echo "Public URLs for uploaded files (latest):"
+            PUBLIC_BASE_URL="https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}" \
+            LATEST_PREFIX="${LATEST_PREFIX}" \
+            python3 - <<'PY'
+import os
+from pathlib import Path
+from urllib.parse import quote
+
+root = Path("_bundle-uploads")
+public_base = os.environ["PUBLIC_BASE_URL"].rstrip("/")
+latest_prefix = os.environ["LATEST_PREFIX"].strip("/")
+
+for path in sorted(p for p in root.rglob("*") if p.is_file()):
+    relative = path.relative_to(root).as_posix()
+    encoded_relative = quote(relative, safe="/")
+    print(f"latest: {public_base}/{quote(latest_prefix, safe='/')}/{encoded_relative}")
+PY
+          else
+            echo "Skipping latest sync for branch '${GITHUB_REF_NAME}' (only 'main' updates latest)."
+          fi
