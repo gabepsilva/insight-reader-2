@@ -624,18 +624,18 @@ jobs:
             PUBLIC_BASE_URL="https://f005.backblazeb2.com/file/${B2_BUCKET_NAME}" \
             LATEST_PREFIX="${LATEST_PREFIX}" \
             python3 - <<'PY'
-            import os
-            from pathlib import Path
-            from urllib.parse import quote
+          import os
+          from pathlib import Path
+          from urllib.parse import quote
 
-            root = Path("_bundle-uploads")
-            public_base = os.environ["PUBLIC_BASE_URL"].rstrip("/")
-            latest_prefix = os.environ["LATEST_PREFIX"].strip("/")
+          root = Path("_bundle-uploads")
+          public_base = os.environ["PUBLIC_BASE_URL"].rstrip("/")
+          latest_prefix = os.environ["LATEST_PREFIX"].strip("/")
 
-            for path in sorted(p for p in root.rglob("*") if p.is_file()):
-                relative = path.relative_to(root).as_posix()
-                encoded_relative = quote(relative, safe="/")
-                print(f"latest: {public_base}/{quote(latest_prefix, safe='/')}/{encoded_relative}")
+          for path in sorted(p for p in root.rglob("*") if p.is_file()):
+              relative = path.relative_to(root).as_posix()
+              encoded_relative = quote(relative, safe="/")
+              print(f"latest: {public_base}/{quote(latest_prefix, safe='/')}/{encoded_relative}")
           PY
           else
             echo "Skipping latest sync for branch '${GITHUB_REF_NAME}' (only 'main' updates latest)."
