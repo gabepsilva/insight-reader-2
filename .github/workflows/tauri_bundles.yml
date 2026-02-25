@@ -215,13 +215,28 @@ jobs:
           where light >nul 2>nul && goto :found_wix
           where wix >nul 2>nul && goto :found_wix
 
-          where choco >nul 2>nul || (
-            echo Chocolatey is required to install WiX Toolset on this runner
-            exit /b 1
+          if exist "%USERPROFILE%\.dotnet\tools" (
+            echo %USERPROFILE%\.dotnet\tools>>"%GITHUB_PATH%"
+            set "PATH=%USERPROFILE%\.dotnet\tools;%PATH%"
           )
 
-          echo WiX Toolset not found in PATH. Installing with Chocolatey...
-          choco install wixtoolset --no-progress -y
+          where dotnet >nul 2>nul && (
+            echo WiX Toolset not found in PATH. Trying dotnet tool install/update...
+            dotnet tool update --global wix || dotnet tool install --global wix
+            if exist "%USERPROFILE%\.dotnet\tools" (
+              echo %USERPROFILE%\.dotnet\tools>>"%GITHUB_PATH%"
+              set "PATH=%USERPROFILE%\.dotnet\tools;%PATH%"
+            )
+          )
+
+          where candle >nul 2>nul && goto :found_wix
+          where light >nul 2>nul && goto :found_wix
+          where wix >nul 2>nul && goto :found_wix
+
+          where choco >nul 2>nul && (
+            echo WiX Toolset still missing. Trying Chocolatey installation...
+            choco install wixtoolset --no-progress -y
+          )
 
           for %%D in (
             "%ProgramFiles(x86)%\WiX Toolset v3.14\bin"
@@ -237,8 +252,8 @@ jobs:
 
           :found_wix
           where candle >nul 2>nul || where wix >nul 2>nul || (
-            echo WiX Toolset binaries were not found after installation
-            exit /b 1
+            echo WiX Toolset binaries were not found after provisioning attempts; MSI step will determine if runner support is sufficient
+            exit /b 0
           )
           where candle 2>nul
           where light 2>nul
