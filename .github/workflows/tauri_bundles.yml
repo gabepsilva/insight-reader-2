@@ -636,7 +636,7 @@ jobs:
                 relative = path.relative_to(root).as_posix()
                 encoded_relative = quote(relative, safe="/")
                 print(f"latest: {public_base}/{quote(latest_prefix, safe='/')}/{encoded_relative}")
-            PY
+          PY
           else
             echo "Skipping latest sync for branch '${GITHUB_REF_NAME}' (only 'main' updates latest)."
           fi
