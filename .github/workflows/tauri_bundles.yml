@@ -12,12 +12,12 @@ on:
         description: Build Windows bundles
         type: boolean
         required: true
-        default: false
+        default: true
       macos:
         description: Build macOS bundles
         type: boolean
         required: true
-        default: false
+        default: true
 
 jobs:
   build-linux-artifacts:
