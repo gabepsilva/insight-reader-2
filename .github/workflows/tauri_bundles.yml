@@ -212,6 +212,7 @@ jobs:
         shell: cmd
         continue-on-error: true
         run: |
+          echo HAS_WIX=false>>"%GITHUB_ENV%"
           where candle >nul 2>nul && goto :found_wix
           where light >nul 2>nul && goto :found_wix
           where wix >nul 2>nul && goto :found_wix
@@ -256,9 +257,10 @@ jobs:
             echo WiX Toolset binaries were not found after provisioning attempts; MSI step will determine if runner support is sufficient
             exit /b 0
           )
-          where candle 2>nul
-          where light 2>nul
-          where wix 2>nul
+          echo HAS_WIX=true>>"%GITHUB_ENV%"
+          where candle 2>nul || ver >nul
+          where light 2>nul || ver >nul
+          where wix 2>nul || ver >nul
 
       - name: Reset soundtouch artifacts in shared target cache
         run: |
@@ -273,6 +275,7 @@ jobs:
           )
 
       - name: Build Windows msi bundle
+        if: ${{ env.HAS_WIX == 'true' }}
         run: |
           if not defined LIBCLANG_PATH (
             echo LIBCLANG_PATH is not set
@@ -359,6 +362,7 @@ jobs:
           bun run tauri build --bundles nsis
 
       - name: Upload Windows msi artifact
+        if: ${{ env.HAS_WIX == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: windows-msi
@@ -501,6 +505,14 @@ jobs:
             exit 0
           fi
 
+          if ! xcrun --find SetFile >/dev/null 2>&1 || ! xcrun --find Rez >/dev/null 2>&1; then
+            echo "Skipping macOS dmg build: required Xcode tools (SetFile/Rez) are unavailable on this runner"
+            echo "MACOS_DMG_BUILD_SKIPPED=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "MACOS_DMG_BUILD_SKIPPED=false" >> "$GITHUB_ENV"
+
           # DMG creation can fail transiently on self-hosted macOS runners (hdiutil/bundle_dmg.sh).
           for attempt in 1 2; do
             echo "Building macOS dmg bundle (attempt ${attempt}/2)"
@@ -522,6 +534,7 @@ jobs:
           done
 
       - name: Upload macOS bundle artifact
+        if: ${{ !(matrix.bundle == 'dmg' && env.MACOS_DMG_BUILD_SKIPPED == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.bundle }}
