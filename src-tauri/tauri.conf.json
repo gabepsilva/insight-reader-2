@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "insight-reader-2",
+  "productName": "Insight Reader",
   "version": "0.1.0",
   "identifier": "com.gabriel.insight-reader-2",
   "build": {
@@ -56,13 +56,43 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "category": "Utility",
+    "shortDescription": "Read clipboard text aloud with offline and cloud voices.",
+    "longDescription": "Insight Reader is a cross-platform desktop text-to-speech app that reads selected or clipboard text aloud. It supports local offline voices (Piper) and cloud voices (Microsoft Edge TTS), making it useful for accessibility, proofreading, and hands-free reading workflows.\n\nReplace this description with your final release copy before public distribution. Add privacy, feature, and support details here.",
+    "copyright": "Copyright 2026 Gabriel Silva",
+    "publisher": "Gabriel Silva",
+    "homepage": "https://api.insightreader.xyz",
+    "license": "Proprietary",
+    "licenseFile": "../LICENSE",
+    "createUpdaterArtifacts": false,
+    "resources": [],
+    "externalBin": [],
     "linux": {
       "deb": {
         "desktopTemplate": "linux.desktop"
       },
       "rpm": {
         "desktopTemplate": "linux.desktop"
+      },
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
       }
+    },
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null,
+      "exceptionDomain": null
     }
-  }
+  },
+  "plugins": {}
 }
