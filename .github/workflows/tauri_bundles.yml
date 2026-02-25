@@ -25,23 +25,8 @@ env:
   WINDOWS_LLVM_VERSION: 19.1.7
 
 jobs:
-  linux-build-branch:
-    if: ${{ github.event.inputs.linux == 'true' }}
-    runs-on: [self-hosted, Linux]
-    steps:
-      - name: Start Linux build branch
-        run: echo "Linux build branch enabled"
-
-  windows-build-branch:
-    if: ${{ github.event.inputs.windows == 'true' }}
-    runs-on: [self-hosted, Linux]
-    steps:
-      - name: Start Windows build branch
-        run: echo "Windows build branch enabled"
-
   build-linux-artifacts:
     if: ${{ github.event.inputs.linux == 'true' }}
-    needs: [linux-build-branch]
     runs-on: [self-hosted, Linux]
     steps:
       - name: Fix workspace permissions (self-hosted cleanup)
@@ -128,7 +113,6 @@ jobs:
 
   build-windows-artifacts:
     if: ${{ github.event.inputs.windows == 'true' }}
-    needs: [windows-build-branch]
     runs-on: [self-hosted, Windows]
     defaults:
       run:
