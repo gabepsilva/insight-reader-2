@@ -19,6 +19,11 @@ on:
         required: true
         default: true
 
+env:
+  RUST_TOOLCHAIN_VERSION: 1.93.1
+  BUN_VERSION: 1.3.9
+  WINDOWS_LLVM_VERSION: 19.1.7
+
 jobs:
   build-linux-artifacts:
     if: ${{ github.event.inputs.linux == 'true' }}
@@ -50,12 +55,12 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.1
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.9
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -132,8 +137,8 @@ jobs:
             "%TEMP%\rustup-init.exe" -y --profile minimal --default-toolchain stable
           )
           echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
-          "%CARGO_HOME%\bin\rustup.exe" toolchain install 1.93.1 --profile minimal
-          "%CARGO_HOME%\bin\rustup.exe" default 1.93.1
+          "%CARGO_HOME%\bin\rustup.exe" toolchain install %RUST_TOOLCHAIN_VERSION% --profile minimal
+          "%CARGO_HOME%\bin\rustup.exe" default %RUST_TOOLCHAIN_VERSION%
           "%CARGO_HOME%\bin\rustc.exe" --version
           "%CARGO_HOME%\bin\cargo.exe" --version
 
@@ -141,13 +146,13 @@ jobs:
         shell: cmd
         run: |
           set "LIBCLANG_BIN="
-          set "PINNED_LLVM_ROOT=%USERPROFILE%\llvm-19.1.7"
+          set "PINNED_LLVM_ROOT=%USERPROFILE%\llvm-%WINDOWS_LLVM_VERSION%"
 
           if exist "%PINNED_LLVM_ROOT%\bin\libclang.dll" set "LIBCLANG_BIN=%PINNED_LLVM_ROOT%\bin"
 
           if not defined LIBCLANG_BIN (
-            curl -L --retry 3 --output "%TEMP%\LLVM-19.1.7-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-win64.exe"
-            "%TEMP%\LLVM-19.1.7-win64.exe" /S /D=%PINNED_LLVM_ROOT%
+            curl -L --retry 3 --output "%TEMP%\LLVM-%WINDOWS_LLVM_VERSION%-win64.exe" "https://github.com/llvm/llvm-project/releases/download/llvmorg-%WINDOWS_LLVM_VERSION%/LLVM-%WINDOWS_LLVM_VERSION%-win64.exe"
+            "%TEMP%\LLVM-%WINDOWS_LLVM_VERSION%-win64.exe" /S /D=%PINNED_LLVM_ROOT%
             if exist "%PINNED_LLVM_ROOT%\bin\libclang.dll" set "LIBCLANG_BIN=%PINNED_LLVM_ROOT%\bin"
           )
 
@@ -184,7 +189,7 @@ jobs:
         shell: cmd
         run: |
           if not exist "%USERPROFILE%\.bun\bin\bun.exe" (
-            curl -L --retry 3 --output "%TEMP%\bun-windows-x64.zip" https://github.com/oven-sh/bun/releases/download/bun-v1.3.9/bun-windows-x64.zip
+            curl -L --retry 3 --output "%TEMP%\bun-windows-x64.zip" https://github.com/oven-sh/bun/releases/download/bun-v%BUN_VERSION%/bun-windows-x64.zip
             powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%TEMP%\\bun-windows-x64.zip' -DestinationPath '%TEMP%\\bun-extract' -Force"
             if not exist "%USERPROFILE%\.bun\bin" mkdir "%USERPROFILE%\.bun\bin"
             copy /Y "%TEMP%\bun-extract\bun-windows-x64\bun.exe" "%USERPROFILE%\.bun\bin\bun.exe"
@@ -424,7 +429,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -471,54 +476,10 @@ jobs:
       - name: Prepare upload workspace
         run: mkdir -p _bundle-uploads
 
-      - name: Download Linux appimage artifact
-        if: ${{ github.event.inputs.linux == 'true' }}
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: linux-appimage
-          path: _bundle-uploads/linux-appimage
-
-      - name: Download Linux deb artifact
-        if: ${{ github.event.inputs.linux == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-deb
-          path: _bundle-uploads/linux-deb
-
-      - name: Download Linux rpm artifact
-        if: ${{ github.event.inputs.linux == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-rpm
-          path: _bundle-uploads/linux-rpm
-
-      - name: Download Windows msi artifact
-        if: ${{ github.event.inputs.windows == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-msi
-          path: _bundle-uploads/windows-msi
-
-      - name: Download Windows nsis artifact
-        if: ${{ github.event.inputs.windows == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-nsis
-          path: _bundle-uploads/windows-nsis
-
-      - name: Download macOS app artifact
-        if: ${{ github.event.inputs.macos == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-app
-          path: _bundle-uploads/macos-app
-
-      - name: Download macOS dmg artifact
-        if: ${{ github.event.inputs.macos == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-dmg
-          path: _bundle-uploads/macos-dmg
+          path: _bundle-uploads
 
       - name: Install AWS CLI
         run: |
