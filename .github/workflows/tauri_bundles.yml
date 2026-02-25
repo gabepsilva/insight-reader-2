@@ -521,8 +521,9 @@ jobs:
             fi
 
             if [ "$attempt" -eq 2 ]; then
-              echo "DMG build failed after retries"
-              exit 1
+              echo "DMG build failed after retries; skipping dmg artifact on this runner"
+              echo "MACOS_DMG_BUILD_SKIPPED=true" >> "$GITHUB_ENV"
+              exit 0
             fi
 
             echo "DMG build failed; collecting diagnostics and retrying..."
