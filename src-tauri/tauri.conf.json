@@ -63,7 +63,6 @@
     "publisher": "Gabriel Silva",
     "homepage": "https://api.insightreader.xyz",
     "license": "Proprietary",
-    "licenseFile": "../LICENSE",
     "createUpdaterArtifacts": false,
     "resources": [],
     "externalBin": [],
