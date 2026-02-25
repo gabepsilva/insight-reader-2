@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Insight Reader",
+  "productName": "insight-reader-2",
   "version": "0.1.0",
   "identifier": "com.gabriel.insight-reader-2",
   "build": {
