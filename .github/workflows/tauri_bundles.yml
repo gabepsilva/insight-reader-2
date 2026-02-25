@@ -208,6 +208,42 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Ensure WiX Toolset is available for MSI bundling
+        shell: cmd
+        run: |
+          where candle >nul 2>nul && goto :found_wix
+          where light >nul 2>nul && goto :found_wix
+          where wix >nul 2>nul && goto :found_wix
+
+          where choco >nul 2>nul || (
+            echo Chocolatey is required to install WiX Toolset on this runner
+            exit /b 1
+          )
+
+          echo WiX Toolset not found in PATH. Installing with Chocolatey...
+          choco install wixtoolset --no-progress -y
+
+          for %%D in (
+            "%ProgramFiles(x86)%\WiX Toolset v3.14\bin"
+            "%ProgramFiles(x86)%\WiX Toolset v3.11\bin"
+            "%ProgramFiles%\WiX Toolset v3.14\bin"
+            "%ProgramFiles%\WiX Toolset v3.11\bin"
+          ) do (
+            if exist "%%~D\candle.exe" (
+              echo %%~D>>"%GITHUB_PATH%"
+              set "PATH=%%~D;%PATH%"
+            )
+          )
+
+          :found_wix
+          where candle >nul 2>nul || where wix >nul 2>nul || (
+            echo WiX Toolset binaries were not found after installation
+            exit /b 1
+          )
+          where candle 2>nul
+          where light 2>nul
+          where wix 2>nul
+
       - name: Reset soundtouch artifacts in shared target cache
         run: |
           if exist "%CARGO_TARGET_DIR%\release\build" (
@@ -443,7 +479,31 @@ jobs:
         run: bun install
 
       - name: Build macOS bundle
-        run: bun run tauri build --bundles ${{ matrix.bundle }}
+        run: |
+          if [ "${{ matrix.bundle }}" != "dmg" ]; then
+            bun run tauri build --bundles "${{ matrix.bundle }}"
+            exit 0
+          fi
+
+          # DMG creation can fail transiently on self-hosted macOS runners (hdiutil/bundle_dmg.sh).
+          for attempt in 1 2; do
+            echo "Building macOS dmg bundle (attempt ${attempt}/2)"
+            if bun run tauri build --bundles dmg; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 2 ]; then
+              echo "DMG build failed after retries"
+              exit 1
+            fi
+
+            echo "DMG build failed; collecting diagnostics and retrying..."
+            hdiutil info || true
+            ls -la src-tauri/target/release/bundle || true
+            ls -la src-tauri/target/release/bundle/dmg || true
+            rm -rf src-tauri/target/release/bundle/dmg || true
+            sleep 5
+          done
 
       - name: Upload macOS bundle artifact
         uses: actions/upload-artifact@v4
