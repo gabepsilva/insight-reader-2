@@ -61,24 +61,6 @@ detect_arch() {
   esac
 }
 
-print_fuse_warning_box() {
-  cat <<'EOF'
-+----------------------------------------------------------------------------+
-| WARNING: FUSE runtime compatibility (libfuse.so.2) was not detected.       |
-|                                                                            |
-| The AppImage was installed anyway, but it may fail to launch until your    |
-| system has FUSE 2 compatibility libraries available.                       |
-|                                                                            |
-| Common packages (examples):                                                |
-|   Ubuntu/Debian/Mint/Pop!_OS: libfuse2   (or libfuse2t64 on newer Ubuntu) |
-|   Fedora:                   fuse-libs                                      |
-|   Arch/Manjaro:             fuse2                                          |
-|                                                                            |
-| If launch fails, install the package for your distro and try again.        |
-+----------------------------------------------------------------------------+
-EOF
-}
-
 has_fuse2_runtime() {
   if command -v ldconfig >/dev/null 2>&1; then
     if ldconfig -p 2>/dev/null | grep -q 'libfuse\.so\.2'; then
@@ -184,7 +166,9 @@ main() {
 
   ensure_dirs
   if ! has_fuse2_runtime; then
-    print_fuse_warning_box
+    log_warn "FUSE runtime compatibility (libfuse.so.2) was not detected."
+    log_warn "The AppImage may fail to launch until FUSE 2 compatibility libraries are installed."
+    log_info "Common packages: Debian/Ubuntu: libfuse2 (or libfuse2t64), Fedora: fuse-libs, Arch: fuse2"
     echo
   fi
 

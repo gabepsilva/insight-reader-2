@@ -515,10 +515,12 @@ jobs:
 
           cp "${APPIMAGE_SRC}" _bundle-uploads/linux-installer/insight-reader-2-linux-x86_64.AppImage
           cp install/install-linux.sh _bundle-uploads/linux-installer/install-linux.sh
+          cp install/uninstall-linux.sh _bundle-uploads/linux-installer/uninstall-linux.sh
           cp src-tauri/linux.desktop _bundle-uploads/linux-installer/linux.desktop.template
           cp src-tauri/icons/128x128.png _bundle-uploads/linux-installer/insight-reader-2.png
 
           chmod +x _bundle-uploads/linux-installer/install-linux.sh
+          chmod +x _bundle-uploads/linux-installer/uninstall-linux.sh
 
           echo "Prepared Linux installer payload:"
           find _bundle-uploads/linux-installer -maxdepth 1 -type f | sort
@@ -567,6 +569,7 @@ jobs:
 
           cp "${NSIS_SRC}" _bundle-uploads/windows-installer/insight-reader-2-windows-x64-setup.exe
           cp install/install-windows.ps1 _bundle-uploads/windows-installer/install-windows.ps1
+          cp install/uninstall-windows.ps1 _bundle-uploads/windows-installer/uninstall-windows.ps1
 
           echo "Prepared Windows installer payload:"
           find _bundle-uploads/windows-installer -maxdepth 1 -type f | sort
@@ -601,8 +604,10 @@ jobs:
 
           cp "${DMG_SRC}" _bundle-uploads/macos-installer/insight-reader-2-macos.dmg
           cp install/install-macos.sh _bundle-uploads/macos-installer/install-macos.sh
+          cp install/uninstall-macos.sh _bundle-uploads/macos-installer/uninstall-macos.sh
 
           chmod +x _bundle-uploads/macos-installer/install-macos.sh
+          chmod +x _bundle-uploads/macos-installer/uninstall-macos.sh
 
           echo "Prepared macOS installer payload:"
           find _bundle-uploads/macos-installer -maxdepth 1 -type f | sort
