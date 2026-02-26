@@ -546,6 +546,28 @@ jobs:
           name: macos-dmg
           path: _bundle-uploads/macos-dmg
 
+      - name: Prepare macOS installer payload
+        if: ${{ github.event.inputs.macos == 'true' }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p _bundle-uploads/macos-installer
+
+          DMG_SRC="$(find _bundle-uploads/macos-dmg -type f -name '*.dmg' | sort | head -n1)"
+          if [ -z "${DMG_SRC}" ]; then
+            echo "macOS DMG artifact not found under _bundle-uploads/macos-dmg"
+            find _bundle-uploads/macos-dmg -maxdepth 5 -type f | sort || true
+            exit 1
+          fi
+
+          cp "${DMG_SRC}" _bundle-uploads/macos-installer/insight-reader-2-macos.dmg
+          cp install/install-macos.sh _bundle-uploads/macos-installer/install-macos.sh
+
+          chmod +x _bundle-uploads/macos-installer/install-macos.sh
+
+          echo "Prepared macOS installer payload:"
+          find _bundle-uploads/macos-installer -maxdepth 1 -type f | sort
+
       - name: Install AWS CLI
         run: |
           if command -v aws >/dev/null 2>&1; then
