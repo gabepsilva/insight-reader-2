@@ -409,6 +409,7 @@ jobs:
           echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PREFIX/include" >> "$GITHUB_ENV"
           echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX/lib" >> "$GITHUB_ENV"
           echo "PKG_CONFIG_PATH=$OPENSSL_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "OPENSSL_STATIC=1" >> "$GITHUB_ENV"
 
       - name: Install Rust
         run: |
@@ -439,6 +440,24 @@ jobs:
 
       - name: Build macOS bundle
         run: bun run tauri build --bundles ${{ matrix.bundle }}
+
+      - name: Verify macOS binary does not depend on Homebrew OpenSSL dylib
+        run: |
+          set -euo pipefail
+
+          APP_BIN="$(find src-tauri/target/release/bundle -type f -path '*/Contents/MacOS/*' | sort | head -n1 || true)"
+          if [ -z "${APP_BIN}" ]; then
+            echo "No macOS app executable found under bundle output; skipping dylib link check."
+            exit 0
+          fi
+
+          echo "Inspecting dynamic libraries for: ${APP_BIN}"
+          otool -L "${APP_BIN}"
+
+          if otool -L "${APP_BIN}" | grep -Eq '/(usr/local|opt/homebrew)/opt/openssl@3/lib/lib(ssl|crypto)\.3\.dylib'; then
+            echo "Homebrew OpenSSL dynamic dependency detected in bundled macOS binary."
+            exit 1
+          fi
 
       - name: Upload macOS bundle artifact
         uses: actions/upload-artifact@v4
