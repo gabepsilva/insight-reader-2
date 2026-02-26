@@ -480,6 +480,30 @@ jobs:
           name: linux-appimage
           path: _bundle-uploads/linux-appimage
 
+      - name: Prepare Linux installer payload
+        if: ${{ github.event.inputs.linux == 'true' }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p _bundle-uploads/linux-installer
+
+          APPIMAGE_SRC="$(find _bundle-uploads/linux-appimage -type f -name '*.AppImage' | sort | head -n1)"
+          if [ -z "${APPIMAGE_SRC}" ]; then
+            echo "Linux AppImage artifact not found under _bundle-uploads/linux-appimage"
+            find _bundle-uploads/linux-appimage -maxdepth 5 -type f | sort || true
+            exit 1
+          fi
+
+          cp "${APPIMAGE_SRC}" _bundle-uploads/linux-installer/insight-reader-2-linux-x86_64.AppImage
+          cp install/install-linux.sh _bundle-uploads/linux-installer/install-linux.sh
+          cp src-tauri/linux.desktop _bundle-uploads/linux-installer/linux.desktop.template
+          cp src-tauri/icons/128x128.png _bundle-uploads/linux-installer/insight-reader-2.png
+
+          chmod +x _bundle-uploads/linux-installer/install-linux.sh
+
+          echo "Prepared Linux installer payload:"
+          find _bundle-uploads/linux-installer -maxdepth 1 -type f | sort
+
       - name: Download Linux deb artifact
         if: ${{ github.event.inputs.linux == 'true' }}
         uses: actions/download-artifact@v4
