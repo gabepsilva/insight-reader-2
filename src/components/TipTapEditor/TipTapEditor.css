@@ -67,7 +67,15 @@
   background: rgba(130, 170, 255, 0.3);
   border-bottom: 2px solid #82aaff;
 }
+.tiptap-editor-content .tiptap .lint--typo {
+  background: rgba(205, 220, 57, 0.3);
+  border-bottom: 2px solid #cddc39;
+}
+.tiptap-editor-content .tiptap .lint--repetition {
+  background: rgba(255, 183, 77, 0.3);
+  border-bottom: 2px solid #ffb74d;
+}
 .tiptap-editor-content .tiptap .lint--misc {
-  background: rgba(206, 147, 216, 0.32);
-  border-bottom: 2px solid #ce93d8;
+  background: rgba(64, 224, 208, 0.28);
+  border-bottom: 2px solid #40e0d0;
 }

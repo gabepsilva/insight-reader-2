@@ -13,6 +13,8 @@ const KINDS = [
   "punctuation",
   "capitalization",
   "style",
+  "typo",
+  "repetition",
   "misc",
 ] as const;
 export function toLintClass(kind: string): string {
