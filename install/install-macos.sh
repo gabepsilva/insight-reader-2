@@ -131,6 +131,15 @@ install_app_bundle() {
   exit 1
 }
 
+refresh_icon_cache() {
+  # macOS caches app icons; after install the cache can show a stale icon (e.g. opaque
+  # background instead of transparent). Touch the app and restart Dock to force a refresh.
+  touch "$INSTALLED_APP_PATH"
+  if killall Dock 2>/dev/null; then
+    log_info "Refreshed Dock to update app icon display"
+  fi
+}
+
 install_cli_symlink() {
   local app_executable
   app_executable="${INSTALLED_APP_PATH}/Contents/MacOS/${APP_EXECUTABLE_NAME}"
@@ -181,6 +190,7 @@ main() {
   mount_dmg
   find_app_in_volume
   install_app_bundle
+  refresh_icon_cache
   install_cli_symlink
   cleanup
   trap - EXIT
