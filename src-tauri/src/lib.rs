@@ -160,6 +160,12 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // Ensure main window decorations stay off on macOS (config can be inconsistent)
+            #[cfg(target_os = "macos")]
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.set_decorations(false);
+            }
+
             if let Some(tray) = app.tray_by_id("main") {
                 let is_visible = match app.get_webview_window("main") {
                     Some(win) => win.is_visible().unwrap_or_else(|e| {
