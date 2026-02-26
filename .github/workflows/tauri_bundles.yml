@@ -551,6 +551,26 @@ jobs:
           name: windows-nsis
           path: _bundle-uploads/windows-nsis
 
+      - name: Prepare Windows installer payload
+        if: ${{ github.event.inputs.windows == 'true' }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p _bundle-uploads/windows-installer
+
+          NSIS_SRC="$(find _bundle-uploads/windows-nsis -type f -name '*.exe' | sort | head -n1)"
+          if [ -z "${NSIS_SRC}" ]; then
+            echo "Windows NSIS installer artifact not found under _bundle-uploads/windows-nsis"
+            find _bundle-uploads/windows-nsis -maxdepth 5 -type f | sort || true
+            exit 1
+          fi
+
+          cp "${NSIS_SRC}" _bundle-uploads/windows-installer/insight-reader-2-windows-x64-setup.exe
+          cp install/install-windows.ps1 _bundle-uploads/windows-installer/install-windows.ps1
+
+          echo "Prepared Windows installer payload:"
+          find _bundle-uploads/windows-installer -maxdepth 1 -type f | sort
+
       - name: Download macOS app artifact
         if: ${{ github.event.inputs.macos == 'true' }}
         uses: actions/download-artifact@v4
